@@ -1,0 +1,38 @@
+
+.splitter-container-horizontal {
+    display: flex;
+    flex-direction: row;
+    height: 100vh;
+    margin: 0;
+    overflow: hidden;
+}
+
+.splitter-container-vertical {
+    display: flex;
+    flex-direction: column;
+    width: 100vw;
+    margin: 0;
+    overflow: hidden;
+}
+
+.splitter-handle-horizontal {
+    cursor: ew-resize;
+    background-color: #ddd;
+    height: 10px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.splitter-handle-vertical {
+    cursor: ew-resize;
+    background-color: #ddd;
+    width: 10px;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+.splitter-pane {
+    flex: 1;
+    overflow: hidden;
+    border: 1px solid #ddd;
+}
