@@ -1,17 +1,21 @@
 "use strict";
 
-class MDISubWindow {
+import {ContainerWidget} from "./Widget.js";
+
+class MDISubWindow extends ContainerWidget {
 
     constructor(mdi_widget, child, title, width, height) {
+        super();
         // the MDI window we belong to
         this.mdi_widget = mdi_widget
         //this.mdi_widget = null;
         
         this.element = document.createElement('div');
         this.element.className = 'mdi-child';
-        this.element.style.width = width + 'px';
-        this.element.style.height = height + 'px';
-        this.element.style.zIndex = this.mdi_widget.zIndexCounter++;
+        let style = this.element.style;
+        style.width = width + 'px';
+        style.height = height + 'px';
+        style.zIndex = this.mdi_widget.zIndexCounter++;
         
         this.titleBar = document.createElement('div');
         this.titleBar.className = 'mdi-title-bar';
@@ -41,12 +45,12 @@ class MDISubWindow {
 
         this.titleBar.appendChild(this.buttons);
         this.element.appendChild(this.titleBar);
-        // TODO: child.get_element()
-        this.element.appendChild(child)
+        this.element.appendChild(child.get_element())
+        this.children.push(child);
 
         // Random placement of subwindow
-        this.element.style.left = Math.random() * (this.element.innerWidth - width) + 'px';
-        this.element.style.top = Math.random() * (this.element.innerHeight - height) + 'px';
+        style.left = Math.random() * (this.element.innerWidth - width) + 'px';
+        style.top = Math.random() * (this.element.innerHeight - height) + 'px';
 
         //this.mdi_widget.add_widget(this);
 
@@ -60,15 +64,12 @@ class MDISubWindow {
         this.update_state(this.get_state());
     }
 
-    get_element() {
-        return this.element;
-    }
-
     update_state(rec) {
-        rec.width = this.element.style.width;
-        rec.height = this.element.style.height;
-        rec.left = this.element.style.left;
-        rec.top = this.element.style.top;
+        let style = this.element.style;
+        rec.width = style.width;
+        rec.height = style.height;
+        rec.left = style.left;
+        rec.top = style.top;
         return rec;
     }
     
@@ -157,25 +158,26 @@ class MDISubWindow {
     toggle_minimize() {
         // Check if the window is already minimized
         const rec = this.get_state();
+        let style = this.element.style;
         if (rec.state === 'minimized') {
             // Restore the window to its previous state
-            this.element.style.display = 'block';
-            this.element.style.width = rec.width;
-            this.element.style.height = rec.height;
-            this.element.style.left = rec.left;
-            this.element.style.top = rec.top;
+            style.display = 'block';
+            style.width = rec.width;
+            style.height = rec.height;
+            style.left = rec.left;
+            style.top = rec.top;
             rec.state = 'normal';
         } else {
             // Minimize the window and store its state
             if (rec.state === 'normal') {
                 this.update_state(rec);
             };
-            //this.element.style.display = 'none';
-            this.element.style.display = 'block';
-            this.element.style.width = 'auto';
-            this.element.style.height = 'auto';
-            this.element.style.left = 'unset';
-            this.element.style.top = 'unset';
+            //style.display = 'none';
+            style.display = 'block';
+            style.width = 'auto';
+            style.height = 'auto';
+            style.left = 'unset';
+            style.top = 'unset';
             rec.state = 'minimized';
         }
 
@@ -185,15 +187,16 @@ class MDISubWindow {
 
     toggle_maximize() {
         const workspace = this.mdi_widget.element;
+        let style = this.element.style;
         const pad = 5;
         // Check if the window is currently maximized
         const rec = this.get_state();
         if (rec.state === 'maximized') {
             // Restore the window to its previous state
-            this.element.style.width = rec.width;
-            this.element.style.height = rec.height;
-            this.element.style.left = rec.left;
-            this.element.style.top = rec.top;
+            style.width = rec.width;
+            style.height = rec.height;
+            style.left = rec.left;
+            style.top = rec.top;
             rec.state = 'normal';
         } else {
             // Maximize the window and store its state
@@ -202,10 +205,10 @@ class MDISubWindow {
             };
             let width = Math.floor(workspace.clientWidth - pad);
             let height = Math.floor(workspace.clientHeight - pad);
-            this.element.style.width = width + 'px';
-            this.element.style.height = height + 'px';
-            this.element.style.left = '0';
-            this.element.style.top = '0';
+            style.width = width + 'px';
+            style.height = height + 'px';
+            style.left = '0';
+            style.top = '0';
             rec.state = 'maximized';
         }
         
@@ -223,28 +226,25 @@ class MDISubWindow {
     }
 }
     
-class MDIWidget {
+class MDIWidget extends ContainerWidget {
 
     constructor(width, height) {
+        super();
         this.element = document.createElement('div');
         this.element.className = 'mdi-container';
-        this.element.style.position = 'relative';
-        //this.element.style.width = width + 'px';
-        //this.element.style.height = height + 'px';
-        this.element.style.width = '100%';
-        this.element.style.height = '100%';
-        this.element.style.flex = '1';
-        this.element.style.backgroundColor = 'lightblue';
-        this.element.style.border = '2px solid green';
-        this.element.style.overflow = 'scroll';
+        let style = this.element.style;
+        style.position = 'relative';
+        //style.width = width + 'px';
+        //style.height = height + 'px';
+        style.width = '100%';
+        style.height = '100%';
+        //style.flex = '1';
+        style.backgroundColor = 'lightblue';
+        style.border = '2px solid green';
+        style.overflow = 'scroll';
 
-        this.children = [];
         this.zIndexCounter = 1;
         this.windowStateMap = new Map();
-    }
-
-    get_element() {
-        return this.element;
     }
 
     add_widget(child, title, width, height) {
@@ -259,20 +259,20 @@ class MDIWidget {
         let offsetY = 0;
 
         for (let subwin of this.children) {
-            let child = subwin.get_element();
+            let win_elt = subwin.get_element();
             let rec = subwin.get_state();
-            child.style.left = offsetX + 'px';
-            child.style.top = offsetY + 'px';
+            win_elt.style.left = offsetX + 'px';
+            win_elt.style.top = offsetY + 'px';
             subwin.update_state(rec);
             rec.state = "normal";
 
             offsetX += 20;
             offsetY += 20;
 
-            if (offsetX + child.clientWidth > this.element.innerWidth) {
+            if (offsetX + win_elt.clientWidth > this.element.innerWidth) {
                 offsetX = 0;
             }
-            if (offsetY + child.clientHeight > this.element.innerHeight) {
+            if (offsetY + win_elt.clientHeight > this.element.innerHeight) {
                 offsetY = 0;
             }
         }
@@ -290,12 +290,12 @@ class MDIWidget {
         let col = 0;
         
         for (let subwin of this.children) {
-            let child = subwin.get_element();
+            let win_elt = subwin.get_element();
             let rec = subwin.get_state();
-            child.style.width = tileWidth + 'px';
-            child.style.height = tileHeight + 'px';
-            child.style.left = col * tileWidth + 'px';
-            child.style.top = row * tileHeight + 'px';
+            win_elt.style.width = tileWidth + 'px';
+            win_elt.style.height = tileHeight + 'px';
+            win_elt.style.left = col * tileWidth + 'px';
+            win_elt.style.top = row * tileHeight + 'px';
             subwin.update_state(rec);
             rec.state = "normal";
 

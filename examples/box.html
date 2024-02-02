@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+<div  id="toplevel">
+</div>
+  <script type="module">
+    import { HBox, VBox, Text, TopLevel } from "../Widgets.js";
+
+    const hbox = new HBox();
+    const vbox1 = new VBox();
+    vbox1.add_widget(new Text("Hello, World!"));
+    vbox1.add_widget(new Text("Hello, Pappy!"));
+    const vbox2 = new VBox();
+    vbox2.add_widget(new Text("Hello, Doggy!"));
+    vbox2.add_widget(new Text("Hello, Mammy!"));
+    
+    hbox.add_widget(vbox1);
+    hbox.add_widget(vbox2);
+
+    let top = new TopLevel();
+    top.set_widget(hbox);
+    top.show();
+
+  </script>
+</body>
+</html>

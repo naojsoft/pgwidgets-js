@@ -6,39 +6,48 @@
   <style>
     body {
       margin: 0;
-      overflow: hidden;
     }
   </style>
   <link rel="stylesheet" href="../css/MDIWidget.css" type="text/css" />
 </head>
 <body>
-<div id="menu">
-    <button type="button" id="cascade">Cascade</button> |
-    <button type="button" id="tile">Tile</button>
-</div>
-<div  id="toplevel" style="display: flex; flex-grow: 1; flex-shrink: 1; align-items: stretch; align-content: stretch; box-sizing: border-box; flex-direction: row; flex-wrap: nowrap; height: 100vh;">
-  <div style="border: 2px solid blue; ">
-  You tell em, Sid! 
-  </div>
-  <div style="border: 2px solid red;">
-   Blah blah blah!
-  </div>
 </div>
   <script type="module">
-    import { MDIWidget } from "../modules/MDIWidget.js";
+    import { MDIWidget, Text, Button, HBox, VBox, ButtonBox,
+             TopLevel } from "../Widgets.js";
+
+    let top = new TopLevel();
+    //top.set_size(1000, 700);
+
+    let vbox = new VBox();
+    let hbox = new HBox();
+    let text = new Text("You tell em, Sid!")
+    text.set_border_width(2);
+    text.set_border_color('blue');
+    hbox.add_widget(text);
+    hbox.add_widget(new Text("Blah, blah, blah!"));
+    
     const mdi_area = new MDIWidget(600, 600);
-    let text = document.createTextNode("Hello, World!");
-    mdi_area.add_widget(text, "Happy 2024", 400, 300)
-    let text2 = document.createTextNode("Hello, Pappy!");
-    mdi_area.add_widget(text2, "Yassir!", 300, 200)
+    text = new Text("Hello, World!");
+    mdi_area.add_widget(text, "Happy 2024", 400, 300);
+    text = new Text("Hello, Pappy!");
+    mdi_area.add_widget(text, "Yassir!", 300, 200);
+    hbox.add_widget(mdi_area);
 
-    document.getElementById('toplevel').appendChild(mdi_area.get_element())
+    let bbox = new ButtonBox();
+    let btn1 = new Button("Cascade");
+    let btn2 = new Button("Tile");
+    bbox.add_widget(btn1, 1);
+    bbox.add_widget(new Text(" | "));
+    bbox.add_widget(btn2, 1);
+    vbox.add_widget(bbox, 0);
+    vbox.add_widget(hbox, 1);
+    
+    top.set_widget(vbox);
+    top.show();
 
-    // Example of tiling and cascading
-    //mdi_area.tile_windows();
-    //mdi_area.cascade_windows();
-    document.getElementById('cascade').onclick = () => mdi_area.cascade_windows();
-    document.getElementById('tile').onclick = () => mdi_area.tile_windows();
+    //document.getElementById('cascade').onclick = () => mdi_area.cascade_windows();
+    //document.getElementById('tile').onclick = () => mdi_area.tile_windows();
 
   </script>
 </body>

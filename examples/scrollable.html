@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+</div>
+  <script type="module">
+    import { TopLevel, Text, Scrollable } from "../Widgets.js";
+
+    let top = new Widgets.TopLevel();
+    top.set_size(300, 300);
+
+    let scr = new Widgets.Scrollable();
+    scr.set_size(300, 300);
+    let text = new Widgets.Text('You tell em, Sid!');
+    text.set_size(400, 400);
+    scr.set_widget(text);
+
+    top.set_widget(scr);
+    top.show();
+
+  </script>
+</body>
+</html>

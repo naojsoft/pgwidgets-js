@@ -6,37 +6,30 @@
   <style>
     body {
       margin: 0;
-      overflow: hidden;
     }
   </style>
   <!-- link rel="stylesheet" href="./css/Splitter.css" type="text/css" /-->
 </head>
 <body>
-<div id="menu">
-    <button type="button" id="cascade">Add child</button> |
-</div>
-<div  id="toplevel">
-</div>
   <script type="module">
-    import { Splitter } from "../modules/Splitter.js";
+    import { Splitter, Text, TopLevel, Button, VBox } from "../Widgets.js";
+
+    const vbox = new VBox();
+    const btn = new Button("Add Child");
+    vbox.add_widget(btn, 0);
     const splitter = new Splitter('horizontal');
-    let elt1 = document.createElement('div');
-    let text = document.createTextNode("Hello, World!");
-    elt1.appendChild(text)
-    splitter.add_widget(elt1)
-    let elt2 = document.createElement('div');
-    let text2 = document.createTextNode("Hello, Pappy!");
-    elt2.appendChild(text2)
-    splitter.add_widget(elt2)
-    let elt3 = document.createElement('div');
-    let text3 = document.createTextNode("Hello, Mammy!");
-    elt3.appendChild(text3)
-    splitter.add_widget(elt3)
+    let w = new Text("Hello, World!")
+    splitter.add_widget(w)
+    w = new Text("Hello, Pappy!")
+    splitter.add_widget(w)
+    w = new Text("Hello, Mammy!");
+    splitter.add_widget(w)
+    vbox.add_widget(splitter, 1);
 
-    document.getElementById('toplevel').appendChild(splitter.get_element())
-
-    //document.getElementById('tile').onclick = () => mdi_area.tile_windows();
-
+    let top = new TopLevel()
+    top.set_widget(vbox)
+    top.show()
+    
   </script>
 </body>
 </html>

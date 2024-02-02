@@ -1,8 +1,11 @@
 "use_strict";
 
-class Splitter {
+import {ContainerWidget} from "./Widget.js";
 
-    constructor(orientation) {
+class Splitter extends ContainerWidget {
+
+    constructor(orientation='horizontal') {
+        super();
         this.orientation = orientation;
         this.isDragging = false;
         this.handles = [];
@@ -10,32 +13,26 @@ class Splitter {
         
         this.element = document.createElement('div');
         this.element.className = 'splitter';
-        this.element.style.position = 'relative';
-        this.element.style.display = 'flex';
-        //this.element.style.width = width + 'px';
-        //this.element.style.height = height + 'px';
+        let style = this.element.style;
+        style.position = 'relative';
+        style.display = 'flex';
+        //style.width = width + 'px';
+        //style.height = height + 'px';
         if (orientation === 'vertical') {
-            this.element.style.height = '100%';
-            this.element.style.width = '100vw';
-            this.element.style['flex-direction'] = 'column';
+            style.height = '100%';
+            style.width = '100vw';
+            style['flex-direction'] = 'column';
         }
         else {
-            this.element.style.width = '100%';
-            this.element.style.height = '100vh';
-            this.element.style['flex-direction'] = 'row';
+            style.width = '100%';
+            style.height = '100vh';
+            style['flex-direction'] = 'row';
         };
-        this.element.style.flex = '1';
-        this.element.style.backgroundColor = 'lightblue';
-        this.element.style.border = '2px solid green';
-        this.element.style.overflow = 'hidden';
-        this.element.style.margin = 0;
-
-        this.children = [];
-        this.windowStateMap = new Map();
-    }
-
-    get_element() {
-        return this.element;
+        style.flex = '1';
+        style.backgroundColor = 'lightblue';
+        style.border = '2px solid green';
+        style.overflow = 'hidden';
+        style.margin = 0;
     }
 
     add_widget(child) {
@@ -51,11 +48,10 @@ class Splitter {
         const pane = document.createElement('div');
         pane.className = 'splitter-pane';
         pane.style.overflow = 'hidden';
-        pane.appendChild(child)
-        //this.children.push(child);
-        //this.element.appendChild(child.get_element());
+        pane.appendChild(child.get_element())
         this.element.appendChild(pane);
         this.panes.push(pane);
+        this.children.push(child);
     }
 
     add_divider() {
