@@ -1,0 +1,107 @@
+/*
+ * Styling the TabWidget
+ */
+.tab-widget {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+}
+
+.tab-header {
+    display: flex;
+}
+
+.tab-header button {
+    padding: 10px;
+    cursor: pointer;
+    border: 1px solid #ccc;
+    background-color: #f1f1f1;
+    border-radius: 8px 8px 0 0;
+    margin-right: 2px;
+    outline: none;
+}
+
+.tab-header-bottom button {
+    border-radius: 0 0 8px 8px;
+}
+
+.tab-header-left button {
+    border-radius: 8px 0 0 8px;
+    margin-bottom: 2px;
+}
+
+.tab-header-right button {
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 2px;
+}
+
+.tab-header button.active {
+    background-color: #ccc;
+    border-bottom: 1px solid transparent;
+}
+
+.tab-header-bottom button.active {
+    border-top: 1px solid transparent;
+    border-bottom: 1px solid #ccc;
+}
+
+.tab-header-left button.active {
+    border-right: 1px solid transparent;
+    border-left: 1px solid #ccc;
+}
+
+.tab-header-right button.active {
+    border-left: 1px solid transparent;
+    border-right: 1px solid #ccc;
+}
+
+.tab-header button .close {
+    margin-left: 5px;
+    border: 1px solid #000000;
+    cursor: pointer;
+}
+
+.tab-content-container {
+    overflow: hidden;
+    border: 1px solid #ccc;
+    padding: 2px;
+    display: block;
+    flex: 1;
+}
+/*
+.tab-content {
+    border: 1px solid #ccc;
+    padding: 10px;
+    display: none;
+    flex: 1;
+}
+
+.tab-content.active {
+    display: block;
+}
+*/
+.draggable {
+    cursor: move;
+    user-select: none;
+}
+
+.tab-widget.vertical .tab-header {
+    flex-direction: column;
+}
+
+.tab-widget.vertical .tab-content {
+    order: 2;
+}
+
+.tab-widget.tab-header-bottom .tab-header {
+    order: 2;
+}
+
+.tab-widget.tab-header-left {
+    flex-direction: row;
+}
+
+.tab-widget.tab-header-right {
+    flex-direction: row-reverse;
+}

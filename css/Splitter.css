@@ -1,38 +1,49 @@
-
-.splitter-container-horizontal {
+/*
+ * Styling the Splitter widget
+ */
+.splitter {
     display: flex;
+    background-color: #EAEAEA;
+    margin: 0;
+    border: 2px outset green;
+    overflow: hidden;
+}
+
+.splitter.horizontal {
     flex-direction: row;
     height: 100vh;
-    margin: 0;
-    overflow: hidden;
 }
 
-.splitter-container-vertical {
-    display: flex;
+.splitter.vertical {
     flex-direction: column;
     width: 100vw;
-    margin: 0;
-    overflow: hidden;
 }
 
-.splitter-handle-horizontal {
-    cursor: ew-resize;
-    background-color: #ddd;
-    height: 10px;
-    width: 100%;
+.splitter-handle {
+    display: flex;
+    justify-content: center;
+    background-color: #ccc;
+/*  border-width: 0px; */
+    border: 1px solid #808080;
     box-sizing: border-box;
 }
 
-.splitter-handle-vertical {
+.splitter-handle.horizontal {
+    flex-direction: column;
     cursor: ew-resize;
-    background-color: #ddd;
-    width: 10px;
+    width: 8px;
     height: 100%;
-    box-sizing: border-box;
+}
+
+.splitter-handle.vertical {
+    flex-direction: row;
+    cursor: ns-resize;
+    height: 8px;
+    width: 100%;
 }
 
 .splitter-pane {
-    flex: 1;
     overflow: hidden;
-    border: 1px solid #ddd;
+    border: 0px;
+    padding: 2px;
 }

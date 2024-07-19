@@ -4,35 +4,44 @@ import {ContainerWidget} from "./Widget.js";
 
 class Splitter extends ContainerWidget {
 
-    constructor(orientation='horizontal') {
+    constructor(options = {orientation: 'horizontal'}) {
         super();
-        this.orientation = orientation;
+        this.element = this.get_option(options, 'element', null);
+        if (this.element == null) {
+            this.element = document.createElement('div');
+        }
+        this.element.className = 'splitter';
+        this.orientation = this.get_option(options, 'orientation', 'horizontal');
+
+        let style = this.element.style;
+        style.position = 'relative';
+        style.display = 'flex';
+
+        if (this.orientation === 'vertical') {
+            this.element.classList.add('vertical');
+            //style.height = '100%';
+            //style.width = '100vw';
+            style['flex-direction'] = 'column';
+        }
+        else {
+            this.element.classList.add('horizontal');
+            //style.width = '100%';
+            //style.height = '100vh';
+            style['flex-direction'] = 'row';
+        };
+        //style.flex = '1';
+        style.overflow = 'hidden';
+
         this.isDragging = false;
         this.handles = [];
         this.panes = [];
         
-        this.element = document.createElement('div');
-        this.element.className = 'splitter';
-        let style = this.element.style;
-        style.position = 'relative';
-        style.display = 'flex';
-        //style.width = width + 'px';
-        //style.height = height + 'px';
-        if (orientation === 'vertical') {
-            style.height = '100%';
-            style.width = '100vw';
-            style['flex-direction'] = 'column';
-        }
-        else {
-            style.width = '100%';
-            style.height = '100vh';
-            style['flex-direction'] = 'row';
-        };
-        style.flex = '1';
-        style.backgroundColor = 'lightblue';
-        style.border = '2px solid green';
-        style.overflow = 'hidden';
-        style.margin = 0;
+        // JavaScript hack to bind "this" correctly for our methods
+        this.add_widget = this.add_widget.bind(this);
+        this.add_divider = this.add_divider.bind(this);
+        this.onMouseDown = this.onMouseDown.bind(this);
+        this.onMouseMove = this.onMouseMove.bind(this);
+        this.onMouseUp = this.onMouseUp.bind(this);
     }
 
     add_widget(child) {
@@ -48,7 +57,7 @@ class Splitter extends ContainerWidget {
         const pane = document.createElement('div');
         pane.className = 'splitter-pane';
         pane.style.overflow = 'hidden';
-        pane.appendChild(child.get_element())
+        pane.appendChild(child.get_element());
         this.element.appendChild(pane);
         this.panes.push(pane);
         this.children.push(child);
@@ -56,19 +65,22 @@ class Splitter extends ContainerWidget {
 
     add_divider() {
         let handle = document.createElement('div');
+        handle.className = 'splitter-handle';
+        let image = document.createElement('img');
+        // prevent divider image from interfering with dragging 
+        image.addEventListener('dragstart', (event) => event.preventDefault());
+
         if (this.orientation === 'vertical') {
-            handle.style.width = '100%';
-            handle.style.height = '10px';
-            handle.className = 'splitter-handle-vertical';
+            handle.classList.add('vertical');
+            image.width = 24;
+            image.src = "../icons/hdots.svg";
         }
         else {
-            handle.style.height = '100%';
-            handle.style.width = '10px';
-            handle.className = 'splitter-handle-horizontal';
+            handle.classList.add('horizontal');
+            image.height = 24;
+            image.src = "../icons/vdots.svg";
         };
-        handle.style.cursor = 'ew-resize';
-        handle.style['background-color'] = '#ddd';
-        handle.style['box-sizing'] = 'border-box';
+        handle.appendChild(image);
 
         this.element.appendChild(handle);
         return handle;

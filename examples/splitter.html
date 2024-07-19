@@ -8,7 +8,7 @@
       margin: 0;
     }
   </style>
-  <!-- link rel="stylesheet" href="./css/Splitter.css" type="text/css" /-->
+  <link rel="stylesheet" href="../css/Splitter.css" type="text/css" />
 </head>
 <body>
   <script type="module">
@@ -17,7 +17,8 @@
     const vbox = new VBox();
     const btn = new Button("Add Child");
     vbox.add_widget(btn, 0);
-    const splitter = new Splitter('horizontal');
+    const splitter = new Splitter({orientation: 'vertical'});
+    splitter.set_size(250, 800)
     let w = new Text("Hello, World!")
     splitter.add_widget(w)
     w = new Text("Hello, Pappy!")
@@ -26,9 +27,10 @@
     splitter.add_widget(w)
     vbox.add_widget(splitter, 1);
 
-    let top = new TopLevel()
-    top.set_widget(vbox)
-    top.show()
+    let top = new TopLevel();
+    top.set_widget(vbox);
+    top.set_size(300, 1000);
+    top.show();
     
   </script>
 </body>

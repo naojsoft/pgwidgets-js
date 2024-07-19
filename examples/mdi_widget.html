@@ -17,7 +17,7 @@
              TopLevel } from "../Widgets.js";
 
     let top = new TopLevel();
-    //top.set_size(1000, 700);
+    top.set_size(1000, 700);
 
     let vbox = new VBox();
     let hbox = new HBox();
@@ -27,27 +27,28 @@
     hbox.add_widget(text);
     hbox.add_widget(new Text("Blah, blah, blah!"));
     
-    const mdi_area = new MDIWidget(600, 600);
+    const mdi_area = new MDIWidget();
     text = new Text("Hello, World!");
-    mdi_area.add_widget(text, "Happy 2024", 400, 300);
+    mdi_area.add_widget(text, {title: "Happy 2024", width: 400, height: 300});
     text = new Text("Hello, Pappy!");
-    mdi_area.add_widget(text, "Yassir!", 300, 200);
+    mdi_area.add_widget(text, {title: "Yassir!", width: 300, height: 200});
     hbox.add_widget(mdi_area);
 
     let bbox = new ButtonBox();
     let btn1 = new Button("Cascade");
     let btn2 = new Button("Tile");
-    bbox.add_widget(btn1, 1);
+    bbox.add_widget(btn1);
     bbox.add_widget(new Text(" | "));
-    bbox.add_widget(btn2, 1);
+    bbox.add_widget(btn2);
+    bbox.add_widget(new Text(''), 1);
     vbox.add_widget(bbox, 0);
     vbox.add_widget(hbox, 1);
     
     top.set_widget(vbox);
     top.show();
 
-    //document.getElementById('cascade').onclick = () => mdi_area.cascade_windows();
-    //document.getElementById('tile').onclick = () => mdi_area.tile_windows();
+    btn1.element.onclick = () => mdi_area.cascade_windows();
+    btn2.element.onclick = () => mdi_area.tile_windows();
 
   </script>
 </body>

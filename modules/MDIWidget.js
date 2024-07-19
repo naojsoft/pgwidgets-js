@@ -2,27 +2,54 @@
 
 import {ContainerWidget} from "./Widget.js";
 
+const default_icon_url = "../icons/ginga.svg";
+
+
 class MDISubWindow extends ContainerWidget {
 
-    constructor(mdi_widget, child, title, width, height) {
+    constructor(mdi_widget, child, title, width, height, icon_url) {
         super();
         // the MDI window we belong to
         this.mdi_widget = mdi_widget
         //this.mdi_widget = null;
         
+        // JavaScript hack to bind "this" correctly for our methods
+        this.update_state = this.update_state.bind(this);
+        this.get_state = this.get_state.bind(this);
+        this.makeDraggable = this.makeDraggable.bind(this);
+        this.makeResizable = this.makeResizable.bind(this);
+        this.toggle_minimize = this.toggle_minimize.bind(this);
+        this.toggle_maximize = this.toggle_maximize.bind(this);
+        this.raise_ = this.raise_.bind(this);
+        this.lower_ = this.lower.bind(this);
+        this.close = this.close.bind(this);
+
         this.element = document.createElement('div');
-        this.element.className = 'mdi-child';
+        this.element.className = 'mdi-window';
         let style = this.element.style;
         style.width = width + 'px';
         style.height = height + 'px';
-        style.zIndex = this.mdi_widget.zIndexCounter++;
+        style.zIndex = 1;
         
         this.titleBar = document.createElement('div');
         this.titleBar.className = 'mdi-title-bar';
-        this.titleBar.innerHTML = title;
+
+        this.icon = document.createElement('img');
+        if (icon_url) {
+            this.icon.src = icon_url;
+            this.icon.width = 20;
+        }
+
+        this.titleText = document.createElement('span');
+        this.titleText.innerHTML = title;
 
         this.buttons = document.createElement('div');
         this.buttons.className = 'mdi-buttons';
+
+        this.lowerButton = document.createElement('div');
+        this.lowerButton.className = 'mdi-button';
+        this.lowerButton.innerHTML = '▼';
+        this.lowerButton.onclick = () => this.lower();
 
         this.minimizeButton = document.createElement('div');
         this.minimizeButton.className = 'mdi-button';
@@ -39,13 +66,21 @@ class MDISubWindow extends ContainerWidget {
         this.closeButton.innerHTML = '✕';
         this.closeButton.onclick = () => this.close();
 
+        this.buttons.appendChild(this.lowerButton);
         this.buttons.appendChild(this.minimizeButton);
         this.buttons.appendChild(this.maximizeButton);
         this.buttons.appendChild(this.closeButton);
 
+        this.child_container = document.createElement('div');
+        this.child_container.className = 'mdi-child-container';
+        this.child_container.appendChild(child.get_element());
+        
+        this.titleBar.appendChild(this.icon);
+        this.titleBar.appendChild(this.titleText);
         this.titleBar.appendChild(this.buttons);
+        
         this.element.appendChild(this.titleBar);
-        this.element.appendChild(child.get_element())
+        this.element.appendChild(this.child_container);
         this.children.push(child);
 
         // Random placement of subwindow
@@ -217,7 +252,28 @@ class MDISubWindow extends ContainerWidget {
     }
     
     raise_() {
-        this.element.style.zIndex = this.mdi_widget.zIndexCounter++;
+        let num_children = this.mdi_widget.children.length;
+        this.element.style.zIndex = num_children;
+        for (let subwin of this.mdi_widget.children) {
+            if (subwin != this) {
+                let win_elt = subwin.get_element();
+                if (win_elt.style.zIndex == num_children) {
+                    win_elt.style.zIndex--;
+                }
+            }
+        }
+    }
+    
+    lower() {
+        this.element.style.zIndex = 1;
+        for (let subwin of this.mdi_widget.children) {
+            if (subwin != this) {
+                let win_elt = subwin.get_element();
+                if (win_elt.style.zIndex == 1) {
+                    win_elt.style.zIndex++;
+                }
+            }
+        }
     }
     
     close() {
@@ -228,30 +284,36 @@ class MDISubWindow extends ContainerWidget {
     
 class MDIWidget extends ContainerWidget {
 
-    constructor(width, height) {
+    constructor(options = { }) {
         super();
-        this.element = document.createElement('div');
-        this.element.className = 'mdi-container';
+        this.element = this.get_option(options, 'element', null);
+        if (this.element == null) {
+            this.element = document.createElement('div');
+        }
+        this.element.className = 'mdi-widget';
         let style = this.element.style;
         style.position = 'relative';
-        //style.width = width + 'px';
-        //style.height = height + 'px';
-        style.width = '100%';
-        style.height = '100%';
-        //style.flex = '1';
-        style.backgroundColor = 'lightblue';
-        style.border = '2px solid green';
         style.overflow = 'scroll';
 
-        this.zIndexCounter = 1;
         this.windowStateMap = new Map();
+
+        // JavaScript hack to bind "this" correctly for our methods
+        this.add_widget = this.add_widget.bind(this);
+        this.cascade_windows = this.cascade_windows.bind(this);
+        this.tile_windows = this.tile_windows.bind(this);
     }
 
-    add_widget(child, title, width, height) {
-        const subwin = new MDISubWindow(this, child, title, width, height);
-        //subwin.mdi_widget = this;
+    add_widget(child, options = { title: "", width: 300, height: 300, icon_url: null }) {
+        const title = this.get_option(options, 'title', '');
+        const width = this.get_option(options, 'width', 300);
+        const height = this.get_option(options, 'height', 300);
+        const icon_url = this.get_option(options, 'icon_url', default_icon_url);
+
+        const subwin = new MDISubWindow(this, child, title, width, height, icon_url);
         this.children.push(subwin);
         this.element.appendChild(subwin.get_element());
+
+        subwin.raise_()
     }
     
     cascade_windows() {

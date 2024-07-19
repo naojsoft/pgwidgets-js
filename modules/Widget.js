@@ -23,6 +23,13 @@ class Widget {
         return this.element;
     }
 
+    get_option(obj, key, default_value) {
+        if (key in obj) {
+            return obj[key];
+        }
+        return default_value;
+    }
+
     set_border_width(width) {
         this.element.style['border-width'] = width + 'px';
     }
@@ -32,6 +39,11 @@ class Widget {
     }
 
     set_size(width, height) {
+        this.element.style.width = width + 'px';
+        this.element.style.height = height + 'px';
+    }
+
+    resize(width, height) {
         this.element.style.width = width + 'px';
         this.element.style.height = height + 'px';
     }
