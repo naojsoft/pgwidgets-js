@@ -13,10 +13,10 @@
 }
 
 .tab-header button {
-    padding: 10px;
+    padding: 6px;
     cursor: pointer;
-    border: 1px solid #ccc;
-    background-color: #f1f1f1;
+    border: 1px solid #C3C3C3;
+    background-color: #F1F1F1;
     border-radius: 8px 8px 0 0;
     margin-right: 2px;
     outline: none;
@@ -37,23 +37,23 @@
 }
 
 .tab-header button.active {
-    background-color: #ccc;
+    background-color: #C3C3C3;
     border-bottom: 1px solid transparent;
 }
 
 .tab-header-bottom button.active {
     border-top: 1px solid transparent;
-    border-bottom: 1px solid #ccc;
+    border-bottom: 1px solid #C3C3C3;
 }
 
 .tab-header-left button.active {
     border-right: 1px solid transparent;
-    border-left: 1px solid #ccc;
+    border-left: 1px solid #C3C3C3;
 }
 
 .tab-header-right button.active {
     border-left: 1px solid transparent;
-    border-right: 1px solid #ccc;
+    border-right: 1px solid #C3C3C3;
 }
 
 .tab-header button .close {
@@ -64,7 +64,7 @@
 
 .tab-content-container {
     overflow: hidden;
-    border: 1px solid #ccc;
+    border: 1px solid #C3C3C3;
     padding: 2px;
     display: block;
     flex: 1;

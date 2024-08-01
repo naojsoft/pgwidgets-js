@@ -5,25 +5,22 @@
     display: flex;
     background-color: #EAEAEA;
     margin: 0;
-    border: 2px outset green;
+    border: 2px;
     overflow: hidden;
 }
 
 .splitter.horizontal {
     flex-direction: row;
-    height: 100vh;
 }
 
 .splitter.vertical {
     flex-direction: column;
-    width: 100vw;
 }
 
 .splitter-handle {
     display: flex;
     justify-content: center;
     background-color: #ccc;
-/*  border-width: 0px; */
     border: 1px solid #808080;
     box-sizing: border-box;
 }

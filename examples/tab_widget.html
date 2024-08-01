@@ -8,28 +8,26 @@
       margin: 0;
     }
   </style>
-  <link rel="stylesheet" href="../css/TabWidget.css" type="text/css" />
+  <link rel="stylesheet" href="../Widgets.css" type="text/css" />
 </head>
 <body>
 </div>
   <script type="module">
-    import { TabWidget, Text, Button, HBox, VBox, ButtonBox,
-             TopLevel } from "../Widgets.js";
+    import { Widgets } from "../Widgets.js";
 
-    let top = new TopLevel();
+    let top = new Widgets.TopLevel();
     top.resize(1000, 700);
 
-    let vbox = new VBox();
+    let vbox = new Widgets.VBox();
     
-    const tab_w = new TabWidget({closable: true, reorderable: true, tab_position: 'top'});
-    //tab_w.resize(900, 600)
-    let text = new Text("Hello, World!");
+    const tab_w = new Widgets.TabWidget({closable: true, reorderable: true, tab_position: 'top'});
+    let text = new Widgets.Text({text: "Hello, World!"});
     tab_w.add_widget(text, {title: "Happy 2024"});
-    text = new Text("Hello, Pappy!");
+    text = new Widgets.Text({text: "Hello, Pappy!"});
     tab_w.add_widget(text, {title: "Yassir!"});
-    text = new Text("Third tab content!");
+    text = new Widgets.Text({text: "Third tab content!"});
     tab_w.add_widget(text, {title: "Tres"});
-    vbox.add_widget(tab_w);
+    vbox.add_widget(tab_w, 1);
 
     top.set_widget(vbox);
     top.show();

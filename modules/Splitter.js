@@ -31,6 +31,7 @@ class Splitter extends ContainerWidget {
         };
         //style.flex = '1';
         style.overflow = 'hidden';
+        style.gap = '2px';
 
         this.isDragging = false;
         this.handles = [];

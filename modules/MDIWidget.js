@@ -16,12 +16,14 @@ class MDISubWindow extends ContainerWidget {
         // JavaScript hack to bind "this" correctly for our methods
         this.update_state = this.update_state.bind(this);
         this.get_state = this.get_state.bind(this);
+        this.get_child = this.get_child.bind(this);
         this.makeDraggable = this.makeDraggable.bind(this);
         this.makeResizable = this.makeResizable.bind(this);
         this.toggle_minimize = this.toggle_minimize.bind(this);
         this.toggle_maximize = this.toggle_maximize.bind(this);
         this.raise_ = this.raise_.bind(this);
         this.lower_ = this.lower.bind(this);
+        this.signal_close = this.signal_close.bind(this);
         this.close = this.close.bind(this);
 
         this.element = document.createElement('div');
@@ -64,7 +66,7 @@ class MDISubWindow extends ContainerWidget {
         this.closeButton = document.createElement('div');
         this.closeButton.className = 'mdi-button';
         this.closeButton.innerHTML = '✕';
-        this.closeButton.onclick = () => this.close();
+        this.closeButton.onclick = () => this.signal_close();
 
         this.buttons.appendChild(this.lowerButton);
         this.buttons.appendChild(this.minimizeButton);
@@ -119,6 +121,10 @@ class MDISubWindow extends ContainerWidget {
             return newrec;
         }
     };
+
+    get_child() {
+        return this.children[0];
+    }
     
     makeDraggable(element, handle) {
         let baseX, baseY;
@@ -262,6 +268,8 @@ class MDISubWindow extends ContainerWidget {
                 }
             }
         }
+
+        this.mdi_widget.make_callback('page-switch', this.get_child());
     }
     
     lower() {
@@ -274,11 +282,21 @@ class MDISubWindow extends ContainerWidget {
                 }
             }
         }
+
+        // TODO: some child should get the page-switch callback
+        //this.mdi_widget.make_callback('page-switch', ??);
     }
     
+    signal_close() {
+        this.mdi_widget.make_callback('page-close', this.get_child());
+    }
+
     close() {
-        // TODO: needs to raise an event
+        this.mdi_widget.close_child(this.get_child());
         this.element.remove();
+
+        // TODO: some child should get the page-switch callback
+        //this.mdi_widget.make_callback('page-switch', ??);
     }
 }
     
@@ -301,6 +319,12 @@ class MDIWidget extends ContainerWidget {
         this.add_widget = this.add_widget.bind(this);
         this.cascade_windows = this.cascade_windows.bind(this);
         this.tile_windows = this.tile_windows.bind(this);
+        this.get_subwin = this.get_subwin.bind(this);
+        this.close_child = this.close_child.bind(this);
+
+        for (let name of ['page-switch', 'page-close']) {
+            this.enable_callback(name);
+        }
     }
 
     add_widget(child, options = { title: "", width: 300, height: 300, icon_url: null }) {
@@ -314,6 +338,7 @@ class MDIWidget extends ContainerWidget {
         this.element.appendChild(subwin.get_element());
 
         subwin.raise_()
+        return subwin;
     }
     
     cascade_windows() {
@@ -368,6 +393,25 @@ class MDIWidget extends ContainerWidget {
             }
         }
     }
+
+    get_subwin(child) {
+        for (let subwin of this.children) {
+            let subwin_child = subwin.get_child();
+            if (subwin_child === child) {
+                return subwin;
+            }
+        }
+        return null;
+    }
+
+    close_child(child) {
+        let subwin = this.get_subwin(child);
+        if (subwin !== null) {
+            this.remove(child);
+            subwin.close();
+        }
+    }
+
 }
 
 export { MDISubWindow, MDIWidget };

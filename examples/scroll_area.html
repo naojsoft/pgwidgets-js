@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+    }
+  </style>
+  <link rel="stylesheet" href="../Widgets.css" type="text/css" />
+</head>
+<body>
+</div>
+  <script type="module">
+    import { Widgets } from "../Widgets.js";
+
+    let top = new Widgets.TopLevel();
+    top.resize(500, 500);
+
+    let scr = new Widgets.Scrollable();
+    //scr.resize(300, 300);
+    
+    let text = new Widgets.Text({text: `Lorem ipsum odor amet, consectetuer adipiscing elit. Cursus aliquam facilisis sociosqu a fringilla turpis. Rutrum vel placerat tristique consectetur dapibus. Justo consectetur etiam curabitur commodo gravida magnis lacus hendrerit auctor. Netus vitae pharetra blandit non id mattis senectus. Cras venenatis scelerisque vitae convallis dapibus nascetur posuere. Quis sociosqu integer feugiat hac conubia.
+
+Placerat gravida ante, cras nascetur sodales sed? Ultricies suspendisse enim interdum sociosqu himenaeos torquent fames commodo. Lorem dapibus turpis maecenas ipsum, tempus enim. Massa vulputate per litora etiam, dignissim aptent. Varius maximus lacus hendrerit tristique euismod mi? Aenean auctor magna etiam; dignissim elementum sapien. Aet fringilla eros habitasse lacus felis eget. At lectus mi facilisis class urna.
+
+Adipiscing neque mauris leo a nibh odio felis pharetra tincidunt. Neque himenaeos erat inceptos duis elit sapien commodo platea. Est feugiat ligula nibh; varius maecenas morbi. Neque litora amet facilisi posuere torquent. Taciti laoreet porta sed; blandit cras nulla. Neque ut urna faucibus congue; libero fusce enim feugiat. Auctor nisl inceptos etiam diam condimentum massa.
+
+Suscipit lacinia vivamus mattis erat phasellus. Primis curae iaculis mauris turpis vulputate praesent litora blandit nulla? Dapibus aenean ridiculus magna erat; molestie at nascetur. Risus ultrices senectus dictumst aliquet habitant nullam cursus aliquam? Semper porta gravida ligula sed netus hendrerit bibendum. Commodo consectetur quisque; facilisi malesuada sapien rutrum. Ullamcorper penatibus laoreet arcu et dictumst sollicitudin nascetur. Diam elit quam placerat habitant massa aliquam. Eros luctus fames arcu vehicula blandit non efficitur ridiculus ullamcorper. Fermentum platea vulputate aptent eget enim arcu habitant.
+
+Diam ad suspendisse bibendum ullamcorper suspendisse class torquent vitae. Congue leo ultricies maximus justo curabitur molestie. Et habitasse eleifend inceptos pulvinar venenatis, purus nisl phasellus. Per morbi et commodo montes phasellus nam condimentum pulvinar? Porta lectus faucibus mus posuere integer; rutrum justo fames. Porttitor mauris cras inceptos mauris duis nisl dapibus. Feugiat tellus arcu elementum ante molestie eleifend!`});
+    scr.set_widget(text);
+
+    top.set_widget(scr);
+    top.show();
+
+  </script>
+</body>
+</html>

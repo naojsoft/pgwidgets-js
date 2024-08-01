@@ -8,47 +8,40 @@
       margin: 0;
     }
   </style>
-  <link rel="stylesheet" href="../css/MDIWidget.css" type="text/css" />
+  <link rel="stylesheet" href="../Widgets.css" type="text/css" />
 </head>
 <body>
 </div>
   <script type="module">
-    import { MDIWidget, Text, Button, HBox, VBox, ButtonBox,
-             TopLevel } from "../Widgets.js";
+    import { Widgets } from "../Widgets.js";
 
-    let top = new TopLevel();
-    top.set_size(1000, 700);
+    let top = new Widgets.TopLevel();
+    //top.set_size(1000, 700);
 
-    let vbox = new VBox();
-    let hbox = new HBox();
-    let text = new Text("You tell em, Sid!")
-    text.set_border_width(2);
-    text.set_border_color('blue');
-    hbox.add_widget(text);
-    hbox.add_widget(new Text("Blah, blah, blah!"));
-    
-    const mdi_area = new MDIWidget();
-    text = new Text("Hello, World!");
+    let vbox = new Widgets.VBox();
+    const mdi_area = new Widgets.MDIWidget();
+    let text = new Widgets.Text({text: "Hello, World!"});
     mdi_area.add_widget(text, {title: "Happy 2024", width: 400, height: 300});
-    text = new Text("Hello, Pappy!");
+    text = new Widgets.Text({text: "Hello, Pappy!"});
     mdi_area.add_widget(text, {title: "Yassir!", width: 300, height: 200});
-    hbox.add_widget(mdi_area);
 
-    let bbox = new ButtonBox();
-    let btn1 = new Button("Cascade");
-    let btn2 = new Button("Tile");
+    let hbox = new Widgets.HBox();
+    let bbox = new Widgets.ButtonBox();
+    let btn1 = new Widgets.Button("Cascade");
+    let btn2 = new Widgets.Button("Tile");
     bbox.add_widget(btn1);
-    bbox.add_widget(new Text(" | "));
+    bbox.add_widget(new Widgets.Text({text: " | "}));
     bbox.add_widget(btn2);
-    bbox.add_widget(new Text(''), 1);
-    vbox.add_widget(bbox, 0);
-    vbox.add_widget(hbox, 1);
+    hbox.add_widget(bbox)
+    hbox.add_widget(new Widgets.Text({text: ''}));
+    vbox.add_widget(hbox, 0);
+    vbox.add_widget(mdi_area, 1);
     
     top.set_widget(vbox);
     top.show();
 
-    btn1.element.onclick = () => mdi_area.cascade_windows();
-    btn2.element.onclick = () => mdi_area.tile_windows();
+    btn1.add_callback('activated', (w) => mdi_area.cascade_windows());
+    btn2.add_callback('activated', (w) => mdi_area.tile_windows());
 
   </script>
 </body>

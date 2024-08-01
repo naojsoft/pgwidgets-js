@@ -21,14 +21,19 @@ class TabWidget extends ContainerWidget {
         this.tabPos = this.get_option(options, 'tab_position', 'top');
 
         // JavaScript hack to bind "this" correctly for our methods
-        this.addTab = this.addTab.bind(this);
-        this.showTab = this.showTab.bind(this);
-        this.closeTab = this.closeTab.bind(this);
+        this.get_tab_id = this.get_tab_id.bind(this);
+        this.get_child = this.get_child.bind(this);
+        this._addTab = this._addTab.bind(this);
+        this._showTab = this._showTab.bind(this);
+        this._closeTab = this._closeTab.bind(this);
+        this.signal_close = this.signal_close.bind(this);
         this.handleDragStart = this.handleDragStart.bind(this);
         this.handleDrop = this.handleDrop.bind(this);
         this.set_index = this.set_index.bind(this);
         this.get_index = this.get_index.bind(this);
         this.add_widget = this.add_widget.bind(this);
+        this.close_widget = this.close_widget.bind(this);
+        this.show_widget = this.show_widget.bind(this);
 
         this.tabContentContainer = document.createElement('div');
         this.tabContentContainer.className = 'tab-content-container';
@@ -64,12 +69,35 @@ class TabWidget extends ContainerWidget {
                 this.element.appendChild(this.tabHeader);
             }
         }
+
+        for (let name of ['page-switch', 'page-close']) {
+            this.enable_callback(name);
+        }
     }
 
-    addTab(title, content) {
+    get_child(tab_id) {
+        for (let [_tab_id, tab_rec] of this.tab_info.entries()) {
+            if (_tab_id === tab_id) {
+                return tab_rec;
+            }
+        }
+        return null;
+    }
+    
+    get_tab_id(child) {
+        for (let [tab_id, tab_rec] of this.tab_info.entries()) {
+            if (tab_rec.child == child) {
+                return tab_id;
+            }
+        }
+        return null;
+    }
+    
+    _addTab(title, child) {
         const index = this.tabs.length;
         const tab_id = `tab_${this.tab_id_counter++}`;
         let tabButton = null;
+        let content = child.get_element();
         
         if (this.tabPos !== 'none') {
             tabButton = document.createElement('button');
@@ -81,7 +109,7 @@ class TabWidget extends ContainerWidget {
                 closeButton.textContent = '×';
                 closeButton.addEventListener('click', (event) => {
                     event.stopPropagation();
-                    this.closeTab(tab_id);
+                    this.signal_close(tab_id);
                 });
                 tabButton.appendChild(closeButton);
             }
@@ -94,21 +122,21 @@ class TabWidget extends ContainerWidget {
                 tabButton.addEventListener('drop', this.handleDrop);
             }
 
-            tabButton.addEventListener('click', () => this.showTab(tab_id));
+            tabButton.addEventListener('click', () => this._showTab(tab_id));
         
             this.tabHeader.appendChild(tabButton);
         }
 
-        let tab_rec = { title, content, tabButton };
+        let tab_rec = { title, content, tabButton, child };
         this.tab_info.set(tab_id, tab_rec);
         this.tabs.push(tab_id);
       
         if (index === 0) {
-            this.showTab(tab_id);
+            this._showTab(tab_id);
         }
     }
 
-    showTab(tab_id) {
+    _showTab(tab_id) {
         const tab_rec = this.tab_info.get(tab_id);
         if (tab_rec && tab_id !== this.current_tab_id) {
             if (this.current_tab_id !== -1) {
@@ -124,10 +152,12 @@ class TabWidget extends ContainerWidget {
                 tab_rec.tabButton.classList.add('active');
             }
             this.tabContentContainer.appendChild(tab_rec.content);
+
+            this.make_callback('page-switch', this.get_child(tab_id));
         }
     }
 
-    closeTab(tab_id) {
+    _closeTab(tab_id) {
         const tab_rec = this.tab_info.get(tab_id);
         if (tab_rec) {
             if (tab_id === this.current_tab_id) {
@@ -149,7 +179,7 @@ class TabWidget extends ContainerWidget {
             if (this.tabs.length > 0) {
                 const new_index = Math.min(index, this.tabs.length - 1);
                 let new_tab_id = this.tabs[new_index];
-                this.showTab(new_tab_id);
+                this._showTab(new_tab_id);
             }
         }
     }
@@ -180,14 +210,33 @@ class TabWidget extends ContainerWidget {
         event.target.classList.remove('dragging');
     }
 
+    signal_close(tab_id) {
+        this.make_callback('page-close', this.get_child(tab_id));
+    }
+
     add_widget(child, options = { title: "" }) {
-        let tab = this.addTab(options.title, child.get_element());
+        let tab = this._addTab(options.title, child);
         this.children.push(child);
     }
     
+    show_widget(child) {
+        const tab_id = this.get_tab_id(child);
+        if (tab_id !== null) {
+            this._showTab(tab_id);
+        }
+    }
+    
+    close_widget(child) {
+        const tab_id = this.get_tab_id(child);
+        if (tab_id !== null) {
+            this.remove(child);
+            this._closeTab(tab_id);
+        }
+    }
+
     set_index(index) {
         const tab_id = this.tabs[index];
-        return this.showTab(tab_id);
+        this._showTab(tab_id);
     }
 
     get_index() {

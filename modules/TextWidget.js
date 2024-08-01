@@ -1,22 +1,36 @@
 "use_strict";
 
-import {Widget, Widgets} from "./Widget.js";
+import {Widget} from "./Widget.js";
 
 class Text extends Widget {
 
-    constructor(text) {
+    constructor(options = {text: ''}) {
         super();
-       
-        this.element = document.createElement('div');
-        this.element.className = 'text';
-        this.element.style.position = 'relative';
-        this.element.style.margin = 0;
+        this.element = this.get_option(options, 'element', null);
+        if (this.element == null) {
+            this.element = document.createElement('div');
+        }
+        this.element.className = 'text-widget';
+        //this.element.style.position = 'relative';
 
-        let text_elt = document.createTextNode(text);
-        this.element.appendChild(text_elt)
+        // JavaScript hack to bind "this" correctly for our methods
+        this.set_text = this.set_text.bind(this);
+        this.set_html = this.set_html.bind(this);
+
+        var text = this.get_option(options, 'text', null);
+        if (text !== null) {
+            this.set_text(text);
+        }
     }
-}
 
-Widgets.Text = Text;
+    set_text(text) {
+        this.element.innerText = text;
+    }
+
+    set_html(html_text) {
+        this.element.innerHTML = html_text;
+    }
+    
+}
 
 export { Text };

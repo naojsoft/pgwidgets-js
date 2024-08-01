@@ -13,8 +13,12 @@ import {Splitter} from "./modules/Splitter.js";
 //import {Splitter2} from "./modules/Splitter2.js";
 import {Text} from "./modules/TextWidget.js";
 import {Button} from "./modules/Button.js";
+import {CheckBox} from "./modules/CheckBox.js";
+import {ComboBox} from "./modules/ComboBox.js";
 
 
-export {Widget, ContainerWidget, Box, VBox, HBox, ButtonBox,
-        TopLevel, Scrollable, MDIWidget, Splitter, TabWidget,
-        Text, Button} ;
+const Widgets = {Widget, ContainerWidget, Box, VBox, HBox, ButtonBox,
+                 TopLevel, Scrollable, MDIWidget, Splitter, TabWidget,
+                 Text, Button, CheckBox, ComboBox} ;
+
+export { Widgets };
