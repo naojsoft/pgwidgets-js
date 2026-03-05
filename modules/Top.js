@@ -15,7 +15,7 @@ class TopLevel extends ContainerWidget {
         //this.element.style.display = 'flex';
         //this.element.style.flex = '1';
         this.element.style.overflow = 'hidden';
-        this.element.style.margin = 0;
+        this.element.style.margin = 1;
 
         // JavaScript hack to bind "this" correctly for our methods
         this.set_widget = this.set_widget.bind(this);

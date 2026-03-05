@@ -18,6 +18,13 @@ class Widget {
         this.make_callback = this.make_callback.bind(this);
 
         this.cb = {}
+
+        for (let name of ['resize']) {
+            this.enable_callback(name);
+        }
+        //this.element.addEventListener('resize',
+        //                              (e) => this.make_callback('resize', e.clientWidth, e.clientHeight));
+
     }
 
     init_style() {
@@ -129,7 +136,9 @@ class ContainerWidget extends Widget {
         // JavaScript hack to bind "this" correctly for our methods
         this.get_children = this.get_children.bind(this);
         this.add = this.add.bind(this);
+        this.add_child = this.add_child.bind(this);
         this.remove = this.remove.bind(this);
+        this.remove_child = this.remove_child.bind(this);
     }
 /*
     init_style() {
@@ -144,20 +153,34 @@ class ContainerWidget extends Widget {
         return this.children;
     }
 
-    add(child) {
+    add_child(child) {
         let idx = this.children.indexOf(child);
         if (idx == -1) {
             // only add if child is not already present
             this.children.push(child);
+        }
+        return idx;
+    }
+    
+    add(child) {
+        let idx = this.add_child(child);
+        if (idx == -1) {
             this.element.appendChild(child.get_element());
         }
     }
     
-    remove(child) {
-        this.element.removeChild(child.get_element());
+    remove_child(child) {
         let idx = this.children.indexOf(child);
         if (idx > -1) {
             this.children.splice(idx, 1);
+        }
+        return idx;
+    }
+
+    remove(child) {
+        let idx = this.remove_child(child);
+        if (idx > -1) {
+            this.element.removeChild(child.get_element());
         }
     }
 }

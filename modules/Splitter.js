@@ -19,13 +19,13 @@ class Splitter extends ContainerWidget {
 
         if (this.orientation === 'vertical') {
             this.element.classList.add('vertical');
-            //style.height = '100%';
+            style.height = '100%';
             //style.width = '100vw';
             style['flex-direction'] = 'column';
         }
         else {
             this.element.classList.add('horizontal');
-            //style.width = '100%';
+            style.width = '100%';
             //style.height = '100vh';
             style['flex-direction'] = 'row';
         };
@@ -36,6 +36,7 @@ class Splitter extends ContainerWidget {
         this.isDragging = false;
         this.handles = [];
         this.panes = [];
+        this.sizes = [];
         
         // JavaScript hack to bind "this" correctly for our methods
         this.add_widget = this.add_widget.bind(this);
@@ -45,7 +46,20 @@ class Splitter extends ContainerWidget {
         this.onMouseUp = this.onMouseUp.bind(this);
     }
 
+    update_sizes() {
+        for (const i = 0; i < this.sizes.length; ++i) {
+            let pane = this.panes[i];
+            let size = this.sizes[i];
+            if (this.orientation === 'vertical') {
+                pane.style.height = size + 'px';
+            } else {
+                pane.style.width = size + 'px';
+            }
+        }
+    }
+    
     add_widget(child) {
+        const widget_rect = this.element.getBoundingClientRect();
         let handle = null;
         if (this.panes.length > 0) {
             // adding a second child, add a divider
@@ -54,7 +68,14 @@ class Splitter extends ContainerWidget {
             let lastPane = this.panes[this.panes.length - 1]
             handle.addEventListener('mousedown',
                                     (e) => this.onMouseDown(e, lastPane));
-        };
+        } else {
+            if (this.orientation === 'vertical') {
+                const len = widget_rect.bottom - widget_rect.top;
+            } else {
+                const len = widget_rect.right - widget_rect.left;
+            }
+            this.sizes.push(len);
+        }
         const pane = document.createElement('div');
         pane.className = 'splitter-pane';
         pane.style.overflow = 'hidden';
@@ -62,6 +83,8 @@ class Splitter extends ContainerWidget {
         this.element.appendChild(pane);
         this.panes.push(pane);
         this.children.push(child);
+
+        this.update_sizes();
     }
 
     add_divider() {
@@ -98,11 +121,23 @@ class Splitter extends ContainerWidget {
     onMouseMove(e, pane) {
         if (this.isDragging) {
             const widget_rect = this.element.getBoundingClientRect();
+            console.log("widget size is " + widget_rect.bottom);
+            const index = this.panes.findIndex(obj => obj === pane);
+            let next_pane = null;
+            let move_limit = 0;
+            if (index < this.panes.length - 1) {
+                next_pane = this.panes[index + 1];
+                const next_pane_rect = pane.getBoundingClientRect();
+                move_limit = next_pane_rect.top;
+            } else {
+                move_limit = widget_rect.bottom;
+            }
             const pane_rect = pane.getBoundingClientRect();
             if (this.orientation === 'vertical') {
                 const panePos = e.clientY - pane_rect.top;
+                console.log("pane " + index + " position is " + panePos); 
                 const widgetLen = widget_rect.height;
-                if (panePos > 0 && panePos < widgetLen) {
+                if (panePos > 0 && panePos < move_limit) {
                     const ht = Math.floor((panePos / widgetLen) * widgetLen);
                     pane.style.height = ht + 'px';
                 }

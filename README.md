@@ -1,3 +1,9 @@
+Pretty Good Widgets
+===================
+A set of minimalistic HTML5 widgets.
+
+Running the Examples
+====================
 To run the examples, start a web server serving the top level of the
 folder.  i.e.:
 

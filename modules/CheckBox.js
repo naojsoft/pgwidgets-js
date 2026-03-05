@@ -31,8 +31,12 @@ class CheckBox extends Widget {
         this.enable_callback('activated');
     }
 
-    set_text(text) {
-        this.label.innerText = text;
+    set_state(tf) {
+        this.element.value = tf;
+    }
+
+    get_state() {
+        return this.element.value;
     }
 
     _cb_redirect(action) {

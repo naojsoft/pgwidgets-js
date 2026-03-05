@@ -59,8 +59,9 @@ class Box extends ContainerWidget {
         let elt = child.get_element();
         elt.classList.add('box-child');
         //elt.style['display'] = 'flex';
-        //elt.style['flex-basis'] = 'auto';
-        //elt.style['flex-grow'] = stretch;
+        elt.style['flex-basis'] = 'auto';
+        elt.style['flex-grow'] = stretch;
+        elt.style['flex-shrink'] = 0;
         //elt.style['align-self'] = 'stretch';
         //elt.style['flex-basis'] = 0;
     }

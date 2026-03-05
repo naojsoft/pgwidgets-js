@@ -18,7 +18,10 @@
     let top = new Widgets.TopLevel();
     top.resize(500, 500);
 
+    let fr = new Widgets.Frame({title: "My Lecture", collapsible: true});
+    
     let scr = new Widgets.Scrollable();
+    
     //scr.resize(300, 300);
     
     let text = new Widgets.Text({text: `Lorem ipsum odor amet, consectetuer adipiscing elit. Cursus aliquam facilisis sociosqu a fringilla turpis. Rutrum vel placerat tristique consectetur dapibus. Justo consectetur etiam curabitur commodo gravida magnis lacus hendrerit auctor. Netus vitae pharetra blandit non id mattis senectus. Cras venenatis scelerisque vitae convallis dapibus nascetur posuere. Quis sociosqu integer feugiat hac conubia.
@@ -32,7 +35,8 @@ Suscipit lacinia vivamus mattis erat phasellus. Primis curae iaculis mauris turp
 Diam ad suspendisse bibendum ullamcorper suspendisse class torquent vitae. Congue leo ultricies maximus justo curabitur molestie. Et habitasse eleifend inceptos pulvinar venenatis, purus nisl phasellus. Per morbi et commodo montes phasellus nam condimentum pulvinar? Porta lectus faucibus mus posuere integer; rutrum justo fames. Porttitor mauris cras inceptos mauris duis nisl dapibus. Feugiat tellus arcu elementum ante molestie eleifend!`});
     scr.set_widget(text);
 
-    top.set_widget(scr);
+    fr.set_widget(scr);
+    top.set_widget(fr);
     top.show();
 
   </script>

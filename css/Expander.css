@@ -1,0 +1,45 @@
+.expander-widget {
+    display: inline-block;
+    height: 100%;
+    width: 100%;
+    box-sizing: border-box;
+    position: relative;
+    padding-top: 30px; /* Space for the title */
+    border-style: ridge;
+    border-width: 3px;
+    border-radius: 2px;
+    border-color: #ccc;
+    overflow: hidden;
+}
+
+.expander-title {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 5px 10px;
+    box-sizing: border-box;
+    background-color: #c0c0f0;
+    border-bottom: 1px solid #ccc;
+    font-size: 14px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.expander-toggle {
+    margin-right: 10px;
+    font-size: 12px;
+    transition: transform 0.2s;
+}
+
+.expander-widget.shadow {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.expander-content {
+    display: none; /* Initially hidden when collapsible is true */
+    height: 100%;
+    width: 100%;
+}
