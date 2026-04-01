@@ -58,12 +58,23 @@ class Box extends ContainerWidget {
 
         let elt = child.get_element();
         elt.classList.add('box-child');
-        //elt.style['display'] = 'flex';
-        elt.style['flex-basis'] = 'auto';
-        elt.style['flex-grow'] = stretch;
-        elt.style['flex-shrink'] = 0;
-        //elt.style['align-self'] = 'stretch';
-        //elt.style['flex-basis'] = 0;
+
+        // main axis: stretch=0 means natural size, stretch>0 means
+        // distribute extra space proportionally (like Qt's stretch factor)
+        if (stretch > 0) {
+            elt.style.flex = stretch + ' 1 0px';
+        } else {
+            elt.style.flex = '0 0 auto';
+        }
+
+        // cross axis: always fill (like Qt)
+        if (this.orientation === 'vertical') {
+            elt.style.width = '100%';
+        } else {
+            elt.style.height = '100%';
+        }
+        elt.style.minWidth = '0';
+        elt.style.minHeight = '0';
     }
 
     set_spacing(gap=0) {

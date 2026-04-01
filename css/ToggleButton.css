@@ -1,0 +1,21 @@
+.togglebutton-widget {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 12px;
+    font-size: 14px;
+    border: 2px outset #ccc;
+    background-color: #eee;
+    cursor: pointer;
+    user-select: none;
+    box-sizing: border-box;
+}
+
+.togglebutton-widget:hover {
+    background-color: #ddd;
+}
+
+.togglebutton-widget.pressed {
+    border-style: inset;
+    background-color: #bbb;
+}

@@ -15,7 +15,7 @@
     import { Widgets } from "../Widgets.js";
 
     let top = new Widgets.TopLevel();
-    top.resize(400, 300);
+    top.resize(400, 400);
 
     let vbox = new Widgets.VBox();
     vbox.set_spacing(4);
@@ -44,13 +44,27 @@
     vbox.add_widget(status, 0);
     vbox.add_widget(status2, 0);
 
+    // tracking slider - updates continuously while dragging
+    let label3 = new Widgets.Label({text: "Tracking (updates while dragging):"});
+    vbox.add_widget(label3, 0);
+
+    let status3 = new Widgets.Text({text: "Value: 50"});
+    let slider3 = new Widgets.Slider({min: 0, max: 100, step: 1, value: 50, track: true});
+    slider3.add_callback('activated', (w, val) => {
+        status3.set_text("Value: " + val);
+    });
+    vbox.add_widget(slider3, 0);
+    vbox.add_widget(status3, 0);
+
     // button to programmatically set slider value
     let btn = new Widgets.Button("Reset to defaults");
     btn.add_callback('activated', (w) => {
         slider1.set_value(50);
         slider2.set_value(0.5);
+        slider3.set_value(50);
         status.set_text("Value: 50");
         status2.set_text("Value: 0.50");
+        status3.set_text("Value: 50");
     });
     vbox.add_widget(btn, 0);
 

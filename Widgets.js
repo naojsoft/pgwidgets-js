@@ -19,11 +19,15 @@ import {TextEntry} from "./modules/TextEntry.js";
 import {Slider} from "./modules/Slider.js";
 import {Canvas} from "./modules/Canvas.js";
 import {Page} from "./modules/Page.js";
+import {SpinBox} from "./modules/SpinBox.js";
+import {ToggleButton} from "./modules/ToggleButton.js";
+import {RadioButton} from "./modules/RadioButton.js";
 
 
 const Widgets = {Widget, ContainerWidget, Box, VBox, HBox, ButtonBox,
                  TopLevel, Scrollable, MDIWidget, Splitter, TabWidget,
                  StackWidget, Expander, Page, Text, Label, TextArea,
-                 Button, CheckBox, ComboBox, TextEntry, Slider, Canvas};
+                 Button, ToggleButton, CheckBox, RadioButton, ComboBox,
+                 TextEntry, Slider, Canvas, SpinBox};
 
 export { Widgets };

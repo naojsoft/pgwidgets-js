@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+    }
+  </style>
+  <link rel="stylesheet" href="../Widgets.css" type="text/css" />
+</head>
+<body>
+  <script type="module">
+    import { Widgets } from "../Widgets.js";
+
+    let top = new Widgets.TopLevel();
+    top.resize(400, 350);
+
+    let vbox = new Widgets.VBox();
+    vbox.set_spacing(6);
+
+    let status = new Widgets.Text({text: "(select an option)"});
+    vbox.add_widget(status, 0);
+
+    // --- Group 1: colors ---
+    let exp1 = new Widgets.Expander({title: "Favorite Color"});
+
+    let colorBox = new Widgets.VBox();
+    let rbRed = new Widgets.RadioButton("Red");
+    let rbGreen = new Widgets.RadioButton("Green", {group: rbRed});
+    let rbBlue = new Widgets.RadioButton("Blue", {group: rbRed});
+
+    rbRed.add_callback('activated', () => status.set_text("Color: Red"));
+    rbGreen.add_callback('activated', () => status.set_text("Color: Green"));
+    rbBlue.add_callback('activated', () => status.set_text("Color: Blue"));
+
+    colorBox.add_widget(rbRed, 0);
+    colorBox.add_widget(rbGreen, 0);
+    colorBox.add_widget(rbBlue, 0);
+    exp1.set_widget(colorBox);
+    vbox.add_widget(exp1, 0);
+
+    // --- Group 2: sizes (independent group) ---
+    let exp2 = new Widgets.Expander({title: "Size"});
+
+    let sizeBox = new Widgets.VBox();
+    let rbSmall = new Widgets.RadioButton("Small");
+    let rbMedium = new Widgets.RadioButton("Medium", {group: rbSmall});
+    let rbLarge = new Widgets.RadioButton("Large", {group: rbSmall});
+
+    rbSmall.add_callback('activated', () => status.set_text("Size: Small"));
+    rbMedium.add_callback('activated', () => status.set_text("Size: Medium"));
+    rbLarge.add_callback('activated', () => status.set_text("Size: Large"));
+
+    sizeBox.add_widget(rbSmall, 0);
+    sizeBox.add_widget(rbMedium, 0);
+    sizeBox.add_widget(rbLarge, 0);
+    exp2.set_widget(sizeBox);
+    vbox.add_widget(exp2, 0);
+
+    // programmatic control
+    let hbox = new Widgets.HBox();
+    hbox.set_spacing(4);
+    let btnSetBlue = new Widgets.Button("Select Blue");
+    btnSetBlue.add_callback('activated', () => {
+        rbBlue.set_state(true);
+        status.set_text("Color: Blue (programmatic)");
+    });
+    let btnSetLarge = new Widgets.Button("Select Large");
+    btnSetLarge.add_callback('activated', () => {
+        rbLarge.set_state(true);
+        status.set_text("Size: Large (programmatic)");
+    });
+    hbox.add_widget(btnSetBlue);
+    hbox.add_widget(btnSetLarge);
+    vbox.add_widget(hbox, 0);
+
+    top.set_widget(vbox);
+    top.show();
+
+  </script>
+</body>
+</html>

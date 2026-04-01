@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+    }
+  </style>
+  <link rel="stylesheet" href="../Widgets.css" type="text/css" />
+</head>
+<body>
+  <script type="module">
+    import { Widgets } from "../Widgets.js";
+
+    let top = new Widgets.TopLevel();
+    top.resize(300, 200);
+
+    let vbox = new Widgets.VBox();
+
+    let spin = new Widgets.SpinBox({dtype: 'int', min: 0, max: 100, value: 50});
+    vbox.add_widget(spin, 0);
+
+    top.set_widget(vbox);
+    top.show();
+
+    // debug: walk from spinbox up to body and log everything
+    setTimeout(() => {
+        let el = spin.get_element();
+        let depth = 0;
+        while (el && el !== document.body) {
+            let cs = getComputedStyle(el);
+            let indent = '  '.repeat(depth);
+            console.log(indent + el.tagName + ' class="' + el.className + '"');
+            console.log(indent + '  inline style: ' + el.style.cssText);
+            console.log(indent + '  computed: width=' + cs.width + ' height=' + cs.height);
+            console.log(indent + '  computed: display=' + cs.display + ' flex-direction=' + cs.flexDirection);
+            console.log(indent + '  computed: flex=' + cs.flex + ' align-items=' + cs.alignItems);
+            console.log(indent + '  computed: align-self=' + cs.alignSelf + ' overflow=' + cs.overflow);
+            console.log(indent + '  offsetWidth=' + el.offsetWidth + ' offsetHeight=' + el.offsetHeight);
+            el = el.parentElement;
+            depth++;
+        }
+    }, 200);
+
+  </script>
+</body>
+</html>

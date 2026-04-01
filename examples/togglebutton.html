@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+    }
+  </style>
+  <link rel="stylesheet" href="../Widgets.css" type="text/css" />
+</head>
+<body>
+  <script type="module">
+    import { Widgets } from "../Widgets.js";
+
+    let top = new Widgets.TopLevel();
+    top.resize(400, 250);
+
+    let vbox = new Widgets.VBox();
+    vbox.set_spacing(8);
+
+    let status = new Widgets.Text({text: "(click a toggle button)"});
+    vbox.add_widget(status, 0);
+
+    let hbox = new Widgets.HBox();
+    hbox.set_spacing(4);
+
+    let tb1 = new Widgets.ToggleButton("Bold");
+    tb1.add_callback('activated', (w, state) => {
+        status.set_text("Bold: " + (state ? "ON" : "OFF"));
+    });
+    hbox.add_widget(tb1);
+
+    let tb2 = new Widgets.ToggleButton("Italic");
+    tb2.add_callback('activated', (w, state) => {
+        status.set_text("Italic: " + (state ? "ON" : "OFF"));
+    });
+    hbox.add_widget(tb2);
+
+    let tb3 = new Widgets.ToggleButton("Underline");
+    tb3.add_callback('activated', (w, state) => {
+        status.set_text("Underline: " + (state ? "ON" : "OFF"));
+    });
+    hbox.add_widget(tb3);
+
+    vbox.add_widget(hbox, 0);
+
+    // programmatic control
+    let btnSet = new Widgets.Button("Set all ON");
+    btnSet.add_callback('activated', () => {
+        tb1.set_state(true);
+        tb2.set_state(true);
+        tb3.set_state(true);
+        status.set_text("All toggled ON");
+    });
+
+    let btnClear = new Widgets.Button("Set all OFF");
+    btnClear.add_callback('activated', () => {
+        tb1.set_state(false);
+        tb2.set_state(false);
+        tb3.set_state(false);
+        status.set_text("All toggled OFF");
+    });
+
+    let btnBox = new Widgets.HBox();
+    btnBox.set_spacing(4);
+    btnBox.add_widget(btnSet);
+    btnBox.add_widget(btnClear);
+    vbox.add_widget(btnBox, 0);
+
+    top.set_widget(vbox);
+    top.show();
+
+  </script>
+</body>
+</html>
