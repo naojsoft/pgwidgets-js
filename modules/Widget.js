@@ -1,7 +1,15 @@
 "use strict";
 
+/**
+ * Base class for all widgets. Provides DOM element management, callback system,
+ * and common utility methods.
+ */
 class Widget {
 
+    /**
+     * Creates a new Widget instance.
+     * Initializes the callback system and enables the 'resize' callback.
+     */
     constructor () {
         this.element = null;
 
@@ -27,27 +35,37 @@ class Widget {
 
     }
 
+    /**
+     * Initializes default inline styles on the widget element.
+     * Sets position to relative and margin to 0.
+     */
     init_style() {
         let style = this.element.style;
         style.position = 'relative';
         style['flex-basis'] = 'auto';
-        //style['flex-basis'] = 0;
-        //style['flex-grow'] = 0;
-        //style['flex-shrink'] = 1;
-        //style['flex'] = '1 1 auto';
-
-        //style.overflow = 'hidden';
         style.margin = '0px';
     }
 
+    /**
+     * Returns the underlying DOM element for this widget.
+     * @returns {HTMLElement} The DOM element.
+     */
     get_element() {
         return this.element;
     }
 
+    /**
+     * Sets the border width on the widget element.
+     * @param {number} width - Border width in pixels.
+     */
     set_border_width(width) {
         this.element.style['border-width'] = width + 'px';
     }
 
+    /**
+     * Sets the border color on the widget element.
+     * @param {string} color - CSS color value.
+     */
     set_border_color(color) {
         this.element.style['border-color'] = color;
     }
@@ -57,6 +75,11 @@ class Widget {
         this.element.style.height = height + 'px';
     }
 */
+    /**
+     * Resizes the widget to the given dimensions.
+     * @param {number} width - Width in pixels.
+     * @param {number} height - Height in pixels.
+     */
     resize(width, height) {
         this.element.style.width = width + 'px';
         this.element.style.height = height + 'px';
@@ -64,12 +87,22 @@ class Widget {
 
     /* CALLBACK HANDLING */
 
+    /**
+     * Registers a new callback action type.
+     * @param {string} action - The name of the callback action to enable.
+     */
     enable_callback(action) {
         if (!(action in this.cb)) {
             this.cb[action] = [];
         }
     }
 
+    /**
+     * Adds a callback function for the given action.
+     * The callback receives (widget, ...args) when triggered.
+     * @param {string} action - The callback action name.
+     * @param {Function} cb_fn - The callback function to add.
+     */
     add_callback(action, cb_fn) {
         if (!(action in this.cb)) {
             // TODO: raise an error
@@ -83,6 +116,11 @@ class Widget {
         }
     }
 
+    /**
+     * Removes a specific callback function for the given action.
+     * @param {string} action - The callback action name.
+     * @param {Function} cb_fn - The callback function to remove.
+     */
     remove_callback(action, cb_fn) {
         if (!(action in this.cb)) {
             return
@@ -94,6 +132,10 @@ class Widget {
         }
     }
 
+    /**
+     * Removes all callback functions for the given action.
+     * @param {string} action - The callback action name.
+     */
     clear_callback(action) {
         if (!(action in this.cb)) {
             return
@@ -101,6 +143,12 @@ class Widget {
         this.cb[action] = [];
     }
 
+    /**
+     * Invokes all registered callbacks for the given action.
+     * Each callback receives (this, ...args). Exceptions are caught and logged.
+     * @param {string} action - The callback action name.
+     * @param {...*} args - Additional arguments passed to each callback.
+     */
     make_callback(action, ...args) {
         let cb_list = this.cb[action];
         let params = [...args];  // shallow copy
@@ -116,7 +164,14 @@ class Widget {
     }
 
     /* UTILITY FUNCTIONS */
-    
+
+    /**
+     * Retrieves an option value from an object, returning a default if not present.
+     * @param {Object} obj - The options object.
+     * @param {string} key - The key to look up.
+     * @param {*} default_value - Value to return if key is not found.
+     * @returns {*} The option value or the default.
+     */
     get_option(obj, key, default_value) {
         if (key in obj) {
             return obj[key];
@@ -126,8 +181,16 @@ class Widget {
 
 }
 
+/**
+ * Base class for container widgets that manage child widgets.
+ * Extends Widget with child management (add, remove, get).
+ * @extends Widget
+ */
 class ContainerWidget extends Widget {
 
+    /**
+     * Creates a new ContainerWidget instance with an empty children array.
+     */
     constructor () {
         super();
 
@@ -149,10 +212,20 @@ class ContainerWidget extends Widget {
     }
 */
     
+    /**
+     * Returns the array of child widgets.
+     * @returns {Widget[]} The children array.
+     */
     get_children() {
         return this.children;
     }
 
+    /**
+     * Adds a child widget to the children array (no DOM manipulation).
+     * Prevents duplicate additions.
+     * @param {Widget} child - The child widget to add.
+     * @returns {number} The existing index if already present, or -1 if newly added.
+     */
     add_child(child) {
         let idx = this.children.indexOf(child);
         if (idx == -1) {
@@ -162,6 +235,10 @@ class ContainerWidget extends Widget {
         return idx;
     }
     
+    /**
+     * Adds a child widget and appends its DOM element to this container's element.
+     * @param {Widget} child - The child widget to add.
+     */
     add(child) {
         let idx = this.add_child(child);
         if (idx == -1) {
@@ -169,6 +246,11 @@ class ContainerWidget extends Widget {
         }
     }
     
+    /**
+     * Removes a child widget from the children array (no DOM manipulation).
+     * @param {Widget} child - The child widget to remove.
+     * @returns {number} The index where the child was, or -1 if not found.
+     */
     remove_child(child) {
         let idx = this.children.indexOf(child);
         if (idx > -1) {
@@ -177,6 +259,10 @@ class ContainerWidget extends Widget {
         return idx;
     }
 
+    /**
+     * Removes a child widget and its DOM element from this container.
+     * @param {Widget} child - The child widget to remove.
+     */
     remove(child) {
         let idx = this.remove_child(child);
         if (idx > -1) {

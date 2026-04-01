@@ -2,8 +2,19 @@
 
 import {Widget} from "./Widget.js";
 
+/**
+ * A clickable button widget with optional icon and text.
+ * Fires the 'activated' callback when clicked.
+ * @extends Widget
+ */
 class Button extends Widget {
 
+    /**
+     * Creates a new Button widget.
+     * @param {string} [text=''] - Button label text.
+     * @param {Object} [options] - Configuration options.
+     * @param {HTMLElement} [options.element=null] - Optional pre-existing DOM element to use.
+     */
     constructor(text='', options={}) {
         super();
         this.element = this.get_option(options, 'element', null);
@@ -32,6 +43,10 @@ class Button extends Widget {
         this.enable_callback('activated');
     }
 
+    /**
+     * Sets the button label text. Adds or removes the text element as needed.
+     * @param {string} text - The label text, or '' to remove text.
+     */
     set_text(text) {
         this.textElement.textContent = text;
         if (text !== '' && !this.textElement.parentElement) {
@@ -41,6 +56,11 @@ class Button extends Widget {
         }
     }
 
+    /**
+     * Sets the button icon from a URL. The icon is displayed above the text.
+     * @param {string} icon_url - URL of the icon image.
+     * @param {number[]|null} [iconsize=null] - Optional [width, height] in pixels.
+     */
     set_icon(icon_url, iconsize=null) {
         if (this.iconElement === null) {
             this.iconElement = document.createElement('img');
@@ -58,6 +78,11 @@ class Button extends Widget {
         }
     }
 
+    /**
+     * Sets the background and/or foreground color.
+     * @param {string|null} [bg=null] - Background CSS color, or null to leave unchanged.
+     * @param {string|null} [fg=null] - Foreground (text) CSS color, or null to leave unchanged.
+     */
     set_color(bg=null, fg=null) {
         if (bg !== null) {
             this.element.style.backgroundColor = bg;

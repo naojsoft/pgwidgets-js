@@ -2,8 +2,19 @@
 
 import {ContainerWidget} from "./Widget.js";
 
+/**
+ * A frame container with an optional titled border, similar to GTK's GtkFrame.
+ * Uses an HTML fieldset/legend for the etched border appearance.
+ * @extends ContainerWidget
+ */
 class Frame extends ContainerWidget {
 
+    /**
+     * Creates a new Frame widget.
+     * @param {Object} [options] - Configuration options.
+     * @param {string} [options.title=''] - Title text displayed in the frame border.
+     * @param {HTMLElement} [options.element=null] - Optional pre-existing DOM element to use.
+     */
     constructor(options={}) {
         super();
         this.element = this.get_option(options, 'element', null);
@@ -30,6 +41,10 @@ class Frame extends ContainerWidget {
         this.set_title = this.set_title.bind(this);
     }
 
+    /**
+     * Sets the single child widget inside the frame. Replaces any existing child.
+     * @param {Widget} child - The widget to display inside the frame.
+     */
     set_widget(child) {
         if (this.children.length > 0) {
             this.contentContainer.removeChild(this.children[0].get_element());
@@ -39,6 +54,11 @@ class Frame extends ContainerWidget {
         this.contentContainer.appendChild(child.get_element());
     }
 
+    /**
+     * Sets or updates the frame title text.
+     * Creates the legend element if it doesn't exist yet.
+     * @param {string} text - The title text to display.
+     */
     set_title(text) {
         this.title = text;
         if (!this.legend) {

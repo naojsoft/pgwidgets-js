@@ -19,15 +19,72 @@
     top.resize(1000, 700);
 
     let vbox = new Widgets.VBox();
-    
+    vbox.set_spacing(8);
+
     const tab_w = new Widgets.TabWidget({closable: true, reorderable: true, tab_position: 'top'});
-    let text = new Widgets.Text({text: "Hello, World!"});
-    tab_w.add_widget(text, {title: "Happy 2024"});
-    text = new Widgets.Text({text: "Hello, Pappy!"});
-    tab_w.add_widget(text, {title: "Yassir!"});
-    text = new Widgets.Text({text: "Third tab content!"});
-    tab_w.add_widget(text, {title: "Tres"});
+    let text1 = new Widgets.Text({text: "Hello, World!"});
+    tab_w.add_widget(text1, {title: "Happy 2024"});
+    let text2 = new Widgets.Text({text: "Hello, Pappy!"});
+    tab_w.add_widget(text2, {title: "Yassir!"});
+    let text3 = new Widgets.Text({text: "Third tab content!"});
+    tab_w.add_widget(text3, {title: "Tres"});
     vbox.add_widget(tab_w, 1);
+
+    // highlight demo
+    tab_w.highlight_tab(text1, '#ffdddd');
+    tab_w.highlight_tab(text3, '#ddffdd');
+
+    // controls for tab position and highlight
+    let controlBox = new Widgets.HBox();
+    controlBox.set_spacing(8);
+
+    controlBox.add_widget(new Widgets.Label("Tab position:"), 0);
+    let posCombo = new Widgets.ComboBox();
+    for (let pos of ['top', 'bottom', 'left', 'right']) {
+        posCombo.append_text(pos);
+    }
+    posCombo.set_index(0);
+    posCombo.add_callback('activated', (w, idx) => {
+        tab_w.set_tab_position(posCombo.get_text());
+    });
+    controlBox.add_widget(posCombo, 0);
+
+    controlBox.add_widget(new Widgets.Label("Highlight color:"), 0);
+    let colorCombo = new Widgets.ComboBox();
+    for (let c of ['#ffdddd', '#ddffdd', '#ddddff', '#ffffdd']) {
+        colorCombo.append_text(c);
+    }
+    colorCombo.set_index(0);
+    controlBox.add_widget(colorCombo, 0);
+
+    let hlBtn = new Widgets.Button("Highlight current tab");
+    hlBtn.add_callback('activated', () => {
+        let idx = tab_w.get_index();
+        if (idx >= 0) {
+            let child = tab_w.children[idx];
+            tab_w.highlight_tab(child, colorCombo.get_text());
+        }
+    });
+    controlBox.add_widget(hlBtn, 0);
+
+    let clearBtn = new Widgets.Button("Clear highlight");
+    clearBtn.add_callback('activated', () => {
+        let idx = tab_w.get_index();
+        if (idx >= 0) {
+            let child = tab_w.children[idx];
+            tab_w.highlight_tab(child, null);
+        }
+    });
+    controlBox.add_widget(clearBtn, 0);
+
+    let status = new Widgets.Text({text: ""});
+    tab_w.add_callback('page-switch', (w, tab_rec) => {
+        let idx = tab_w.get_index();
+        status.set_text("Switched to tab index " + idx);
+    });
+
+    vbox.add_widget(controlBox, 0);
+    vbox.add_widget(status, 0);
 
     top.set_widget(vbox);
     top.show();

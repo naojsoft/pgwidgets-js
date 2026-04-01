@@ -1,7 +1,9 @@
 "use_strict";
 
-/*
- * Export all widgets
+/**
+ * @module Widgets
+ * @description Main entry point for the pgwidgets library.
+ * Imports and re-exports all widget classes as a single Widgets namespace.
  */
 import {Widget, ContainerWidget} from "./modules/Widget.js";
 import {Box, VBox, HBox, ButtonBox} from "./modules/Box.js";

@@ -2,8 +2,22 @@
 
 import {Widget} from "./Widget.js";
 
+/**
+ * A radio button widget with mutual exclusion within a group.
+ * Only one radio button in a group can be selected at a time.
+ * Fires the 'activated' callback with the state when selected.
+ * @extends Widget
+ */
 class RadioButton extends Widget {
 
+    /**
+     * Creates a new RadioButton.
+     * @param {string} [text=''] - Label text next to the radio button.
+     * @param {Object} [options] - Configuration options.
+     * @param {RadioButton|null} [options.group=null] - Another RadioButton to join its group,
+     *   or null to start a new group.
+     * @param {HTMLElement} [options.element=null] - Optional pre-existing DOM element to use.
+     */
     constructor(text='', options={}) {
         super();
         this.element = this.get_option(options, 'element', null);
@@ -72,10 +86,18 @@ class RadioButton extends Widget {
         }
     }
 
+    /**
+     * Sets the radio button label text.
+     * @param {string} text - The label text.
+     */
     set_text(text) {
         this.label.textContent = text;
     }
 
+    /**
+     * Sets the selection state. If true, deselects all others in the group.
+     * @param {boolean} value - True to select, false to deselect.
+     */
     set_state(value) {
         if (value) {
             this._select();
@@ -85,6 +107,10 @@ class RadioButton extends Widget {
         }
     }
 
+    /**
+     * Returns the current selection state.
+     * @returns {boolean} True if selected, false otherwise.
+     */
     get_state() {
         return this.state;
     }

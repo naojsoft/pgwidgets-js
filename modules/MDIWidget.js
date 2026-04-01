@@ -5,8 +5,22 @@ import {ContainerWidget} from "./Widget.js";
 const default_icon_url = "../icons/ginga.svg";
 
 
+/**
+ * An individual sub-window within an MDIWidget workspace.
+ * Supports dragging, resizing, minimize, maximize, raise, lower, and close.
+ * @extends ContainerWidget
+ */
 class MDISubWindow extends ContainerWidget {
 
+    /**
+     * Creates a new MDI sub-window.
+     * @param {MDIWidget} mdi_widget - The parent MDI workspace.
+     * @param {Widget} child - The child widget displayed in this sub-window.
+     * @param {string} title - Window title text.
+     * @param {number} width - Initial width in pixels.
+     * @param {number} height - Initial height in pixels.
+     * @param {string} icon_url - URL of the title bar icon.
+     */
     constructor(mdi_widget, child, title, width, height, icon_url) {
         super();
         // the MDI window we belong to
@@ -48,24 +62,42 @@ class MDISubWindow extends ContainerWidget {
         this.buttons = document.createElement('div');
         this.buttons.className = 'mdi-buttons';
 
+        // lower: downward arrow
         this.lowerButton = document.createElement('div');
         this.lowerButton.className = 'mdi-button';
-        this.lowerButton.innerHTML = '▼';
+        this.lowerButton.innerHTML =
+            '<svg viewBox="0 0 10 10">' +
+            '<polyline points="2,4 5,8 8,4" />' +
+            '<line x1="5" y1="1" x2="5" y2="8" />' +
+            '</svg>';
         this.lowerButton.onclick = () => this.lower();
 
+        // minimize: horizontal line at bottom
         this.minimizeButton = document.createElement('div');
         this.minimizeButton.className = 'mdi-button';
-        this.minimizeButton.innerHTML = '—';
+        this.minimizeButton.innerHTML =
+            '<svg viewBox="0 0 10 10">' +
+            '<line x1="2" y1="8" x2="8" y2="8" />' +
+            '</svg>';
         this.minimizeButton.onclick = () => this.toggle_minimize();
 
+        // maximize: square outline
         this.maximizeButton = document.createElement('div');
         this.maximizeButton.className = 'mdi-button';
-        this.maximizeButton.innerHTML = '□';
+        this.maximizeButton.innerHTML =
+            '<svg viewBox="0 0 10 10">' +
+            '<rect x="1.5" y="1.5" width="7" height="7" fill="none" />' +
+            '</svg>';
         this.maximizeButton.onclick = () => this.toggle_maximize();
 
+        // close: X
         this.closeButton = document.createElement('div');
-        this.closeButton.className = 'mdi-button';
-        this.closeButton.innerHTML = '✕';
+        this.closeButton.className = 'mdi-button mdi-close';
+        this.closeButton.innerHTML =
+            '<svg viewBox="0 0 10 10">' +
+            '<line x1="1" y1="1" x2="9" y2="9" />' +
+            '<line x1="9" y1="1" x2="1" y2="9" />' +
+            '</svg>';
         this.closeButton.onclick = () => this.signal_close();
 
         this.buttons.appendChild(this.lowerButton);
@@ -101,6 +133,11 @@ class MDISubWindow extends ContainerWidget {
         this.update_state(this.get_state());
     }
 
+    /**
+     * Saves the current window geometry into the state record.
+     * @param {Object} rec - The state record to update.
+     * @returns {Object} The updated state record.
+     */
     update_state(rec) {
         let style = this.element.style;
         rec.width = style.width;
@@ -110,6 +147,10 @@ class MDISubWindow extends ContainerWidget {
         return rec;
     }
     
+    /**
+     * Returns the current window state record, creating one if needed.
+     * @returns {Object} The state record with {state, width, height, left, top}.
+     */
     get_state() {
         const rec = this.mdi_widget.windowStateMap.get(this.element);
         if (rec) {
@@ -122,10 +163,19 @@ class MDISubWindow extends ContainerWidget {
         }
     };
 
+    /**
+     * Returns the child widget contained in this sub-window.
+     * @returns {Widget} The child widget.
+     */
     get_child() {
         return this.children[0];
     }
-    
+
+    /**
+     * Makes the sub-window draggable via the given handle element.
+     * @param {HTMLElement} element - The window element to move.
+     * @param {HTMLElement} handle - The element that initiates dragging (title bar).
+     */
     makeDraggable(element, handle) {
         let baseX, baseY;
         let offsetX, offsetY;
@@ -161,41 +211,95 @@ class MDISubWindow extends ContainerWidget {
         });
     }
     
+    /**
+     * Makes the sub-window resizable via grip handles at all four corners.
+     * Grips appear on hover and allow dragging to resize from any corner.
+     * @param {HTMLElement} element - The window element to resize.
+     */
     makeResizable(element) {
-        const handle = document.createElement('div');
-        handle.className = 'mdi-resize-handle';
-        element.appendChild(handle);
+        const corners = [
+            { name: 'nw', cursor: 'nwse-resize' },
+            { name: 'ne', cursor: 'nesw-resize' },
+            { name: 'sw', cursor: 'nesw-resize' },
+            { name: 'se', cursor: 'nwse-resize' },
+        ];
 
-        let isResizing = false;
-        let rec = this.get_state();
+        for (let corner of corners) {
+            let grip = document.createElement('div');
+            grip.className = 'mdi-grip mdi-grip-' + corner.name;
+            grip.style.cursor = corner.cursor;
 
-        handle.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            isResizing = true;
+            // no inner content needed — CSS handles the triangle
+            grip.innerHTML = '';
 
-            document.addEventListener('mousemove', this.handleResize);
-            document.addEventListener('mouseup', () => {
-                isResizing = false;
-                document.removeEventListener('mousemove', this.handleResize);
-            });
-        });
-
-        this.handleResize = (e) => {
-            if (isResizing) {
-                const width = e.clientX - element.getBoundingClientRect().left;
-                const height = e.clientY - element.getBoundingClientRect().top;
-
-                element.style.width = width + 'px';
-                element.style.height = height + 'px';
-                this.update_state(rec);
-                rec.state = 'normal';
-
-                // Bring the window to the top while resizing
-                this.raise_();
-            }
-        };
+            element.appendChild(grip);
+            this._setupCornerResize(element, grip, corner.name);
+        }
     }
 
+    /**
+     * Sets up mouse event handling for a single corner resize grip.
+     * @param {HTMLElement} element - The window element to resize.
+     * @param {HTMLElement} grip - The grip DOM element.
+     * @param {string} corner - Corner identifier: 'nw', 'ne', 'sw', or 'se'.
+     */
+    _setupCornerResize(element, grip, corner) {
+        let startX, startY, startW, startH, startLeft, startTop;
+        let rec = this.get_state();
+
+        const onMouseMove = (e) => {
+            let dx = e.clientX - startX;
+            let dy = e.clientY - startY;
+            const minW = 60;
+            const minH = 40;
+
+            if (corner === 'se') {
+                element.style.width = Math.max(minW, startW + dx) + 'px';
+                element.style.height = Math.max(minH, startH + dy) + 'px';
+            } else if (corner === 'sw') {
+                let newW = Math.max(minW, startW - dx);
+                element.style.width = newW + 'px';
+                element.style.left = (startLeft + startW - newW) + 'px';
+                element.style.height = Math.max(minH, startH + dy) + 'px';
+            } else if (corner === 'ne') {
+                element.style.width = Math.max(minW, startW + dx) + 'px';
+                let newH = Math.max(minH, startH - dy);
+                element.style.height = newH + 'px';
+                element.style.top = (startTop + startH - newH) + 'px';
+            } else if (corner === 'nw') {
+                let newW = Math.max(minW, startW - dx);
+                element.style.width = newW + 'px';
+                element.style.left = (startLeft + startW - newW) + 'px';
+                let newH = Math.max(minH, startH - dy);
+                element.style.height = newH + 'px';
+                element.style.top = (startTop + startH - newH) + 'px';
+            }
+
+            this.update_state(rec);
+            rec.state = 'normal';
+            this.raise_();
+        };
+
+        const onMouseUp = () => {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        };
+
+        grip.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            startX = e.clientX;
+            startY = e.clientY;
+            startW = element.offsetWidth;
+            startH = element.offsetHeight;
+            startLeft = parseInt(element.style.left) || 0;
+            startTop = parseInt(element.style.top) || 0;
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        });
+    }
+
+    /** Toggles the sub-window between minimized and normal states. */
     toggle_minimize() {
         // Check if the window is already minimized
         const rec = this.get_state();
@@ -226,6 +330,7 @@ class MDISubWindow extends ContainerWidget {
         this.raise_();
     }
 
+    /** Toggles the sub-window between maximized and normal states. */
     toggle_maximize() {
         const workspace = this.mdi_widget.element;
         let style = this.element.style;
@@ -257,6 +362,7 @@ class MDISubWindow extends ContainerWidget {
         this.raise_();
     }
     
+    /** Raises the sub-window to the top of the z-order. */
     raise_() {
         let num_children = this.mdi_widget.children.length;
         this.element.style.zIndex = num_children;
@@ -272,6 +378,7 @@ class MDISubWindow extends ContainerWidget {
         this.mdi_widget.make_callback('page-switch', this.get_child());
     }
     
+    /** Lowers the sub-window to the bottom of the z-order. */
     lower() {
         this.element.style.zIndex = 1;
         for (let subwin of this.mdi_widget.children) {
@@ -287,10 +394,12 @@ class MDISubWindow extends ContainerWidget {
         //this.mdi_widget.make_callback('page-switch', ??);
     }
     
+    /** Fires the 'page-close' callback on the parent MDI widget. */
     signal_close() {
         this.mdi_widget.make_callback('page-close', this.get_child());
     }
 
+    /** Closes and removes this sub-window from the MDI workspace. */
     close() {
         this.mdi_widget.close_child(this.get_child());
         this.element.remove();
@@ -300,8 +409,22 @@ class MDISubWindow extends ContainerWidget {
     }
 }
     
+/**
+ * A Multiple Document Interface (MDI) workspace container.
+ * Manages multiple draggable, resizable sub-windows with cascade and tile layouts.
+ * @extends ContainerWidget
+ *
+ * Callbacks:
+ * - 'page-switch': fired when a sub-window is raised/focused.
+ * - 'page-close': fired when a sub-window close button is clicked.
+ */
 class MDIWidget extends ContainerWidget {
 
+    /**
+     * Creates a new MDI workspace.
+     * @param {Object} [options] - Configuration options.
+     * @param {HTMLElement} [options.element=null] - Optional pre-existing DOM element to use.
+     */
     constructor(options = { }) {
         super();
         this.element = this.get_option(options, 'element', null);
@@ -327,6 +450,16 @@ class MDIWidget extends ContainerWidget {
         }
     }
 
+    /**
+     * Adds a child widget as a new sub-window in the MDI workspace.
+     * @param {Widget} child - The widget to display in the sub-window.
+     * @param {Object} [options] - Sub-window options.
+     * @param {string} [options.title=''] - Window title text.
+     * @param {number} [options.width=300] - Initial width in pixels.
+     * @param {number} [options.height=300] - Initial height in pixels.
+     * @param {string|null} [options.icon_url=null] - Title bar icon URL.
+     * @returns {MDISubWindow} The created sub-window.
+     */
     add_widget(child, options = { title: "", width: 300, height: 300, icon_url: null }) {
         const title = this.get_option(options, 'title', '');
         const width = this.get_option(options, 'width', 300);
@@ -341,6 +474,7 @@ class MDIWidget extends ContainerWidget {
         return subwin;
     }
     
+    /** Arranges all sub-windows in a cascading (staggered) layout. */
     cascade_windows() {
         let offsetX = 0;
         let offsetY = 0;
@@ -365,6 +499,7 @@ class MDIWidget extends ContainerWidget {
         }
     }
 
+    /** Arranges all sub-windows in a tiled grid layout. */
     tile_windows() {
         const containerWidth = this.element.clientWidth;
         const containerHeight = this.element.clientHeight;
@@ -394,6 +529,11 @@ class MDIWidget extends ContainerWidget {
         }
     }
 
+    /**
+     * Returns the MDISubWindow containing the given child widget.
+     * @param {Widget} child - The child widget to look up.
+     * @returns {MDISubWindow|null} The sub-window, or null if not found.
+     */
     get_subwin(child) {
         for (let subwin of this.children) {
             let subwin_child = subwin.get_child();
@@ -404,6 +544,10 @@ class MDIWidget extends ContainerWidget {
         return null;
     }
 
+    /**
+     * Closes and removes the sub-window containing the given child widget.
+     * @param {Widget} child - The child widget whose sub-window to close.
+     */
     close_child(child) {
         let subwin = this.get_subwin(child);
         if (subwin !== null) {

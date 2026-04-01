@@ -2,8 +2,19 @@
 
 import {ContainerWidget} from "./Widget.js";
 
+/**
+ * A flexible box layout container, similar to Qt's QBoxLayout.
+ * Arranges child widgets either horizontally or vertically using CSS flexbox.
+ * @extends ContainerWidget
+ */
 class Box extends ContainerWidget {
 
+    /**
+     * Creates a new Box layout container.
+     * @param {Object} [options] - Configuration options.
+     * @param {string} [options.orientation='horizontal'] - Layout direction: 'horizontal' or 'vertical'.
+     * @param {HTMLElement} [options.element=null] - Optional pre-existing DOM element to use.
+     */
     constructor(options = { orientation: 'horizontal' }) {
         super();
         this.element = this.get_option(options, 'element', null);
@@ -53,6 +64,12 @@ class Box extends ContainerWidget {
         //style.margin = 0;
     }
     
+    /**
+     * Adds a child widget to the box layout.
+     * @param {Widget} child - The widget to add.
+     * @param {number} [stretch=0] - Stretch factor. 0 means natural size;
+     *   values > 0 distribute extra space proportionally (like Qt's stretch factor).
+     */
     add_widget(child, stretch=0) {
         super.add(child);
 
@@ -77,6 +94,10 @@ class Box extends ContainerWidget {
         elt.style.minHeight = '0';
     }
 
+    /**
+     * Sets the gap between child widgets.
+     * @param {number} [gap=0] - Spacing in pixels.
+     */
     set_spacing(gap=0) {
         let style = this.element.style;
         style['gap'] = gap + "px";
@@ -84,22 +105,40 @@ class Box extends ContainerWidget {
 
 };    
 
+/**
+ * A vertical box layout container. Shortcut for Box with vertical orientation.
+ * @extends Box
+ */
 class VBox extends Box {
 
+    /** Creates a new vertical box layout. */
     constructor() {
         super({orientation: 'vertical'});
     }
 }
 
+/**
+ * A horizontal box layout container. Shortcut for Box with horizontal orientation.
+ * @extends Box
+ */
 class HBox extends Box {
 
+    /** Creates a new horizontal box layout. */
     constructor() {
         super({orientation: 'horizontal'});
     }
 }
 
+/**
+ * A box layout designed for arranging buttons, with flex-grow enabled.
+ * @extends Box
+ */
 class ButtonBox extends Box {
 
+    /**
+     * Creates a new ButtonBox.
+     * @param {Object} [options] - Configuration options (same as Box).
+     */
     constructor(options = { orientation: 'horizontal' }) {
         super(options);
     }

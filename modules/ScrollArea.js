@@ -2,8 +2,18 @@
 
 import {ContainerWidget} from "./Widget.js";
 
+/**
+ * A scrollable container widget. Wraps a single child and provides
+ * automatic scrollbars when the content overflows.
+ * @extends ContainerWidget
+ */
 class ScrollArea extends ContainerWidget {
 
+    /**
+     * Creates a new ScrollArea widget.
+     * @param {Object} [options] - Configuration options.
+     * @param {HTMLElement} [options.element=null] - Optional pre-existing DOM element to use.
+     */
     constructor(options = { }) {
         //containerId, contentId, containerWidth, containerHeight, contentWidth, contentHeight
         super();
@@ -32,6 +42,9 @@ class ScrollArea extends ContainerWidget {
         style.overflow = 'scroll';
     }
 */
+    /**
+     * Updates scrollbar visibility based on whether the content overflows.
+     */
     updateScrollbars() {
         let style = this.element.style;
 
@@ -57,6 +70,10 @@ class ScrollArea extends ContainerWidget {
         style.overflowY = showVerticalScrollbar ? 'scroll' : 'hidden';
     }
 
+    /**
+     * Sets the single child widget inside the scroll area. Replaces any existing child.
+     * @param {Widget} child - The widget to display inside the scroll area.
+     */
     set_widget(child) {
         let style = this.element.style;
         style.overflow = 'scroll';

@@ -2,8 +2,24 @@
 
 import {Widget} from "./Widget.js";
 
+/**
+ * A numeric spin box widget with up/down buttons, similar to Qt's QSpinBox/QDoubleSpinBox.
+ * Supports integer and float data types, keyboard arrow keys, and direct text entry.
+ * Fires 'activated' callback with the current value on change.
+ * @extends Widget
+ */
 class SpinBox extends Widget {
 
+    /**
+     * Creates a new SpinBox widget.
+     * @param {Object} [options] - Configuration options.
+     * @param {string} [options.dtype='int'] - Data type: 'int' or 'float'.
+     * @param {number} [options.min=0] - Minimum value.
+     * @param {number} [options.max=99] - Maximum value.
+     * @param {number} [options.step=1] - Step increment for up/down buttons.
+     * @param {number} [options.value] - Initial value (defaults to min).
+     * @param {HTMLElement} [options.element=null] - Optional pre-existing DOM element to use.
+     */
     constructor(options = {}) {
         super();
         this.element = this.get_option(options, 'element', null);
@@ -122,6 +138,10 @@ class SpinBox extends Widget {
         this.make_callback('activated', this.value);
     }
 
+    /**
+     * Sets the spin box value, clamped to the configured limits.
+     * @param {number} val - The value to set.
+     */
     set_value(val) {
         val = this._clamp(val);
         if (this.dtype === 'int') {
@@ -131,10 +151,20 @@ class SpinBox extends Widget {
         this._display();
     }
 
+    /**
+     * Returns the current spin box value.
+     * @returns {number} The current value.
+     */
     get_value() {
         return this.value;
     }
 
+    /**
+     * Sets the minimum, maximum, and optional step values. Clamps current value to new range.
+     * @param {number} minval - Minimum value.
+     * @param {number} maxval - Maximum value.
+     * @param {number} [incrval] - Step increment (optional).
+     */
     set_limits(minval, maxval, incrval) {
         this.minval = minval;
         this.maxval = maxval;

@@ -2,8 +2,19 @@
 
 import {Widget} from "./Widget.js";
 
+/**
+ * A toggle button that maintains a pressed/unpressed state.
+ * Fires the 'activated' callback with the new boolean state when toggled.
+ * @extends Widget
+ */
 class ToggleButton extends Widget {
 
+    /**
+     * Creates a new ToggleButton.
+     * @param {string} [text=''] - Button label text.
+     * @param {Object} [options] - Configuration options.
+     * @param {HTMLElement} [options.element=null] - Optional pre-existing DOM element to use.
+     */
     constructor(text='', options={}) {
         super();
         this.element = this.get_option(options, 'element', null);
@@ -38,15 +49,27 @@ class ToggleButton extends Widget {
         }
     }
 
+    /**
+     * Sets the button label text.
+     * @param {string} text - The label text.
+     */
     set_text(text) {
         this.element.textContent = text;
     }
 
+    /**
+     * Sets the toggle state programmatically (does not fire callback).
+     * @param {boolean} value - True for pressed, false for unpressed.
+     */
     set_state(value) {
         this.state = !!value;
         this._update_visual();
     }
 
+    /**
+     * Returns the current toggle state.
+     * @returns {boolean} True if pressed, false if unpressed.
+     */
     get_state() {
         return this.state;
     }

@@ -2,8 +2,20 @@
 
 import {ContainerWidget} from "./Widget.js";
 
+/**
+ * A resizable split pane container, similar to Qt's QSplitter.
+ * Child widgets are separated by draggable handles. Supports horizontal
+ * and vertical orientations with document-level mouse tracking.
+ * @extends ContainerWidget
+ */
 class Splitter extends ContainerWidget {
 
+    /**
+     * Creates a new Splitter widget.
+     * @param {Object} [options] - Configuration options.
+     * @param {string} [options.orientation='horizontal'] - Split direction: 'horizontal' or 'vertical'.
+     * @param {HTMLElement} [options.element=null] - Optional pre-existing DOM element to use.
+     */
     constructor(options = {orientation: 'horizontal'}) {
         super();
         this.element = this.get_option(options, 'element', null);
@@ -31,6 +43,11 @@ class Splitter extends ContainerWidget {
         this.onMouseUp = this.onMouseUp.bind(this);
     }
 
+    /**
+     * Adds a child widget as a new pane in the splitter.
+     * A draggable handle is inserted between adjacent panes.
+     * @param {Widget} child - The widget to add.
+     */
     add_widget(child) {
         if (this.panes.length > 0) {
             let handle = this._add_handle();
@@ -134,12 +151,20 @@ class Splitter extends ContainerWidget {
         document.removeEventListener('mouseup', this.onMouseUp);
     }
 
+    /**
+     * Sets the sizes of the panes in pixels.
+     * @param {number[]} sizes - Array of pixel sizes, one per pane.
+     */
     set_sizes(sizes) {
         for (let i = 0; i < sizes.length && i < this.panes.length; i++) {
             this.panes[i].style.flex = '0 0 ' + sizes[i] + 'px';
         }
     }
 
+    /**
+     * Returns the current sizes of all panes in pixels.
+     * @returns {number[]} Array of pixel sizes.
+     */
     get_sizes() {
         let sizes = [];
         for (let pane of this.panes) {

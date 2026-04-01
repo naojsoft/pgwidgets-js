@@ -2,8 +2,21 @@
 
 import {ContainerWidget} from "./Widget.js";
 
+/**
+ * A collapsible/expandable container widget with an optional title and shadow.
+ * When collapsible, clicking the title bar toggles content visibility.
+ * @extends ContainerWidget
+ */
 class Expander extends ContainerWidget {
 
+    /**
+     * Creates a new Expander widget.
+     * @param {Object} [options] - Configuration options.
+     * @param {string} [options.title=''] - Title text displayed in the header.
+     * @param {boolean} [options.collapsible=false] - Whether the content can be collapsed.
+     * @param {boolean} [options.shadow=false] - Whether to apply a drop shadow.
+     * @param {HTMLElement} [options.element=null] - Optional pre-existing DOM element to use.
+     */
     constructor(options = {}) {
         super();
         this.title = options.title || '';
@@ -64,6 +77,7 @@ class Expander extends ContainerWidget {
         }
     }
 
+    /** Toggles the content container between visible and hidden states. */
     toggleContent() {
         const toggleButton = this.element.querySelector('.expander-toggle');
         if (this.collapsed) {
@@ -76,6 +90,10 @@ class Expander extends ContainerWidget {
         this.collapsed = !this.collapsed;
     }
 
+    /**
+     * Sets the single child widget inside the expander. Replaces any existing child.
+     * @param {Widget} child - The widget to display inside the expander content area.
+     */
     set_widget(child) {
         //let style = this.element.style;
         //style.overflow = 'scroll';

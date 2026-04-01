@@ -42,17 +42,58 @@
 
 .mdi-title-bar img {
     object-fit: contain;
+    margin-left: 16px;
 }
 
 .mdi-buttons {
     display: flex;
+    margin-right: 16px;
 }
 
 .mdi-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     margin-left: 3px;
-    border: 1px solid black;
-    padding: 2px;
+    width: 18px;
+    height: 18px;
+    border: 1px solid #999;
+    border-radius: 3px;
+    background-color: #e0e0e0;
     cursor: pointer;
+    color: #444;
+}
+
+.mdi-button:hover {
+    background-color: #d0d0d0;
+    color: #000;
+}
+
+.mdi-button:active {
+    background-color: #b0b0b0;
+}
+
+.mdi-button.mdi-close:hover {
+    background-color: #e04040;
+    color: #fff;
+}
+
+.mdi-button.mdi-close:active {
+    background-color: #c03030;
+}
+
+.mdi-button svg {
+    width: 10px;
+    height: 10px;
+}
+
+.mdi-button svg line,
+.mdi-button svg polyline,
+.mdi-button svg rect {
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 /* this holds the child widget in a MDI window */
@@ -63,12 +104,56 @@
     overflow: hidden;
 }
 
-.mdi-resize-handle {
+.mdi-grip {
     position: absolute;
+    width: 0;
+    height: 0;
+    opacity: 0;
+    transition: opacity 0.15s;
+    filter: drop-shadow(1px 1px 1px rgba(0, 0, 0, 0.4));
+}
+
+.mdi-window:hover .mdi-grip {
+    opacity: 0.7;
+}
+
+.mdi-grip:hover {
+    opacity: 1 !important;
+}
+
+.mdi-grip-se {
     bottom: 0;
     right: 0;
-    width: 10px;
-    height: 10px;
-    background-color: #3498db;
-    cursor: nwse-resize;
+    border-style: solid;
+    border-width: 0 0 16px 16px;
+    border-color: transparent transparent #999 transparent;
 }
+
+.mdi-grip-sw {
+    bottom: 0;
+    left: 0;
+    border-style: solid;
+    border-width: 16px 0 0 16px;
+    border-color: transparent transparent transparent #999;
+}
+
+.mdi-grip-ne {
+    top: 0;
+    right: 0;
+    border-style: solid;
+    border-width: 0 16px 16px 0;
+    border-color: transparent #999 transparent transparent;
+}
+
+.mdi-grip-nw {
+    top: 0;
+    left: 0;
+    border-style: solid;
+    border-width: 0 0 16px 16px;
+    border-color: transparent transparent transparent #999;
+}
+
+.mdi-grip-se:hover { border-bottom-color: #777; }
+.mdi-grip-sw:hover { border-left-color: #777; }
+.mdi-grip-ne:hover { border-right-color: #777; }
+.mdi-grip-nw:hover { border-left-color: #777; }

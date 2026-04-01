@@ -37,8 +37,9 @@
 }
 
 .tab-header button.active {
-    background-color: #C3C3C3;
     border-bottom: 1px solid transparent;
+    box-shadow: 0 0 4px 2px rgba(0, 0, 0, 0.5);
+    z-index: 1;
 }
 
 .tab-header-bottom button.active {
@@ -56,10 +57,37 @@
     border-right: 1px solid #C3C3C3;
 }
 
-.tab-header button .close {
-    margin-left: 5px;
-    border: 1px solid #000000;
+.tab-header button .tab-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 6px;
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    color: #666;
     cursor: pointer;
+    vertical-align: middle;
+}
+
+.tab-header button .tab-close svg {
+    width: 10px;
+    height: 10px;
+}
+
+.tab-header button .tab-close svg line {
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+}
+
+.tab-header button .tab-close:hover {
+    background-color: rgba(0, 0, 0, 0.15);
+    color: #000;
+}
+
+.tab-header button .tab-close:active {
+    background-color: rgba(0, 0, 0, 0.25);
 }
 
 .tab-content-container {
@@ -102,6 +130,19 @@
     flex-direction: row;
 }
 
+.tab-widget.tab-header-left .tab-header button,
+.tab-widget.tab-header-right .tab-header button {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    text-align: left;
+}
+
+.tab-widget.tab-header-left .tab-header button .tab-close,
+.tab-widget.tab-header-right .tab-header button .tab-close {
+    margin-left: auto;
+}
+
 .tab-widget.tab-header-right {
-    flex-direction: row-reverse;
+    flex-direction: row;
 }

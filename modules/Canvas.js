@@ -2,8 +2,26 @@
 
 import {Widget} from "./Widget.js";
 
+/**
+ * A canvas widget for custom drawing and event handling.
+ * Wraps an HTML canvas element and dispatches pointer, mouse, keyboard,
+ * focus, and drag-drop events through the callback system.
+ * @extends Widget
+ *
+ * Callbacks:
+ * - 'pointer-down', 'pointer-up', 'pointer-move', 'pointer-over', 'pointer-out'
+ * - 'click', 'dblclick', 'wheel'
+ * - 'keydown', 'keyup', 'keypress'
+ * - 'focus', 'focusout'
+ * - 'drop', 'dragover', 'contextmenu'
+ */
 class Canvas extends Widget {
 
+    /**
+     * Creates a new Canvas widget.
+     * @param {Object} [options] - Configuration options.
+     * @param {HTMLElement} [options.element=null] - Optional pre-existing canvas element to use.
+     */
     constructor(options={}) {
         super();
         this.element = this.get_option(options, 'element', null);

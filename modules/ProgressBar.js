@@ -2,8 +2,17 @@
 
 import {Widget} from "./Widget.js";
 
+/**
+ * A horizontal progress bar widget displaying a value from 0% to 100%.
+ * @extends Widget
+ */
 class ProgressBar extends Widget {
 
+    /**
+     * Creates a new ProgressBar widget.
+     * @param {Object} [options] - Configuration options.
+     * @param {HTMLElement} [options.element=null] - Optional pre-existing DOM element to use.
+     */
     constructor(options={}) {
         super();
         this.element = this.get_option(options, 'element', null);
@@ -35,11 +44,19 @@ class ProgressBar extends Widget {
         this.label.textContent = Math.round(pct) + '%';
     }
 
+    /**
+     * Sets the progress value.
+     * @param {number} value - A float between 0 (0%) and 1 (100%).
+     */
     set_value(value) {
         this.value = Math.max(0, Math.min(1, value));
         this._display();
     }
 
+    /**
+     * Returns the current progress value.
+     * @returns {number} A float between 0 and 1.
+     */
     get_value() {
         return this.value;
     }
