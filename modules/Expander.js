@@ -12,6 +12,7 @@ class Expander extends ContainerWidget {
         //this.borderColor = options.borderColor || 'black';
         //this.borderRadius = options.borderRadius || '2px';
         this.collapsible = options.collapsible || false;
+        this.collapsed = this.collapsible;
         this.shadow = options.shadow || false;
 
         // Create the frame element

@@ -2,11 +2,10 @@
  * Styling the Box widget
  */
 .box-widget {
-/*    position: relative; */
+    display: flex;
     flex-basis: auto;
     flex-wrap: nowrap;
-/*    flex-grow: stretch; */
-    align-items: normal;
+    align-items: stretch;
     overflow: hidden;
     margin: 0px;
 }

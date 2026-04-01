@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+    }
+  </style>
+  <link rel="stylesheet" href="../Widgets.css" type="text/css" />
+</head>
+<body>
+  <script type="module">
+    import { Widgets } from "../Widgets.js";
+
+    let top = new Widgets.TopLevel();
+    top.resize(500, 500);
+
+    let vbox = new Widgets.VBox();
+    vbox.set_spacing(4);
+
+    // collapsible expander
+    let exp1 = new Widgets.Expander({title: "Section 1 (collapsible)", collapsible: true});
+    let text1 = new Widgets.Text({text: "This content can be collapsed by clicking the title bar."});
+    exp1.set_widget(text1);
+    vbox.add_widget(exp1, 0);
+
+    // non-collapsible expander
+    let exp2 = new Widgets.Expander({title: "Section 2 (always visible)", collapsible: false});
+    let text2 = new Widgets.Text({text: "This content is always visible."});
+    exp2.set_widget(text2);
+    vbox.add_widget(exp2, 0);
+
+    // with shadow
+    let exp3 = new Widgets.Expander({title: "Section 3 (with shadow)", collapsible: true, shadow: true});
+    let text3 = new Widgets.Text({text: "This expander has a shadow style applied."});
+    exp3.set_widget(text3);
+    vbox.add_widget(exp3, 0);
+
+    top.set_widget(vbox);
+    top.show();
+
+  </script>
+</body>
+</html>

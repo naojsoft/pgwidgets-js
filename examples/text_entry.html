@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+    }
+  </style>
+  <link rel="stylesheet" href="../Widgets.css" type="text/css" />
+</head>
+<body>
+  <script type="module">
+    import { Widgets } from "../Widgets.js";
+
+    let top = new Widgets.TopLevel();
+    top.resize(400, 300);
+
+    let vbox = new Widgets.VBox();
+    vbox.set_spacing(4);
+
+    let label = new Widgets.Label({text: "Type something and press a key:"});
+    vbox.add_widget(label, 0);
+
+    let entry = new Widgets.TextEntry({text: "Hello", editable: true});
+    vbox.add_widget(entry, 0);
+
+    let readonly_entry = new Widgets.TextEntry({text: "This is read-only", editable: false});
+    vbox.add_widget(readonly_entry, 0);
+
+    let status = new Widgets.Text({text: ""});
+    entry.add_callback('activated', (w) => {
+        status.set_text("Current text: " + entry.get_text());
+    });
+    vbox.add_widget(status, 1);
+
+    top.set_widget(vbox);
+    top.show();
+
+  </script>
+</body>
+</html>

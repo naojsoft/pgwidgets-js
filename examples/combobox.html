@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+    }
+  </style>
+  <link rel="stylesheet" href="../Widgets.css" type="text/css" />
+</head>
+<body>
+  <script type="module">
+    import { Widgets } from "../Widgets.js";
+
+    let top = new Widgets.TopLevel();
+    top.resize(400, 300);
+
+    let vbox = new Widgets.VBox();
+    vbox.set_spacing(4);
+
+    let label = new Widgets.Label({text: "Pick a color:"});
+    vbox.add_widget(label, 0);
+
+    let status = new Widgets.Text({text: "(no selection)"});
+
+    let colors = ["Red", "Green", "Blue", "Yellow", "Magenta"];
+    let combo = new Widgets.ComboBox();
+    for (let color of colors) {
+        combo.append_text(color);
+    }
+    combo.set_index(0);
+    combo.add_callback('activated', (w, idx) => {
+        status.set_text("Selected: " + colors[idx]);
+    });
+
+    vbox.add_widget(combo, 0);
+    vbox.add_widget(status, 1);
+
+    top.set_widget(vbox);
+    top.show();
+
+  </script>
+</body>
+</html>

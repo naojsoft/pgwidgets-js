@@ -2,24 +2,19 @@
 
 import {ContainerWidget} from "./Widget.js";
 
-class TopLevel extends ContainerWidget {
+class Page extends ContainerWidget {
 
-    constructor(options={}) {
+    constructor(options = {}) {
         super();
         this.element = this.get_option(options, 'element', null);
         if (this.element == null) {
             this.element = document.createElement('div');
         }
-        this.element.className = 'toplevel-widget';
+        this.element.className = 'page';
         this.element.style.position = 'absolute';
         this.element.style.display = 'flex';
-        this.element.style.overflow = 'hidden';
-        this.element.style.margin = 1;
-
-        // JavaScript hack to bind "this" correctly for our methods
-        this.set_widget = this.set_widget.bind(this);
-        this.show = this.show.bind(this);
-        this.hide = this.hide.bind(this);
+        //this.element.style.overflow = 'hidden';
+        this.element.style.margin = 0;
     }
 
     set_widget(child) {
@@ -38,5 +33,4 @@ class TopLevel extends ContainerWidget {
     }
 };    
 
-export { TopLevel };
-
+export { Page };

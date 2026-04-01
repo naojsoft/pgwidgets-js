@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+    }
+  </style>
+  <link rel="stylesheet" href="../Widgets.css" type="text/css" />
+</head>
+<body>
+  <script type="module">
+    import { Widgets } from "../Widgets.js";
+
+    let top = new Widgets.TopLevel();
+    top.resize(700, 700);
+
+    let vbox = new Widgets.VBox();
+    vbox.set_spacing(6);
+
+    let status = new Widgets.Text({text: "Interact with the widgets below"});
+    vbox.add_widget(status, 0);
+
+    // --- Buttons ---
+    let exp_buttons = new Widgets.Expander({title: "Buttons", collapsible: true});
+    let btn_box = new Widgets.HBox();
+    btn_box.set_spacing(4);
+    let btn1 = new Widgets.Button("Button A");
+    btn1.add_callback('activated', () => status.set_text("Button A clicked"));
+    let btn2 = new Widgets.Button("Button B");
+    btn2.add_callback('activated', () => status.set_text("Button B clicked"));
+    btn_box.add_widget(btn1);
+    btn_box.add_widget(btn2);
+    exp_buttons.set_widget(btn_box);
+    vbox.add_widget(exp_buttons, 0);
+
+    // --- CheckBoxes ---
+    let exp_checks = new Widgets.Expander({title: "CheckBoxes", collapsible: true});
+    let check_box = new Widgets.VBox();
+    let cb1 = new Widgets.CheckBox("Option 1");
+    cb1.add_callback('activated', (w, val) => status.set_text("Option 1: " + (val ? "ON" : "OFF")));
+    let cb2 = new Widgets.CheckBox("Option 2");
+    cb2.add_callback('activated', (w, val) => status.set_text("Option 2: " + (val ? "ON" : "OFF")));
+    check_box.add_widget(cb1);
+    check_box.add_widget(cb2);
+    exp_checks.set_widget(check_box);
+    vbox.add_widget(exp_checks, 0);
+
+    // --- ComboBox ---
+    let exp_combo = new Widgets.Expander({title: "ComboBox", collapsible: true});
+    let combo_box = new Widgets.VBox();
+    let combo = new Widgets.ComboBox();
+    let items = ["Apple", "Banana", "Cherry", "Date", "Elderberry"];
+    for (let item of items) {
+        combo.append_text(item);
+    }
+    combo.add_callback('activated', (w, idx) => status.set_text("Selected: " + items[idx]));
+    combo_box.add_widget(combo);
+    exp_combo.set_widget(combo_box);
+    vbox.add_widget(exp_combo, 0);
+
+    // --- TextEntry ---
+    let exp_entry = new Widgets.Expander({title: "TextEntry", collapsible: true});
+    let entry_box = new Widgets.VBox();
+    let entry = new Widgets.TextEntry({text: "Type here"});
+    entry.add_callback('activated', () => status.set_text("Entry: " + entry.get_text()));
+    entry_box.add_widget(entry);
+    exp_entry.set_widget(entry_box);
+    vbox.add_widget(exp_entry, 0);
+
+    // --- Slider ---
+    let exp_slider = new Widgets.Expander({title: "Slider", collapsible: true});
+    let slider_box = new Widgets.VBox();
+    let slider = new Widgets.Slider({min: 0, max: 100, value: 50});
+    slider.add_callback('activated', (w, val) => status.set_text("Slider: " + val));
+    slider_box.add_widget(slider);
+    exp_slider.set_widget(slider_box);
+    vbox.add_widget(exp_slider, 0);
+
+    // --- Label with styling ---
+    let exp_label = new Widgets.Expander({title: "Label (styled)", collapsible: true});
+    let label_box = new Widgets.VBox();
+    let lbl = new Widgets.Label({text: "Styled Label"});
+    lbl.set_font("monospace", 14);
+    lbl.set_color("darkblue", "#eef");
+    lbl.set_halign("center");
+    label_box.add_widget(lbl);
+    exp_label.set_widget(label_box);
+    vbox.add_widget(exp_label, 0);
+
+    top.set_widget(vbox);
+    top.show();
+
+  </script>
+</body>
+</html>

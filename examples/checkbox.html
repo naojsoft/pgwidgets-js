@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+    }
+  </style>
+  <link rel="stylesheet" href="../Widgets.css" type="text/css" />
+</head>
+<body>
+  <script type="module">
+    import { Widgets } from "../Widgets.js";
+
+    let top = new Widgets.TopLevel();
+    top.resize(400, 300);
+
+    let vbox = new Widgets.VBox();
+    vbox.set_spacing(4);
+
+    let status = new Widgets.Text({text: "(check a box)"});
+
+    let cb1 = new Widgets.CheckBox("Enable feature A");
+    cb1.add_callback('activated', (w, val) => {
+        status.set_text("Feature A: " + (val ? "ON" : "OFF"));
+    });
+
+    let cb2 = new Widgets.CheckBox("Enable feature B");
+    cb2.add_callback('activated', (w, val) => {
+        status.set_text("Feature B: " + (val ? "ON" : "OFF"));
+    });
+
+    vbox.add_widget(cb1, 0);
+    vbox.add_widget(cb2, 0);
+    vbox.add_widget(status, 1);
+
+    top.set_widget(vbox);
+    top.show();
+
+  </script>
+</body>
+</html>

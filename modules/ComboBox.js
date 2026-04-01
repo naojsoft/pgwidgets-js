@@ -39,9 +39,11 @@ class ComboBox extends Widget {
     }
 
     set_index(idx) {
+        this.element.selectedIndex = idx;
     }
 
     get_index() {
+        return this.element.selectedIndex;
     }
 
     _cb_redirect(action) {

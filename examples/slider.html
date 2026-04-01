@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+    }
+  </style>
+  <link rel="stylesheet" href="../Widgets.css" type="text/css" />
+</head>
+<body>
+  <script type="module">
+    import { Widgets } from "../Widgets.js";
+
+    let top = new Widgets.TopLevel();
+    top.resize(400, 300);
+
+    let vbox = new Widgets.VBox();
+    vbox.set_spacing(4);
+
+    let label = new Widgets.Label({text: "Adjust the sliders:"});
+    vbox.add_widget(label, 0);
+
+    let status = new Widgets.Text({text: "Value: 50"});
+
+    let slider1 = new Widgets.Slider({min: 0, max: 100, step: 1, value: 50});
+    slider1.add_callback('activated', (w, val) => {
+        status.set_text("Value: " + val);
+    });
+    vbox.add_widget(slider1, 0);
+
+    let label2 = new Widgets.Label({text: "Fine-grained (0.0 - 1.0):"});
+    vbox.add_widget(label2, 0);
+
+    let status2 = new Widgets.Text({text: "Value: 0.5"});
+    let slider2 = new Widgets.Slider({min: 0, max: 1, step: 0.01, value: 0.5});
+    slider2.add_callback('activated', (w, val) => {
+        status2.set_text("Value: " + val.toFixed(2));
+    });
+    vbox.add_widget(slider2, 0);
+
+    vbox.add_widget(status, 0);
+    vbox.add_widget(status2, 0);
+
+    // button to programmatically set slider value
+    let btn = new Widgets.Button("Reset to defaults");
+    btn.add_callback('activated', (w) => {
+        slider1.set_value(50);
+        slider2.set_value(0.5);
+        status.set_text("Value: 50");
+        status2.set_text("Value: 0.50");
+    });
+    vbox.add_widget(btn, 0);
+
+    top.set_widget(vbox);
+    top.show();
+
+  </script>
+</body>
+</html>

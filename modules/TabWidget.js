@@ -251,10 +251,10 @@ class TabWidget extends ContainerWidget {
 
 class StackWidget extends TabWidget {
 
-    constructor(options = { }) {
-        const element = this.get_option(options, 'element', null);
-        super(options = { element: element, closable: false, reorderable: false,
-                          tab_position: 'none' });
+    constructor(options = {}) {
+        const element = options.element || null;
+        super({ element: element, closable: false, reorderable: false,
+                tab_position: 'none' });
     }
 }
 

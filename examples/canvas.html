@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+    }
+  </style>
+  <link rel="stylesheet" href="../Widgets.css" type="text/css" />
+</head>
+<body>
+  <script type="module">
+    import { Widgets } from "../Widgets.js";
+
+    let top = new Widgets.TopLevel();
+    top.resize(600, 500);
+
+    let vbox = new Widgets.VBox();
+    vbox.set_spacing(4);
+
+    let status = new Widgets.Text({text: "Draw on the canvas (click and drag)"});
+    vbox.add_widget(status, 0);
+
+    let canvas = new Widgets.Canvas();
+    canvas.resize(580, 400);
+
+    // simple drawing app
+    let drawing = false;
+    let ctx = null;
+
+    canvas.add_callback('pointer-down', (w, e) => {
+        drawing = true;
+        let el = w.get_element();
+        ctx = el.getContext('2d');
+        let rect = el.getBoundingClientRect();
+        ctx.beginPath();
+        ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+        status.set_text("Drawing...");
+    });
+
+    canvas.add_callback('pointer-move', (w, e) => {
+        if (drawing && ctx) {
+            let el = w.get_element();
+            let rect = el.getBoundingClientRect();
+            ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+            ctx.stroke();
+        }
+    });
+
+    canvas.add_callback('pointer-up', (w, e) => {
+        drawing = false;
+        status.set_text("Draw on the canvas (click and drag)");
+    });
+
+    canvas.add_callback('dblclick', (w, e) => {
+        let el = w.get_element();
+        let ctx = el.getContext('2d');
+        ctx.clearRect(0, 0, el.width, el.height);
+        status.set_text("Canvas cleared! Draw on the canvas (click and drag)");
+    });
+
+    vbox.add_widget(canvas, 1);
+
+    top.set_widget(vbox);
+    top.show();
+
+  </script>
+</body>
+</html>

@@ -14,34 +14,32 @@ class CheckBox extends Widget {
         this.element.className = 'checkbox-widget';
         
         this.checkbox = document.createElement('input');
-        checkbox.type = "checkbox";
+        this.checkbox.type = "checkbox";
         this.element.appendChild(this.checkbox);
-        this.label = document.createTextNode(text)
+        this.label = document.createTextNode(text);
         this.element.appendChild(this.label);
-        
+
         // JavaScript hack to bind "this" correctly for our methods
-        this.set_text = this.set_text.bind(this);
+        this.set_state = this.set_state.bind(this);
+        this.get_state = this.get_state.bind(this);
         this._cb_redirect = this._cb_redirect.bind(this);
 
-        //super.init_style();
-
-        this.element.textContent = text;
-        this.element.onclick = () => this._cb_redirect('clicked');
+        this.checkbox.onclick = () => this._cb_redirect('clicked');
 
         this.enable_callback('activated');
     }
 
     set_state(tf) {
-        this.element.value = tf;
+        this.checkbox.checked = tf;
     }
 
     get_state() {
-        return this.element.value;
+        return this.checkbox.checked;
     }
 
     _cb_redirect(action) {
         if (action === 'clicked') {
-            this.make_callback('activated', this.element.value);
+            this.make_callback('activated', this.checkbox.checked);
         }
     }
 };    

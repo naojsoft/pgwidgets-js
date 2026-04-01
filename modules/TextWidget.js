@@ -33,7 +33,7 @@ class Text extends Widget {
     set_html(html_text) {
         this.element.innerHTML = html_text;
     }
-    
+
 }
 
 class Label extends Widget {
@@ -49,6 +49,9 @@ class Label extends Widget {
         // JavaScript hack to bind "this" correctly for our methods
         this.set_text = this.set_text.bind(this);
         this.set_html = this.set_html.bind(this);
+        this.set_font = this.set_font.bind(this);
+        this.set_color = this.set_color.bind(this);
+        this.set_halign = this.set_halign.bind(this);
 
         var text = this.get_option(options, 'text', null);
         if (text !== null) {
@@ -63,64 +66,25 @@ class Label extends Widget {
     set_html(html_text) {
         this.element.innerHTML = html_text;
     }
-    
+
     set_font(font, size=10) {
-        this.element.innerText = text;
+        this.element.style.fontFamily = font;
+        this.element.style.fontSize = size + 'pt';
     }
 
     set_color(fg=null, bg=null) {
-        this.element.innerText = text;
-    }
-
-    set_halign() {
-        this.element.innerText = text;
-    }
-
-}
-
-class TextEntry extends Widget {
-
-    constructor(text='', options={editable: true}) {
-        super();
-        this.element = this.get_option(options, 'element', null);
-        if (this.element == null) {
-            this.element = document.createElement('input');
+        if (fg !== null) {
+            this.element.style.color = fg;
         }
-        this.element.setAttribute('type', 'text');
-        
-        // JavaScript hack to bind "this" correctly for our methods
-        this.set_text = this.set_text.bind(this);
-        this._cb_redirect = this._cb_redirect.bind(this);
-
-        super.init_style();
-
-        this.element.textContent = text;
-        this.element.onclick = () => this._cb_redirect('clicked');
-
-        this.enable_callback('activated');
-    }
-
-    set_text(text) {
-        this.element.innerText = text;
-    }
-
-    get_text() {
-        this.element.innerText = text;
-    }
-
-    set_editable(tf) {
-        this.element.innerText = text;
-    }
-
-    set_font(font, size=10) {
-        this.element.innerText = text;
-    }
-
-    _cb_redirect(action) {
-        if (action === 'clicked') {
-            this.make_callback('activated');
+        if (bg !== null) {
+            this.element.style.backgroundColor = bg;
         }
     }
+
+    set_halign(align) {
+        this.element.style.textAlign = align;
+    }
+
 }
 
 class TextArea extends Widget {
@@ -131,44 +95,56 @@ class TextArea extends Widget {
         if (this.element == null) {
             this.element = document.createElement('textarea');
         }
-        
+        this.element.className = 'textarea-widget';
+
         // JavaScript hack to bind "this" correctly for our methods
         this.set_text = this.set_text.bind(this);
-        this._cb_redirect = this._cb_redirect.bind(this);
+        this.get_text = this.get_text.bind(this);
+        this.append_text = this.append_text.bind(this);
+        this.set_editable = this.set_editable.bind(this);
+        this.set_wrap = this.set_wrap.bind(this);
+        this.set_font = this.set_font.bind(this);
+        this.set_limit = this.set_limit.bind(this);
 
         super.init_style();
 
-        this.element.textContent = text;
+        this.element.readOnly = ! this.get_option(options, 'editable', true);
+        this.element.wrap = this.get_option(options, 'wrap', false) ? 'soft' : 'off';
+
+        if (text) {
+            this.set_text(text);
+        }
     }
 
     set_text(text) {
-        this.element.innerText = text;
+        this.element.value = text;
     }
 
     get_text() {
-        this.element.innerText = text;
+        return this.element.value;
     }
 
     append_text(text) {
-        this.element.innerText = text;
+        this.element.value += text;
     }
 
     set_editable(tf) {
-        this.element.innerText = text;
+        this.element.readOnly = !tf;
     }
 
     set_wrap(tf) {
-        this.element.innerText = text;
+        this.element.wrap = tf ? 'soft' : 'off';
     }
 
     set_font(font, size=10) {
-        this.element.innerText = text;
+        this.element.style.fontFamily = font;
+        this.element.style.fontSize = size + 'pt';
     }
 
     set_limit(numlines) {
-        this.element.innerText = text;
+        this.element.rows = numlines;
     }
 
 }
 
-export { Text };
+export { Text, Label, TextArea };

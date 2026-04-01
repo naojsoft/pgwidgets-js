@@ -14,24 +14,24 @@
   <script type="module">
     import { Widgets } from "../Widgets.js";
 
-    const vbox = new Widgets.VBox();
-    vbox.set_spacing(2);
-    const btn = new Widgets.Button("Add Child");
-    vbox.add_widget(btn, 0);
-    const splitter = new Widgets.Splitter({orientation: 'vertical'});
-    let w = new Widgets.Text({text: "Hello, World!"})
-    splitter.add_widget(w)
-    w = new Widgets.Text({text: "Hello, Pappy!"})
-    splitter.add_widget(w)
-    w = new Widgets.Text({text: "Hello, Mammy!"});
-    splitter.add_widget(w)
-    vbox.add_widget(splitter, 1);
-
     let top = new Widgets.TopLevel();
-    top.set_widget(vbox);
-    top.resize(500, 1000);
+    top.resize(700, 500);
+
+    // horizontal splitter with three panes
+    const hsplitter = new Widgets.Splitter({orientation: 'horizontal'});
+    hsplitter.add_widget(new Widgets.Text({text: "Left pane"}));
+
+    // nest a vertical splitter in the middle pane
+    const vsplitter = new Widgets.Splitter({orientation: 'vertical'});
+    vsplitter.add_widget(new Widgets.Text({text: "Top middle"}));
+    vsplitter.add_widget(new Widgets.Text({text: "Bottom middle"}));
+    hsplitter.add_widget(vsplitter);
+
+    hsplitter.add_widget(new Widgets.Text({text: "Right pane"}));
+
+    top.set_widget(hsplitter);
     top.show();
-    
+
   </script>
 </body>
 </html>
