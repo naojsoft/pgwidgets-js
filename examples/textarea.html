@@ -20,7 +20,7 @@
     let vbox = new Widgets.VBox();
     vbox.set_spacing(4);
 
-    let label = new Widgets.Label({text: "Editable text area:"});
+    let label = new Widgets.Label("Editable text area:");
     vbox.add_widget(label, 0);
 
     let textarea = new Widgets.TextArea("Type here...", {editable: true, wrap: true});
@@ -51,7 +51,7 @@
     });
 
     // read-only area
-    let label2 = new Widgets.Label({text: "Read-only text area:"});
+    let label2 = new Widgets.Label("Read-only text area:");
     vbox.add_widget(label2, 0);
 
     let readonly_area = new Widgets.TextArea("This text area is read-only.\nYou cannot edit it.", {editable: false});

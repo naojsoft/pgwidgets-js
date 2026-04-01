@@ -82,9 +82,9 @@
     // --- Label with styling ---
     let exp_label = new Widgets.Expander({title: "Label (styled)", collapsible: true});
     let label_box = new Widgets.VBox();
-    let lbl = new Widgets.Label({text: "Styled Label"});
+    let lbl = new Widgets.Label("Styled Label");
     lbl.set_font("monospace", 14);
-    lbl.set_color("darkblue", "#eef");
+    lbl.set_color("#eef", "darkblue");
     lbl.set_halign("center");
     label_box.add_widget(lbl);
     exp_label.set_widget(label_box);

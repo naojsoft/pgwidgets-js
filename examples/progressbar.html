@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+    }
+  </style>
+  <link rel="stylesheet" href="../Widgets.css" type="text/css" />
+</head>
+<body>
+  <script type="module">
+    import { Widgets } from "../Widgets.js";
+
+    let top = new Widgets.TopLevel();
+    top.resize(400, 250);
+
+    let vbox = new Widgets.VBox();
+    vbox.set_spacing(8);
+
+    let label1 = new Widgets.Label("Manual control:");
+    vbox.add_widget(label1, 0);
+
+    let pb1 = new Widgets.ProgressBar();
+    pb1.set_value(0);
+    vbox.add_widget(pb1, 0);
+
+    let slider = new Widgets.Slider({dtype: 'float', min: 0, max: 1, step: 0.01, value: 0, track: true});
+    slider.add_callback('activated', (w, val) => {
+        pb1.set_value(val);
+    });
+    vbox.add_widget(slider, 0);
+
+    let label2 = new Widgets.Label("Animated:");
+    vbox.add_widget(label2, 0);
+
+    let pb2 = new Widgets.ProgressBar();
+    vbox.add_widget(pb2, 0);
+
+    let hbox = new Widgets.HBox();
+    hbox.set_spacing(4);
+
+    let running = false;
+    let timer = null;
+
+    let btnStart = new Widgets.Button("Start");
+    btnStart.add_callback('activated', () => {
+        if (!running) {
+            running = true;
+            let val = pb2.get_value();
+            timer = setInterval(() => {
+                val += 0.01;
+                if (val > 1) val = 0;
+                pb2.set_value(val);
+            }, 50);
+        }
+    });
+
+    let btnStop = new Widgets.Button("Stop");
+    btnStop.add_callback('activated', () => {
+        running = false;
+        if (timer) {
+            clearInterval(timer);
+            timer = null;
+        }
+    });
+
+    let btnReset = new Widgets.Button("Reset");
+    btnReset.add_callback('activated', () => {
+        running = false;
+        if (timer) {
+            clearInterval(timer);
+            timer = null;
+        }
+        pb2.set_value(0);
+    });
+
+    hbox.add_widget(btnStart);
+    hbox.add_widget(btnStop);
+    hbox.add_widget(btnReset);
+    vbox.add_widget(hbox, 0);
+
+    top.set_widget(vbox);
+    top.show();
+
+  </script>
+</body>
+</html>

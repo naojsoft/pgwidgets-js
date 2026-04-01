@@ -2,7 +2,7 @@
 
 import {ContainerWidget} from "./Widget.js";
 
-class Scrollable extends ContainerWidget {
+class ScrollArea extends ContainerWidget {
 
     constructor(options = { }) {
         //containerId, contentId, containerWidth, containerHeight, contentWidth, contentHeight
@@ -71,4 +71,4 @@ class Scrollable extends ContainerWidget {
     }
 }
 
-export { Scrollable };
+export { ScrollArea };

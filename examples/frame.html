@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+    }
+  </style>
+  <link rel="stylesheet" href="../Widgets.css" type="text/css" />
+</head>
+<body>
+  <script type="module">
+    import { Widgets } from "../Widgets.js";
+
+    let top = new Widgets.TopLevel();
+    top.resize(400, 350);
+
+    let vbox = new Widgets.VBox();
+    vbox.set_spacing(8);
+
+    // frame with title
+    let frame1 = new Widgets.Frame({title: "User Info"});
+    let innerVbox = new Widgets.VBox();
+    innerVbox.set_spacing(4);
+    innerVbox.add_widget(new Widgets.Label("Name:"), 0);
+    innerVbox.add_widget(new Widgets.TextEntry({text: ""}), 0);
+    innerVbox.add_widget(new Widgets.Label("Email:"), 0);
+    innerVbox.add_widget(new Widgets.TextEntry({text: ""}), 0);
+    frame1.set_widget(innerVbox);
+    vbox.add_widget(frame1, 0);
+
+    // frame without title
+    let frame2 = new Widgets.Frame();
+    let text = new Widgets.Text({text: "This frame has no title, just an etched border."});
+    frame2.set_widget(text);
+    vbox.add_widget(frame2, 0);
+
+    // frame with controls
+    let frame3 = new Widgets.Frame({title: "Settings"});
+    let settingsBox = new Widgets.VBox();
+    settingsBox.set_spacing(4);
+    settingsBox.add_widget(new Widgets.CheckBox("Enable notifications"), 0);
+    settingsBox.add_widget(new Widgets.CheckBox("Dark mode"), 0);
+    let slider = new Widgets.Slider({min: 0, max: 100, value: 75, track: true});
+    settingsBox.add_widget(new Widgets.Label("Volume:"), 0);
+    settingsBox.add_widget(slider, 0);
+    frame3.set_widget(settingsBox);
+    vbox.add_widget(frame3, 0);
+
+    top.set_widget(vbox);
+    top.show();
+
+  </script>
+</body>
+</html>

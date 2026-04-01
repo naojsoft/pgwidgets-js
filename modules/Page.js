@@ -14,7 +14,7 @@ class Page extends ContainerWidget {
         this.element.style.position = 'absolute';
         this.element.style.display = 'flex';
         //this.element.style.overflow = 'hidden';
-        this.element.style.margin = 0;
+        this.element.style.margin = '0px';
     }
 
     set_widget(child) {

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+    }
+  </style>
+  <link rel="stylesheet" href="../Widgets.css" type="text/css" />
+</head>
+<body>
+  <script type="module">
+    import { Widgets } from "../Widgets.js";
+
+    let top = new Widgets.TopLevel();
+    top.resize(500, 500);
+
+    let vbox = new Widgets.VBox();
+    vbox.set_spacing(8);
+
+    // form layout using GridBox
+    let frame1 = new Widgets.Frame({title: "Form Layout"});
+    let grid1 = new Widgets.GridBox({rows: 3, columns: 2});
+    grid1.set_spacing(6);
+
+    grid1.add_widget(new Widgets.Label("Name:"), 0, 0);
+    grid1.add_widget(new Widgets.TextEntry({text: ""}), 0, 1);
+    grid1.add_widget(new Widgets.Label("Email:"), 1, 0);
+    grid1.add_widget(new Widgets.TextEntry({text: ""}), 1, 1);
+    grid1.add_widget(new Widgets.Label("Age:"), 2, 0);
+    grid1.add_widget(new Widgets.SpinBox({dtype: 'int', min: 0, max: 120, value: 25}), 2, 1);
+
+    frame1.set_widget(grid1);
+    vbox.add_widget(frame1, 0);
+
+    // button grid
+    let frame2 = new Widgets.Frame({title: "Button Grid"});
+    let grid2 = new Widgets.GridBox({rows: 3, columns: 3});
+    grid2.set_spacing(4);
+
+    let status = new Widgets.Text({text: ""});
+    for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < 3; c++) {
+            let label = "(" + r + "," + c + ")";
+            let btn = new Widgets.Button(label);
+            btn.add_callback('activated', () => status.set_text("Clicked " + label));
+            grid2.add_widget(btn, r, c);
+        }
+    }
+
+    frame2.set_widget(grid2);
+    vbox.add_widget(frame2, 0);
+    vbox.add_widget(status, 0);
+
+    // dynamic add: auto-expands grid
+    let frame3 = new Widgets.Frame({title: "Dynamic Grid"});
+    let grid3 = new Widgets.GridBox();
+    grid3.set_spacing(4);
+    grid3.add_widget(new Widgets.Label("Top-left"), 0, 0);
+    grid3.add_widget(new Widgets.Label("Auto-expanded to row 2, col 3", {halign: 'center'}), 2, 3);
+
+    let [rows, cols] = grid3.get_row_column_count();
+    let info = new Widgets.Text({text: "Grid size: " + rows + " rows x " + cols + " columns"});
+
+    frame3.set_widget(grid3);
+    vbox.add_widget(frame3, 0);
+    vbox.add_widget(info, 0);
+
+    top.set_widget(vbox);
+    top.show();
+
+  </script>
+</body>
+</html>

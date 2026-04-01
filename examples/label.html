@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+    }
+  </style>
+  <link rel="stylesheet" href="../Widgets.css" type="text/css" />
+</head>
+<body>
+  <script type="module">
+    import { Widgets } from "../Widgets.js";
+
+    let top = new Widgets.TopLevel();
+    top.resize(500, 550);
+
+    let vbox = new Widgets.VBox();
+    vbox.set_spacing(8);
+
+    // basic labels with alignment
+    let frame1 = new Widgets.Frame({title: "Alignment"});
+    let alignBox = new Widgets.VBox();
+    alignBox.set_spacing(4);
+
+    let lblLeft = new Widgets.Label("Left aligned (default)");
+    alignBox.add_widget(lblLeft, 0);
+
+    let lblCenter = new Widgets.Label("Center aligned", {halign: 'center'});
+    alignBox.add_widget(lblCenter, 0);
+
+    let lblRight = new Widgets.Label("Right aligned", {halign: 'right'});
+    alignBox.add_widget(lblRight, 0);
+
+    frame1.set_widget(alignBox);
+    vbox.add_widget(frame1, 0);
+
+    // colored labels
+    let frame2 = new Widgets.Frame({title: "Colors"});
+    let colorBox = new Widgets.VBox();
+    colorBox.set_spacing(4);
+
+    let lblWarn = new Widgets.Label("Warning message");
+    lblWarn.set_color('#fff3cd', '#856404');
+    colorBox.add_widget(lblWarn, 0);
+
+    let lblErr = new Widgets.Label("Error message");
+    lblErr.set_color('#f8d7da', '#721c24');
+    colorBox.add_widget(lblErr, 0);
+
+    let lblOk = new Widgets.Label("Success message");
+    lblOk.set_color('#d4edda', '#155724');
+    colorBox.add_widget(lblOk, 0);
+
+    frame2.set_widget(colorBox);
+    vbox.add_widget(frame2, 0);
+
+    // fonts
+    let frame3 = new Widgets.Frame({title: "Fonts"});
+    let fontBox = new Widgets.VBox();
+    fontBox.set_spacing(4);
+
+    let lblMono = new Widgets.Label("Monospace 12pt");
+    lblMono.set_font("monospace", 12);
+    fontBox.add_widget(lblMono, 0);
+
+    let lblSerif = new Widgets.Label("Serif 14pt");
+    lblSerif.set_font("serif", 14);
+    fontBox.add_widget(lblSerif, 0);
+
+    let lblSans = new Widgets.Label("Sans-serif 10pt");
+    lblSans.set_font("sans-serif", 10);
+    fontBox.add_widget(lblSans, 0);
+
+    frame3.set_widget(fontBox);
+    vbox.add_widget(frame3, 0);
+
+    // dynamic control
+    let frame4 = new Widgets.Frame({title: "Dynamic"});
+    let dynBox = new Widgets.VBox();
+    dynBox.set_spacing(4);
+
+    let dynLabel = new Widgets.Label("Click buttons to change me", {halign: 'center'});
+    dynLabel.set_font("sans-serif", 14);
+    dynBox.add_widget(dynLabel, 0);
+
+    let btnBox = new Widgets.HBox();
+    btnBox.set_spacing(4);
+
+    let btnLeft = new Widgets.Button("Align Left");
+    btnLeft.add_callback('activated', () => dynLabel.set_halign('left'));
+    btnBox.add_widget(btnLeft);
+
+    let btnMid = new Widgets.Button("Align Center");
+    btnMid.add_callback('activated', () => dynLabel.set_halign('center'));
+    btnBox.add_widget(btnMid);
+
+    let btnRt = new Widgets.Button("Align Right");
+    btnRt.add_callback('activated', () => dynLabel.set_halign('right'));
+    btnBox.add_widget(btnRt);
+
+    dynBox.add_widget(btnBox, 0);
+    frame4.set_widget(dynBox);
+    vbox.add_widget(frame4, 0);
+
+    top.set_widget(vbox);
+    top.show();
+
+  </script>
+</body>
+</html>

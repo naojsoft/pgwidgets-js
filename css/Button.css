@@ -2,7 +2,23 @@
  * Styling the Button widgets
  */
 .button-widget {
-    border: 2px;
-    padding: 0px;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 8px;
+    cursor: pointer;
+    box-sizing: border-box;
 }
 
+.button-icon {
+    display: block;
+}
+
+.button-text {
+    display: block;
+}
+
+.button-icon + .button-text {
+    margin-top: 2px;
+}

@@ -37,7 +37,7 @@ class Widget {
         //style['flex'] = '1 1 auto';
 
         //style.overflow = 'hidden';
-        style.margin = 0;
+        style.margin = '0px';
     }
 
     get_element() {

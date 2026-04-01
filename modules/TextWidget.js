@@ -36,57 +36,6 @@ class Text extends Widget {
 
 }
 
-class Label extends Widget {
-
-    constructor(options = {text: ''}) {
-        super();
-        this.element = this.get_option(options, 'element', null);
-        if (this.element == null) {
-            this.element = document.createElement('div');
-        }
-        this.element.className = 'label-widget';
-
-        // JavaScript hack to bind "this" correctly for our methods
-        this.set_text = this.set_text.bind(this);
-        this.set_html = this.set_html.bind(this);
-        this.set_font = this.set_font.bind(this);
-        this.set_color = this.set_color.bind(this);
-        this.set_halign = this.set_halign.bind(this);
-
-        var text = this.get_option(options, 'text', null);
-        if (text !== null) {
-            this.set_text(text);
-        }
-    }
-
-    set_text(text) {
-        this.element.innerText = text;
-    }
-
-    set_html(html_text) {
-        this.element.innerHTML = html_text;
-    }
-
-    set_font(font, size=10) {
-        this.element.style.fontFamily = font;
-        this.element.style.fontSize = size + 'pt';
-    }
-
-    set_color(fg=null, bg=null) {
-        if (fg !== null) {
-            this.element.style.color = fg;
-        }
-        if (bg !== null) {
-            this.element.style.backgroundColor = bg;
-        }
-    }
-
-    set_halign(align) {
-        this.element.style.textAlign = align;
-    }
-
-}
-
 class TextArea extends Widget {
 
     constructor(text='', options={wrap: false, editable: true}) {
@@ -147,4 +96,4 @@ class TextArea extends Widget {
 
 }
 
-export { Text, Label, TextArea };
+export { Text, TextArea };

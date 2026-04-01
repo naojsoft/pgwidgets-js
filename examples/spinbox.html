@@ -23,7 +23,7 @@
     let status = new Widgets.Text({text: ""});
 
     // integer spinbox
-    let label1 = new Widgets.Label({text: "Integer (0 to 100, step 5):"});
+    let label1 = new Widgets.Label("Integer (0 to 100, step 5):");
     vbox.add_widget(label1, 0);
 
     let intSpin = new Widgets.SpinBox({dtype: 'int', min: 0, max: 100, step: 5, value: 50});
@@ -33,7 +33,7 @@
     vbox.add_widget(intSpin, 0);
 
     // float spinbox
-    let label2 = new Widgets.Label({text: "Float (0.0 to 1.0, step 0.05):"});
+    let label2 = new Widgets.Label("Float (0.0 to 1.0, step 0.05):");
     vbox.add_widget(label2, 0);
 
     let floatSpin = new Widgets.SpinBox({dtype: 'float', min: 0.0, max: 1.0, step: 0.05, value: 0.5});

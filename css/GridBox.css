@@ -1,0 +1,10 @@
+.gridbox-widget {
+    display: grid;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.gridbox-widget > * {
+    min-width: 0;
+    min-height: 0;
+}
