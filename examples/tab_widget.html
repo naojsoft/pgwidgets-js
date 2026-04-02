@@ -44,8 +44,8 @@
         posCombo.append_text(pos);
     }
     posCombo.set_index(0);
-    posCombo.add_callback('activated', (w, idx) => {
-        tab_w.set_tab_position(posCombo.get_text());
+    posCombo.add_callback('activated', (w, idx, text) => {
+        tab_w.set_tab_position(text);
     });
     controlBox.add_widget(posCombo, 0);
 

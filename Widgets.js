@@ -19,6 +19,7 @@ import {Label} from "./modules/Label.js";
 import {Button} from "./modules/Button.js";
 import {CheckBox} from "./modules/CheckBox.js";
 import {ComboBox} from "./modules/ComboBox.js";
+import {ComboBoxNative} from "./modules/ComboBoxNative.js";
 import {TextEntry} from "./modules/TextEntry.js";
 import {Slider} from "./modules/Slider.js";
 import {Canvas} from "./modules/Canvas.js";
@@ -43,9 +44,9 @@ const Widgets = {Widget, ContainerWidget, Box, VBox, HBox, ButtonBox,
                  TopLevel, ScrollArea, MDIWidget, Splitter, TabWidget,
                  StackWidget, Expander, Page, Text, Label, TextArea,
                  Frame, GridBox, Button, ToggleButton, CheckBox,
-                 RadioButton, ComboBox, TextEntry, Slider, Canvas,
-                 SpinBox, ProgressBar, Image, Dial, MenuBar, Menu,
-                 MenuAction, ToolBar, ToolBarAction,
+                 RadioButton, ComboBox, ComboBoxNative, TextEntry,
+                 Slider, Canvas, SpinBox, ProgressBar, Image, Dial,
+                 MenuBar, Menu, MenuAction, ToolBar, ToolBarAction,
                  TextEntrySet};
 
 export { Widgets };

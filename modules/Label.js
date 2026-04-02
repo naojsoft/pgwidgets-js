@@ -31,8 +31,6 @@ class Label extends Widget {
         this.get_text = this.get_text.bind(this);
         this.set_color = this.set_color.bind(this);
         this.set_halign = this.set_halign.bind(this);
-        this.set_font = this.set_font.bind(this);
-
         if (text !== '') {
             this.set_text(text);
         }
@@ -76,15 +74,6 @@ class Label extends Widget {
         this.element.style.textAlign = align;
     }
 
-    /**
-     * Sets the font family and size.
-     * @param {string} font - CSS font family name.
-     * @param {number} [size=10] - Font size in points.
-     */
-    set_font(font, size=10) {
-        this.element.style.fontFamily = font;
-        this.element.style.fontSize = size + 'pt';
-    }
 }
 
 export { Label };

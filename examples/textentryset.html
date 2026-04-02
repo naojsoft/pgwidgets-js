@@ -34,7 +34,8 @@
 
     // --- Custom button text ---
     let frame2 = new Widgets.Frame({title: "Custom button text"});
-    let entry2 = new Widgets.TextEntrySet({text: "Go", value: "search term"});
+    let entry2 = new Widgets.TextEntrySet({text: "Go", value: "search term",
+                                          linehistory: 10});
     entry2.add_callback('activated', (w, text) =>
         status.set_text('Search: "' + text + '"'));
     frame2.set_widget(entry2);

@@ -1,8 +1,63 @@
-/*
- * Styling the ComboBox widgets
- */
 .combobox-widget {
-    border: 2px;
-    padding: 0px;
+    display: inline-flex;
+    position: relative;
+    align-items: stretch;
 }
 
+.combobox-input {
+    flex: 1;
+    min-width: 0;
+    padding: 2px 4px;
+    border: 1px solid #aaa;
+    border-right: none;
+    border-radius: 3px 0 0 3px;
+    font-size: 13px;
+    outline: none;
+}
+
+.combobox-input:focus {
+    border-color: #4a90d9;
+}
+
+.combobox-input[readonly] {
+    cursor: default;
+    background-color: #f6f6f6;
+}
+
+.combobox-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 6px;
+    border: 1px solid #aaa;
+    border-radius: 0 3px 3px 0;
+    background-color: #e0e0e0;
+    font-size: 10px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.combobox-button:hover {
+    background-color: #d0d0d0;
+}
+
+.combobox-dropdown {
+    position: fixed;
+    z-index: 10000;
+    background-color: #fff;
+    border: 1px solid #aaa;
+    box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.15);
+    max-height: 200px;
+    overflow-y: auto;
+    font-size: 13px;
+}
+
+.combobox-item {
+    padding: 3px 6px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.combobox-item:hover {
+    background-color: #cde;
+}

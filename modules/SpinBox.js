@@ -70,6 +70,10 @@ class SpinBox extends Widget {
 
         this.upButton.addEventListener('click', () => this._step(1));
         this.downButton.addEventListener('click', () => this._step(-1));
+        this.input.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            this._step(e.deltaY < 0 ? 1 : -1);
+        });
         this.input.addEventListener('change', this._on_input);
         this.input.addEventListener('keydown', (e) => {
             if (e.key === 'ArrowUp') {
@@ -78,6 +82,9 @@ class SpinBox extends Widget {
             } else if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 this._step(-1);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                this._on_input(e);
             }
         });
 

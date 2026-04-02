@@ -14,29 +14,64 @@
   <script type="module">
     import { Widgets } from "../Widgets.js";
 
-    let top = new Widgets.TopLevel();
-    top.resize(400, 300);
+    let top = new Widgets.TopLevel({resizable: true});
+    top.resize(450, 400);
 
     let vbox = new Widgets.VBox();
-    vbox.set_spacing(4);
+    vbox.set_spacing(8);
+    vbox.set_padding(10);
 
-    let label = new Widgets.Label("Pick a color:");
-    vbox.add_widget(label, 0);
+    let status = new Widgets.Label("(no selection)");
+    status.set_padding([6, 4, 6, 4]);
 
-    let status = new Widgets.Text({text: "(no selection)"});
-
+    // --- Standard ComboBox (pick only) ---
+    let frame1 = new Widgets.Frame({title: "ComboBox (pick only)"});
     let colors = ["Red", "Green", "Blue", "Yellow", "Magenta"];
     let combo = new Widgets.ComboBox();
     for (let color of colors) {
         combo.append_text(color);
     }
     combo.set_index(0);
-    combo.add_callback('activated', (w, idx) => {
-        status.set_text("Selected: " + colors[idx]);
+    combo.add_callback('activated', (w, idx, text) => {
+        status.set_text("ComboBox: " + text + " (index " + idx + ")");
     });
+    frame1.set_widget(combo);
+    vbox.add_widget(frame1, 0);
 
-    vbox.add_widget(combo, 0);
-    vbox.add_widget(status, 1);
+    // --- Editable ComboBox ---
+    let frame2 = new Widgets.Frame({title: "ComboBox editable (type or pick)"});
+    let comboEdit = new Widgets.ComboBox({editable: true});
+    let fruits = ["Apple", "Apricot", "Banana", "Blueberry", "Cherry",
+                  "Grape", "Lemon", "Mango", "Orange", "Peach",
+                  "Pear", "Plum", "Strawberry"];
+    for (let fruit of fruits) {
+        comboEdit.append_text(fruit);
+    }
+    comboEdit.add_callback('activated', (w, idx, text) => {
+        status.set_text("Editable: " + text + " (index " + idx + ")");
+    });
+    frame2.set_widget(comboEdit);
+    vbox.add_widget(frame2, 0);
+
+    // --- Editable ComboBox with pre-set value ---
+    let frame3 = new Widgets.Frame({title: "ComboBox editable (custom entry allowed)"});
+    let comboEdit2 = new Widgets.ComboBox({editable: true});
+    let sizes = ["Small", "Medium", "Large", "Extra Large"];
+    for (let size of sizes) {
+        comboEdit2.append_text(size);
+    }
+    comboEdit2.set_text("Medium");
+    comboEdit2.add_callback('activated', (w, idx, text) => {
+        status.set_text("Size: " + text + " (index " + idx + ")");
+    });
+    frame3.set_widget(comboEdit2);
+    vbox.add_widget(frame3, 0);
+
+    // spacer
+    vbox.add_widget(new Widgets.Label(""), 1);
+
+    // status
+    vbox.add_widget(status, 0);
 
     top.set_widget(vbox);
     top.show();

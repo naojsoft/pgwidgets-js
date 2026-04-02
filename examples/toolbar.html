@@ -59,8 +59,9 @@
     fontCombo.append_text("Serif");
     fontCombo.append_text("Monospace");
     fontCombo.append_text("Cursive");
-    fontCombo.add_callback('activated', (w, idx) =>
-        status.set_text("Font: " + fontCombo.get_alpha(idx)));
+    fontCombo.set_index(0);
+    fontCombo.add_callback('activated', (w, idx, text) =>
+        status.set_text("Font: " + text));
     toolbar.add_widget(fontCombo);
 
     toolbar.add_spacer();

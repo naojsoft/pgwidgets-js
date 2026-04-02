@@ -12,6 +12,7 @@ class Widget {
      */
     constructor () {
         this.element = null;
+        this._enabled = true;
 
         // JavaScript hack to bind "this" correctly for our methods
         this.get_element = this.get_element.bind(this);
@@ -19,6 +20,10 @@ class Widget {
         this.set_border_color = this.set_border_color.bind(this);
         this.init_style = this.init_style.bind(this);
         this.resize = this.resize.bind(this);
+        this.set_enabled = this.set_enabled.bind(this);
+        this.get_enabled = this.get_enabled.bind(this);
+        this.show = this.show.bind(this);
+        this.hide = this.hide.bind(this);
         this.enable_callback = this.enable_callback.bind(this);
         this.add_callback = this.add_callback.bind(this);
         this.clear_callback = this.clear_callback.bind(this);
@@ -101,6 +106,70 @@ class Widget {
         } else {
             this.element.style.padding = padding + 'px';
         }
+    }
+
+    /**
+     * Sets the font properties of the widget.
+     * @param {string} font - CSS font family name.
+     * @param {number|null} [size=null] - Font size in points, or null to leave unchanged.
+     * @param {string|null} [weight=null] - Font weight (e.g. 'bold', 'normal', '600'), or null to leave unchanged.
+     * @param {string|null} [style=null] - Font style (e.g. 'italic', 'normal'), or null to leave unchanged.
+     */
+    set_font(font, size=null, weight=null, style=null) {
+        this.element.style.fontFamily = font;
+        if (size !== null) {
+            this.element.style.fontSize = size + 'pt';
+        }
+        if (weight !== null) {
+            this.element.style.fontWeight = weight;
+        }
+        if (style !== null) {
+            this.element.style.fontStyle = style;
+        }
+    }
+
+    /**
+     * Enables or disables the widget. A disabled widget is visually dimmed
+     * and does not respond to user interaction.
+     * @param {boolean} tf - True to enable, false to disable.
+     */
+    set_enabled(tf) {
+        this._enabled = tf;
+        if (tf) {
+            this.element.classList.remove('widget-disabled');
+        } else {
+            this.element.classList.add('widget-disabled');
+        }
+        // native form elements support the disabled attribute
+        if ('disabled' in this.element) {
+            this.element.disabled = !tf;
+        }
+    }
+
+    /**
+     * Returns whether the widget is currently enabled.
+     * @returns {boolean} True if enabled, false if disabled.
+     */
+    get_enabled() {
+        return this._enabled;
+    }
+
+    /** Makes the widget visible. */
+    show() {
+        this.element.style.display = '';
+    }
+
+    /** Hides the widget. */
+    hide() {
+        this.element.style.display = 'none';
+    }
+
+    /**
+     * Returns whether the widget is currently visible.
+     * @returns {boolean} True if visible, false if hidden.
+     */
+    is_visible() {
+        return this.element.style.display !== 'none';
     }
 
     /* CALLBACK HANDLING */

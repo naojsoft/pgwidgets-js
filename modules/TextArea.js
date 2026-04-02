@@ -31,7 +31,6 @@ class TextArea extends Widget {
         this.clear = this.clear.bind(this);
         this.set_editable = this.set_editable.bind(this);
         this.set_wrap = this.set_wrap.bind(this);
-        this.set_font = this.set_font.bind(this);
         this.set_limit = this.set_limit.bind(this);
 
         super.init_style();
@@ -87,16 +86,6 @@ class TextArea extends Widget {
      */
     set_wrap(tf) {
         this.element.wrap = tf ? 'soft' : 'off';
-    }
-
-    /**
-     * Sets the font family and size.
-     * @param {string} font - CSS font family name.
-     * @param {number} [size=10] - Font size in points.
-     */
-    set_font(font, size=10) {
-        this.element.style.fontFamily = font;
-        this.element.style.fontSize = size + 'pt';
     }
 
     /**

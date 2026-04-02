@@ -53,6 +53,15 @@ class Slider extends Widget {
         } else {
             this.element.addEventListener("change", this._cb_redirect);
         }
+        this.element.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            let step = Number(this.element.step) || 1;
+            let val = this.get_value() + (e.deltaY < 0 ? step : -step);
+            val = Math.min(Number(this.element.max), Math.max(Number(this.element.min), val));
+            this.element.value = val;
+            this.make_callback('activated', this.get_value());
+        });
+
         this.enable_callback('activated');
     }
 

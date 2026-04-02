@@ -90,6 +90,17 @@ class Dial extends Widget {
         this._onMouseUp = this._onMouseUp.bind(this);
 
         this._svg.addEventListener('mousedown', this._onMouseDown);
+        this._svg.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            let val = this.value + (e.deltaY < 0 ? this.step : -this.step);
+            val = Math.min(this.max, Math.max(this.min, val));
+            if (this.dtype === 'int') {
+                val = Math.round(val);
+            }
+            this.value = val;
+            this._updateVisual();
+            this.make_callback('activated', this.get_value());
+        });
 
         this.enable_callback('activated');
         this._updateVisual();

@@ -56,7 +56,7 @@
     for (let item of items) {
         combo.append_text(item);
     }
-    combo.add_callback('activated', (w, idx) => status.set_text("Selected: " + items[idx]));
+    combo.add_callback('activated', (w, idx, text) => status.set_text("Selected: " + text));
     combo_box.add_widget(combo);
     exp_combo.set_widget(combo_box);
     vbox.add_widget(exp_combo, 0);
@@ -64,7 +64,7 @@
     // --- TextEntry ---
     let exp_entry = new Widgets.Expander({title: "TextEntry", collapsible: true});
     let entry_box = new Widgets.VBox();
-    let entry = new Widgets.TextEntry({text: "Type here"});
+    let entry = new Widgets.TextEntry({text: "Type here", linehistory: 10});
     entry.add_callback('activated', () => status.set_text("Entry: " + entry.get_text()));
     entry_box.add_widget(entry);
     exp_entry.set_widget(entry_box);
