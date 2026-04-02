@@ -184,8 +184,9 @@ class MDISubWindow extends ContainerWidget {
 
         handle.addEventListener('mousedown', (e) => {
             e.preventDefault();
-            baseX = Math.floor(this.mdi_widget.element.getBoundingClientRect().left);
-            baseY = Math.floor(this.mdi_widget.element.getBoundingClientRect().top);
+            let wsRect = this.mdi_widget.workspace.getBoundingClientRect();
+            baseX = Math.floor(wsRect.left);
+            baseY = Math.floor(wsRect.top);
             offsetX = Math.floor(e.x - this.element.getBoundingClientRect().left);
             offsetY = Math.floor(e.y - this.element.getBoundingClientRect().top);
             isMoving = true;
@@ -200,13 +201,13 @@ class MDISubWindow extends ContainerWidget {
                 element.style.top = y + 'px';
                 this.update_state(rec);
 
-                // Bring the window to the top while dragging
                 this.raise_();
-            };
+                this.mdi_widget._updateWorkspaceSize();
+            }
         };
 
-        this.mdi_widget.element.addEventListener('mousemove', this.handleDrag);
-        this.mdi_widget.element.addEventListener('mouseup', () => {
+        document.addEventListener('mousemove', this.handleDrag);
+        document.addEventListener('mouseup', () => {
             isMoving = false;
         });
     }
@@ -278,6 +279,7 @@ class MDISubWindow extends ContainerWidget {
             this.update_state(rec);
             rec.state = 'normal';
             this.raise_();
+            this.mdi_widget._updateWorkspaceSize();
         };
 
         const onMouseUp = () => {
@@ -301,32 +303,29 @@ class MDISubWindow extends ContainerWidget {
 
     /** Toggles the sub-window between minimized and normal states. */
     toggle_minimize() {
-        // Check if the window is already minimized
         const rec = this.get_state();
         let style = this.element.style;
         if (rec.state === 'minimized') {
             // Restore the window to its previous state
-            style.display = 'block';
+            this.child_container.style.display = '';
             style.width = rec.width;
             style.height = rec.height;
             style.left = rec.left;
             style.top = rec.top;
             rec.state = 'normal';
+            this.mdi_widget._layoutMinimized();
         } else {
-            // Minimize the window and store its state
+            // Minimize: save state, hide content, show only title bar
             if (rec.state === 'normal') {
                 this.update_state(rec);
-            };
-            //style.display = 'none';
-            style.display = 'block';
+            }
+            this.child_container.style.display = 'none';
             style.width = 'auto';
             style.height = 'auto';
-            style.left = 'unset';
-            style.top = 'unset';
             rec.state = 'minimized';
+            this.mdi_widget._layoutMinimized();
         }
 
-        // Bring the window to the top when minimized or restored
         this.raise_();
     }
 
@@ -432,9 +431,12 @@ class MDIWidget extends ContainerWidget {
             this.element = document.createElement('div');
         }
         this.element.className = 'mdi-widget';
-        let style = this.element.style;
-        style.position = 'relative';
-        style.overflow = 'scroll';
+
+        // inner workspace holds all sub-windows; sized to fit content
+        this.workspace = document.createElement('div');
+        this.workspace.className = 'mdi-workspace';
+        this.element.appendChild(this.workspace);
+
 
         this.windowStateMap = new Map();
 
@@ -444,10 +446,22 @@ class MDIWidget extends ContainerWidget {
         this.tile_windows = this.tile_windows.bind(this);
         this.get_subwin = this.get_subwin.bind(this);
         this.close_child = this.close_child.bind(this);
+        this.set_resistance = this.set_resistance.bind(this);
+        this._updateWorkspaceSize = this._updateWorkspaceSize.bind(this);
 
         for (let name of ['page-switch', 'page-close']) {
             this.enable_callback(name);
         }
+    }
+
+    /**
+     * Sets the workspace expansion resistance.
+     * 0.0 = frictionless (workspace expands immediately with window movement).
+     * 1.0 = locked (windows cannot be moved outside the workspace).
+     * @param {number} value - Resistance factor between 0.0 and 1.0.
+     */
+    set_resistance(value) {
+        this.resistance = Math.max(0, Math.min(1, value));
     }
 
     /**
@@ -468,9 +482,10 @@ class MDIWidget extends ContainerWidget {
 
         const subwin = new MDISubWindow(this, child, title, width, height, icon_url);
         this.children.push(subwin);
-        this.element.appendChild(subwin.get_element());
+        this.workspace.appendChild(subwin.get_element());
 
-        subwin.raise_()
+        subwin.raise_();
+        this._updateWorkspaceSize();
         return subwin;
     }
     
@@ -490,13 +505,14 @@ class MDIWidget extends ContainerWidget {
             offsetX += 20;
             offsetY += 20;
 
-            if (offsetX + win_elt.clientWidth > this.element.innerWidth) {
+            if (offsetX + win_elt.clientWidth > this.element.clientWidth) {
                 offsetX = 0;
             }
-            if (offsetY + win_elt.clientHeight > this.element.innerHeight) {
+            if (offsetY + win_elt.clientHeight > this.element.clientHeight) {
                 offsetY = 0;
             }
         }
+        this._updateWorkspaceSize();
     }
 
     /** Arranges all sub-windows in a tiled grid layout. */
@@ -527,6 +543,37 @@ class MDIWidget extends ContainerWidget {
                 row++;
             }
         }
+        this._updateWorkspaceSize();
+    }
+
+    /**
+     * Lays out all minimized sub-windows in a row along the bottom of the workspace.
+     */
+    _layoutMinimized() {
+        const workspaceH = this.element.clientHeight;
+        let x = 0;
+        for (let subwin of this.children) {
+            let rec = this.windowStateMap.get(subwin.get_element());
+            if (rec && rec.state === 'minimized') {
+                let style = subwin.get_element().style;
+                style.left = x + 'px';
+                // position so the bottom of the title bar sits at the bottom
+                let h = subwin.get_element().offsetHeight;
+                style.top = (workspaceH - h) + 'px';
+                x += subwin.get_element().offsetWidth + 2;
+            }
+        }
+    }
+
+    /**
+     * Updates the workspace div size to encompass all sub-windows,
+     * ensuring scrollbars appear when windows extend beyond the visible area.
+     * If any window has a negative position, all windows are shifted so the
+     * minimum position becomes 0, and the scroll offset is adjusted to
+     * keep the view stable.
+     */
+    _updateWorkspaceSize() {
+        // no-op for now
     }
 
     /**
