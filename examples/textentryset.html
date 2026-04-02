@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+    }
+  </style>
+  <link rel="stylesheet" href="../Widgets.css" type="text/css" />
+</head>
+<body>
+  <script type="module">
+    import { Widgets } from "../Widgets.js";
+
+    let top = new Widgets.TopLevel({resizable: true});
+    top.resize(500, 300);
+
+    let vbox = new Widgets.VBox();
+    vbox.set_spacing(8);
+    vbox.set_padding(10);
+
+    let status = new Widgets.Label("Ready.");
+    status.set_padding([6, 4, 6, 4]);
+
+    // --- Default "Set" button ---
+    let frame1 = new Widgets.Frame({title: "Default button text"});
+    let entry1 = new Widgets.TextEntrySet({value: "hello"});
+    entry1.add_callback('activated', (w, text) =>
+        status.set_text('Entry 1: "' + text + '"'));
+    frame1.set_widget(entry1);
+    vbox.add_widget(frame1, 0);
+
+    // --- Custom button text ---
+    let frame2 = new Widgets.Frame({title: "Custom button text"});
+    let entry2 = new Widgets.TextEntrySet({text: "Go", value: "search term"});
+    entry2.add_callback('activated', (w, text) =>
+        status.set_text('Search: "' + text + '"'));
+    frame2.set_widget(entry2);
+    vbox.add_widget(frame2, 0);
+
+    // --- Programmatic control ---
+    let frame3 = new Widgets.Frame({title: "Programmatic control"});
+    let hbox = new Widgets.HBox();
+    hbox.set_spacing(8);
+
+    let entry3 = new Widgets.TextEntrySet({text: "Apply"});
+    entry3.add_callback('activated', (w, text) =>
+        status.set_text('Applied: "' + text + '"'));
+
+    let fillBtn = new Widgets.Button("Fill");
+    fillBtn.add_callback('activated', (w) =>
+        entry3.set_text("filled by button"));
+
+    let clearBtn = new Widgets.Button("Clear");
+    clearBtn.add_callback('activated', (w) => entry3.set_text(""));
+
+    hbox.add_widget(entry3, 1);
+    hbox.add_widget(fillBtn, 0);
+    hbox.add_widget(clearBtn, 0);
+    frame3.set_widget(hbox);
+    vbox.add_widget(frame3, 0);
+
+    // spacer
+    vbox.add_widget(new Widgets.Label(""), 1);
+
+    // status
+    vbox.add_widget(status, 0);
+
+    top.set_widget(vbox);
+    top.show();
+
+  </script>
+</body>
+</html>

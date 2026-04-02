@@ -13,7 +13,8 @@ import {MDIWidget} from "./modules/MDIWidget.js";
 import {TabWidget, StackWidget} from "./modules/TabWidget.js";
 import {Splitter} from "./modules/Splitter.js";
 import {Expander} from "./modules/Expander.js";
-import {Text, TextArea} from "./modules/TextWidget.js";
+import {Text} from "./modules/TextWidget.js";
+import {TextArea} from "./modules/TextArea.js";
 import {Label} from "./modules/Label.js";
 import {Button} from "./modules/Button.js";
 import {CheckBox} from "./modules/CheckBox.js";
@@ -33,6 +34,9 @@ import {Dial} from "./modules/Dial.js";
 import {MenuBar} from "./modules/MenuBar.js";
 import {Menu} from "./modules/Menu.js";
 import {MenuAction} from "./modules/MenuAction.js";
+import {ToolBar} from "./modules/ToolBar.js";
+import {ToolBarAction} from "./modules/ToolBarAction.js";
+import {TextEntrySet} from "./modules/TextEntrySet.js";
 
 
 const Widgets = {Widget, ContainerWidget, Box, VBox, HBox, ButtonBox,
@@ -41,6 +45,7 @@ const Widgets = {Widget, ContainerWidget, Box, VBox, HBox, ButtonBox,
                  Frame, GridBox, Button, ToggleButton, CheckBox,
                  RadioButton, ComboBox, TextEntry, Slider, Canvas,
                  SpinBox, ProgressBar, Image, Dial, MenuBar, Menu,
-                 MenuAction};
+                 MenuAction, ToolBar, ToolBarAction,
+                 TextEntrySet};
 
 export { Widgets };

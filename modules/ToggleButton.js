@@ -15,6 +15,14 @@ class ToggleButton extends Widget {
      * @param {Object} [options] - Configuration options.
      * @param {HTMLElement} [options.element=null] - Optional pre-existing DOM element to use.
      */
+    /**
+     * Creates a new ToggleButton.
+     * @param {string} [text=''] - Button label text.
+     * @param {Object} [options] - Configuration options.
+     * @param {ToggleButton|null} [options.group=null] - Another ToggleButton to join its
+     *   mutual-exclusion group, or null for independent toggle behavior.
+     * @param {HTMLElement} [options.element=null] - Optional pre-existing DOM element to use.
+     */
     constructor(text='', options={}) {
         super();
         this.element = this.get_option(options, 'element', null);
@@ -24,6 +32,20 @@ class ToggleButton extends Widget {
         this.element.className = 'togglebutton-widget';
         this.element.textContent = text;
         this.state = false;
+
+        // group management
+        let groupOwner = this.get_option(options, 'group', null);
+        if (groupOwner !== null) {
+            if (groupOwner.group !== null) {
+                this.group = groupOwner.group;
+            } else {
+                groupOwner.group = [groupOwner];
+                this.group = groupOwner.group;
+            }
+            this.group.push(this);
+        } else {
+            this.group = null;
+        }
 
         // JavaScript hack to bind "this" correctly for our methods
         this.set_text = this.set_text.bind(this);
@@ -36,9 +58,29 @@ class ToggleButton extends Widget {
     }
 
     _cb_redirect(event) {
-        this.state = !this.state;
-        this._update_visual();
-        this.make_callback('activated', this.state);
+        if (this.group !== null) {
+            if (this.state) {
+                // toggle off the current one
+                this.state = false;
+                this._update_visual();
+                this.make_callback('activated', this.state);
+            } else {
+                // turn off others, turn on this one
+                for (let btn of this.group) {
+                    if (btn !== this && btn.state) {
+                        btn.state = false;
+                        btn._update_visual();
+                    }
+                }
+                this.state = true;
+                this._update_visual();
+                this.make_callback('activated', this.state);
+            }
+        } else {
+            this.state = !this.state;
+            this._update_visual();
+            this.make_callback('activated', this.state);
+        }
     }
 
     _update_visual() {
@@ -62,6 +104,14 @@ class ToggleButton extends Widget {
      * @param {boolean} value - True for pressed, false for unpressed.
      */
     set_state(value) {
+        if (value && this.group !== null) {
+            for (let btn of this.group) {
+                if (btn !== this && btn.state) {
+                    btn.state = false;
+                    btn._update_visual();
+                }
+            }
+        }
         this.state = !!value;
         this._update_visual();
     }

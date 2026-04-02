@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+    }
+  </style>
+  <link rel="stylesheet" href="../Widgets.css" type="text/css" />
+</head>
+<body>
+  <script type="module">
+    import { Widgets } from "../Widgets.js";
+
+    let top = new Widgets.TopLevel({resizable: true});
+    top.resize(650, 400);
+
+    let vbox = new Widgets.VBox();
+
+    let status = new Widgets.Label("Ready.");
+    status.set_padding([6, 4, 6, 4]);
+
+    // --- Horizontal toolbar ---
+    let toolbar = new Widgets.ToolBar();
+
+    // icon-only actions
+    let newBtn = toolbar.add_action({icon_url: "../icons/ginga.svg",
+                                     iconsize: [20, 20]});
+    newBtn.add_callback('activated', (w) => status.set_text("New"));
+
+    let openBtn = toolbar.add_action({text: "Open"});
+    openBtn.add_callback('activated', (w) => status.set_text("Open"));
+
+    let saveBtn = toolbar.add_action({text: "Save"});
+    saveBtn.add_callback('activated', (w) => status.set_text("Save"));
+
+    toolbar.add_separator();
+
+    // toggle actions
+    let boldBtn = toolbar.add_action({text: "B", toggle: true});
+    boldBtn.add_callback('activated', (w, state) =>
+        status.set_text("Bold: " + (state ? "on" : "off")));
+
+    let italicBtn = toolbar.add_action({text: "I", toggle: true});
+    italicBtn.add_callback('activated', (w, state) =>
+        status.set_text("Italic: " + (state ? "on" : "off")));
+
+    let underBtn = toolbar.add_action({text: "U", toggle: true});
+    underBtn.add_callback('activated', (w, state) =>
+        status.set_text("Underline: " + (state ? "on" : "off")));
+
+    toolbar.add_separator();
+
+    // embedded widget: combo box
+    let fontCombo = new Widgets.ComboBox();
+    fontCombo.append_text("Sans Serif");
+    fontCombo.append_text("Serif");
+    fontCombo.append_text("Monospace");
+    fontCombo.append_text("Cursive");
+    fontCombo.add_callback('activated', (w, idx) =>
+        status.set_text("Font: " + fontCombo.get_alpha(idx)));
+    toolbar.add_widget(fontCombo);
+
+    toolbar.add_spacer();
+
+    // action pushed to the right by the spacer
+    let helpBtn = toolbar.add_action({text: "Help"});
+    helpBtn.add_callback('activated', (w) => status.set_text("Help"));
+
+    vbox.add_widget(toolbar, 0);
+
+    // --- Main content with a vertical toolbar on the left ---
+    let hbox = new Widgets.HBox();
+
+    let vtoolbar = new Widgets.ToolBar({orientation: 'vertical'});
+
+    let selectBtn = vtoolbar.add_action({text: "Select", toggle: true});
+    selectBtn.set_state(true);
+    selectBtn.add_callback('activated', (w, state) =>
+        status.set_text("Select"));
+
+    let drawBtn = vtoolbar.add_action({text: "Draw", group: selectBtn});
+    drawBtn.add_callback('activated', (w, state) =>
+        status.set_text("Draw"));
+
+    let eraseBtn = vtoolbar.add_action({text: "Erase", group: selectBtn});
+    eraseBtn.add_callback('activated', (w, state) =>
+        status.set_text("Erase"));
+
+    vtoolbar.add_separator();
+
+    let zoomInBtn = vtoolbar.add_action({text: "Zoom +"});
+    zoomInBtn.add_callback('activated', (w) => status.set_text("Zoom In"));
+
+    let zoomOutBtn = vtoolbar.add_action({text: "Zoom -"});
+    zoomOutBtn.add_callback('activated', (w) => status.set_text("Zoom Out"));
+
+    vtoolbar.add_spacer();
+
+    let settingsBtn = vtoolbar.add_action({text: "Settings"});
+    settingsBtn.add_callback('activated', (w) => status.set_text("Settings"));
+
+    hbox.add_widget(vtoolbar, 0);
+
+    // content area
+    let content = new Widgets.Frame({title: "Content Area"});
+    let contentLabel = new Widgets.Label("Click toolbar items to see status updates below.");
+    contentLabel.set_padding(10);
+    content.set_widget(contentLabel);
+    hbox.add_widget(content, 1);
+
+    vbox.add_widget(hbox, 1);
+
+    // --- Status bar ---
+    vbox.add_widget(status, 0);
+
+    top.set_widget(vbox);
+    top.show();
+
+  </script>
+</body>
+</html>

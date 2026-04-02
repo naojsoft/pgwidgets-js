@@ -1,0 +1,95 @@
+/* ToolBar */
+.toolbar-widget {
+    display: flex;
+    align-items: center;
+    background-color: #e8e8e8;
+    padding: 2px;
+    gap: 2px;
+    user-select: none;
+}
+
+.toolbar-widget.horizontal {
+    flex-direction: row;
+    width: 100%;
+    border-bottom: 1px solid #bbb;
+}
+
+.toolbar-widget.vertical {
+    flex-direction: column;
+    height: 100%;
+    border-right: 1px solid #bbb;
+}
+
+.toolbar-child {
+    flex-shrink: 0;
+}
+
+.toolbar-separator {
+    flex-shrink: 0;
+}
+
+.toolbar-widget.horizontal .toolbar-separator {
+    width: 0;
+    height: 20px;
+    border-left: 1px solid #aaa;
+    border-right: 1px solid #fff;
+    margin: 0 3px;
+}
+
+.toolbar-widget.vertical .toolbar-separator {
+    height: 0;
+    width: 20px;
+    border-top: 1px solid #aaa;
+    border-bottom: 1px solid #fff;
+    margin: 3px 0;
+}
+
+.toolbar-spacer {
+    flex: 1;
+}
+
+/* ToolBarAction */
+.toolbar-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 6px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    background-color: transparent;
+    white-space: nowrap;
+    font-size: 13px;
+    color: #333;
+}
+
+.toolbar-action:hover {
+    background-color: #d4d4d4;
+    border-color: #bbb;
+}
+
+.toolbar-action:active {
+    background-color: #c0c0c0;
+    border-color: #999;
+}
+
+.toolbar-action.pressed {
+    background-color: #c8c8c8;
+    border-color: #999;
+    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.toolbar-action.pressed:hover {
+    background-color: #bbb;
+}
+
+.toolbar-action-icon {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.toolbar-action-label {
+    flex-shrink: 0;
+}

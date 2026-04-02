@@ -31,6 +31,7 @@ class TextEntry extends Widget {
         // JavaScript hack to bind "this" correctly for our methods
         this.set_text = this.set_text.bind(this);
         this.get_text = this.get_text.bind(this);
+        this.clear = this.clear.bind(this);
         this._cb_redirect = this._cb_redirect.bind(this);
 
         this.element.addEventListener("keydown", this._cb_redirect);
@@ -60,6 +61,11 @@ class TextEntry extends Widget {
      */
     get_text() {
         return this.element.value;
+    }
+
+    /** Clears the input text. */
+    clear() {
+        this.element.value = '';
     }
 }
 

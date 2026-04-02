@@ -1,0 +1,38 @@
+.textentryset-widget {
+    display: inline-flex;
+    align-items: stretch;
+    overflow: hidden;
+}
+
+.textentryset-input {
+    flex: 1;
+    min-width: 0;
+    padding: 2px 4px;
+    border: 1px solid #aaa;
+    border-right: none;
+    border-radius: 3px 0 0 3px;
+    font-size: 13px;
+    outline: none;
+}
+
+.textentryset-input:focus {
+    border-color: #4a90d9;
+}
+
+.textentryset-button {
+    flex-shrink: 0;
+    padding: 2px 8px;
+    border: 1px solid #aaa;
+    border-radius: 0 3px 3px 0;
+    background-color: #e0e0e0;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.textentryset-button:hover {
+    background-color: #d0d0d0;
+}
+
+.textentryset-button:active {
+    background-color: #c0c0c0;
+}
