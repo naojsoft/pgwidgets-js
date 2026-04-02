@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+    }
+  </style>
+  <link rel="stylesheet" href="../Widgets.css" type="text/css" />
+</head>
+<body>
+  <script type="module">
+    import { Widgets } from "../Widgets.js";
+
+    let top = new Widgets.TopLevel({resizable: true});
+    top.resize(500, 500);
+
+    let vbox = new Widgets.VBox();
+    vbox.set_spacing(8);
+    vbox.set_padding(10);
+
+    // --- Dial with tracking and live label ---
+    let frame1 = new Widgets.Frame({title: "Tracking dial (0–100)"});
+    let hbox1 = new Widgets.HBox();
+    hbox1.set_spacing(10);
+
+    let dial1 = new Widgets.Dial({min: 0, max: 100, value: 50, track: true});
+    dial1.resize(100, 100);
+    let label1 = new Widgets.Label("50");
+    label1.resize(40, 20);
+
+    dial1.add_callback('activated', (w, val) => label1.set_text(String(val)));
+
+    hbox1.add_widget(dial1, 0);
+    hbox1.add_widget(label1, 0);
+    frame1.set_widget(hbox1);
+    vbox.add_widget(frame1, 0);
+
+    // --- Float dial with step ---
+    let frame2 = new Widgets.Frame({title: "Float dial (0.0–1.0, step 0.05)"});
+    let hbox2 = new Widgets.HBox();
+    hbox2.set_spacing(10);
+
+    let dial2 = new Widgets.Dial({min: 0, max: 1, step: 0.05, value: 0.5,
+                                  dtype: 'float', track: true});
+    dial2.resize(100, 100);
+    let label2 = new Widgets.Label("0.5");
+    label2.resize(40, 20);
+
+    dial2.add_callback('activated', (w, val) => label2.set_text(val.toFixed(2)));
+
+    hbox2.add_widget(dial2, 0);
+    hbox2.add_widget(label2, 0);
+    frame2.set_widget(hbox2);
+    vbox.add_widget(frame2, 0);
+
+    // --- Non-tracking dial with button controls ---
+    let frame3 = new Widgets.Frame({title: "Non-tracking dial with controls"});
+    let hbox3 = new Widgets.HBox();
+    hbox3.set_spacing(10);
+
+    let dial3 = new Widgets.Dial({min: 0, max: 360, step: 10, value: 180});
+    dial3.resize(100, 100);
+    let label3 = new Widgets.Label("180");
+    label3.resize(40, 20);
+
+    dial3.add_callback('activated', (w, val) => label3.set_text(String(val)));
+
+    let btnBox = new Widgets.VBox();
+    btnBox.get_element().style.width = '90px';
+    btnBox.set_spacing(4);
+    let btnMin = new Widgets.Button("Set 0");
+    btnMin.add_callback('activated', () => { dial3.set_value(0); label3.set_text("0"); });
+    let btnMid = new Widgets.Button("Set 180");
+    btnMid.add_callback('activated', () => { dial3.set_value(180); label3.set_text("180"); });
+    let btnMax = new Widgets.Button("Set 360");
+    btnMax.add_callback('activated', () => { dial3.set_value(360); label3.set_text("360"); });
+    btnBox.add_widget(btnMin, 0);
+    btnBox.add_widget(btnMid, 0);
+    btnBox.add_widget(btnMax, 0);
+
+    hbox3.add_widget(dial3, 0);
+    hbox3.add_widget(label3, 0);
+    hbox3.add_widget(btnBox, 0);
+    frame3.set_widget(hbox3);
+    vbox.add_widget(frame3, 0);
+
+    top.set_widget(vbox);
+    top.show();
+
+  </script>
+</body>
+</html>

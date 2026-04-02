@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+    }
+  </style>
+  <link rel="stylesheet" href="../Widgets.css" type="text/css" />
+</head>
+<body>
+  <script type="module">
+    import { Widgets } from "../Widgets.js";
+
+    let top = new Widgets.TopLevel({resizable: true});
+    top.resize(600, 500);
+
+    let vbox = new Widgets.VBox();
+    vbox.set_spacing(8);
+
+    // image loaded via constructor
+    let frame1 = new Widgets.Frame({title: "Image from constructor"});
+    let img1 = new Widgets.Image({url: "../icons/ginga.svg"});
+    //yimg1.resize(100, 100);
+    frame1.set_widget(img1);
+    vbox.add_widget(frame1, 1);
+
+    // image set dynamically
+    let frame2 = new Widgets.Frame({title: "Dynamic image"});
+    let img2 = new Widgets.Image();
+    img2.resize(100, 100);
+    frame2.set_widget(img2);
+    vbox.add_widget(frame2, 0);
+
+    let hbox = new Widgets.HBox();
+    hbox.set_spacing(6);
+    let btn1 = new Widgets.Button("Load ginga.svg");
+    btn1.add_callback('activated', () => img2.set_image("../icons/ginga.svg"));
+    let btn2 = new Widgets.Button("Load hdots.svg");
+    btn2.add_callback('activated', () => img2.set_image("../icons/hdots.svg"));
+    let btn3 = new Widgets.Button("Load vdots.svg");
+    btn3.add_callback('activated', () => img2.set_image("../icons/vdots.svg"));
+    hbox.add_widget(btn1, 0);
+    hbox.add_widget(btn2, 0);
+    hbox.add_widget(btn3, 0);
+    vbox.add_widget(hbox, 0);
+
+    top.set_widget(vbox);
+    top.show();
+
+  </script>
+</body>
+</html>

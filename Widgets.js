@@ -28,6 +28,11 @@ import {RadioButton} from "./modules/RadioButton.js";
 import {ProgressBar} from "./modules/ProgressBar.js";
 import {Frame} from "./modules/Frame.js";
 import {GridBox} from "./modules/GridBox.js";
+import {Image} from "./modules/Image.js";
+import {Dial} from "./modules/Dial.js";
+import {MenuBar} from "./modules/MenuBar.js";
+import {Menu} from "./modules/Menu.js";
+import {MenuAction} from "./modules/MenuAction.js";
 
 
 const Widgets = {Widget, ContainerWidget, Box, VBox, HBox, ButtonBox,
@@ -35,6 +40,7 @@ const Widgets = {Widget, ContainerWidget, Box, VBox, HBox, ButtonBox,
                  StackWidget, Expander, Page, Text, Label, TextArea,
                  Frame, GridBox, Button, ToggleButton, CheckBox,
                  RadioButton, ComboBox, TextEntry, Slider, Canvas,
-                 SpinBox, ProgressBar};
+                 SpinBox, ProgressBar, Image, Dial, MenuBar, Menu,
+                 MenuAction};
 
 export { Widgets };

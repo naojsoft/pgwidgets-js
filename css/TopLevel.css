@@ -9,3 +9,59 @@
     margin: 2px;
 }
 
+/* Corner resize grips */
+.toplevel-grip {
+    position: absolute;
+    width: 0;
+    height: 0;
+    opacity: 0;
+    transition: opacity 0.15s;
+    filter: drop-shadow(1px 1px 1px rgba(0, 0, 0, 0.4));
+    z-index: 9999;
+}
+
+.toplevel-widget:hover .toplevel-grip {
+    opacity: 0.7;
+}
+
+.toplevel-grip:hover {
+    opacity: 1 !important;
+}
+
+.toplevel-grip-se {
+    bottom: 0;
+    right: 0;
+    border-style: solid;
+    border-width: 0 0 16px 16px;
+    border-color: transparent transparent #999 transparent;
+}
+
+.toplevel-grip-sw {
+    bottom: 0;
+    left: 0;
+    border-style: solid;
+    border-width: 16px 0 0 16px;
+    border-color: transparent transparent transparent #999;
+}
+
+.toplevel-grip-ne {
+    top: 0;
+    right: 0;
+    border-style: solid;
+    border-width: 0 16px 16px 0;
+    border-color: transparent #999 transparent transparent;
+}
+
+.toplevel-grip-nw {
+    top: 0;
+    left: 0;
+    border-style: solid;
+    border-width: 0 0 16px 16px;
+    border-color: transparent transparent transparent #999;
+}
+
+.toplevel-grip-se:hover { border-bottom-color: #777; }
+.toplevel-grip-sw:hover { border-left-color: #777; }
+.toplevel-grip-ne:hover { border-right-color: #777; }
+.toplevel-grip-nw:hover { border-left-color: #777; }
+

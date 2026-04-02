@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+    }
+  </style>
+  <link rel="stylesheet" href="../Widgets.css" type="text/css" />
+</head>
+<body>
+  <script type="module">
+    import { Widgets } from "../Widgets.js";
+
+    let top = new Widgets.TopLevel({resizable: true});
+    top.resize(600, 400);
+
+    let vbox = new Widgets.VBox();
+
+    let status = new Widgets.Label("Ready.");
+    status.set_padding([6, 4, 6, 4]);
+
+    // --- Menu Bar ---
+    let menubar = new Widgets.MenuBar();
+
+    // File menu
+    let fileMenu = menubar.add_name("File");
+    let newAction = fileMenu.add_name("New");
+    let openAction = fileMenu.add_name("Open");
+    let saveAction = fileMenu.add_name("Save");
+    fileMenu.add_separator();
+    let exitAction = fileMenu.add_name("Exit");
+
+    newAction.add_callback('activated', (w, text) => status.set_text("File > New"));
+    openAction.add_callback('activated', (w, text) => status.set_text("File > Open"));
+    saveAction.add_callback('activated', (w, text) => status.set_text("File > Save"));
+    exitAction.add_callback('activated', (w, text) => status.set_text("File > Exit"));
+
+    // Edit menu
+    let editMenu = menubar.add_name("Edit");
+    let cutAction = editMenu.add_name("Cut");
+    let copyAction = editMenu.add_name("Copy");
+    let pasteAction = editMenu.add_name("Paste");
+    editMenu.add_separator();
+    let selectAllAction = editMenu.add_name("Select All");
+
+    cutAction.add_callback('activated', (w, text) => status.set_text("Edit > Cut"));
+    copyAction.add_callback('activated', (w, text) => status.set_text("Edit > Copy"));
+    pasteAction.add_callback('activated', (w, text) => status.set_text("Edit > Paste"));
+    selectAllAction.add_callback('activated', (w, text) => status.set_text("Edit > Select All"));
+
+    // View menu with checkable items
+    let viewMenu = menubar.add_name("View");
+    let showToolbar = viewMenu.add_name("Toolbar", true);
+    showToolbar.set_checked(true);
+    let showStatusbar = viewMenu.add_name("Status Bar", true);
+    showStatusbar.set_checked(true);
+    viewMenu.add_separator();
+
+    // submenu
+    let themeMenu = viewMenu.add_menu("Theme");
+    let lightAction = themeMenu.add_name("Light");
+    let darkAction = themeMenu.add_name("Dark");
+    let systemAction = themeMenu.add_name("System");
+
+    showToolbar.add_callback('activated', (w, text, checked) =>
+        status.set_text("Toolbar: " + (checked ? "shown" : "hidden")));
+    showStatusbar.add_callback('activated', (w, text, checked) =>
+        status.set_text("Status Bar: " + (checked ? "shown" : "hidden")));
+    lightAction.add_callback('activated', (w, text) => status.set_text("Theme > Light"));
+    darkAction.add_callback('activated', (w, text) => status.set_text("Theme > Dark"));
+    systemAction.add_callback('activated', (w, text) => status.set_text("Theme > System"));
+
+    // Help menu with icon
+    let helpMenu = menubar.add_name("Help");
+    let aboutAction = helpMenu.add_name("About");
+    let docsAction = new Widgets.MenuAction({text: "Documentation",
+                                             icon_url: "../icons/ginga.svg",
+                                             iconsize: [14, 14]});
+    helpMenu.add_widget(docsAction);
+
+    aboutAction.add_callback('activated', (w, text) => status.set_text("Help > About"));
+    docsAction.add_callback('activated', (w, text) => status.set_text("Help > Documentation"));
+
+    vbox.add_widget(menubar, 0);
+
+    // --- Main content area ---
+    let content = new Widgets.VBox();
+    content.set_spacing(10);
+    content.set_padding(10);
+
+    // Popup menu demo
+    let frame = new Widgets.Frame({title: "Popup Menu"});
+    let hbox = new Widgets.HBox();
+    hbox.set_spacing(10);
+
+    let popupMenu = new Widgets.Menu();
+    popupMenu.add_name("Option A").add_callback('activated',
+        (w, text) => status.set_text("Popup > Option A"));
+    popupMenu.add_name("Option B").add_callback('activated',
+        (w, text) => status.set_text("Popup > Option B"));
+    popupMenu.add_separator();
+    popupMenu.add_name("Option C").add_callback('activated',
+        (w, text) => status.set_text("Popup > Option C"));
+
+    let popupBtn = new Widgets.Button("Click for Popup Menu");
+    popupBtn.add_callback('activated', (w) => {
+        let rect = popupBtn.get_element().getBoundingClientRect();
+        let elt = popupMenu.get_element();
+        elt.style.left = rect.left + 'px';
+        elt.style.top = rect.bottom + 'px';
+        elt.style.position = 'fixed';
+        popupMenu.popup();
+    });
+
+    // close popup when clicking outside
+    document.addEventListener('mousedown', (e) => {
+        let elt = popupMenu.get_element();
+        if (elt.style.display !== 'none' && !elt.contains(e.target) &&
+            !popupBtn.get_element().contains(e.target)) {
+            elt.style.display = 'none';
+        }
+    });
+
+    // hide popup initially and append to body so it can float
+    let popupElt = popupMenu.get_element();
+    popupElt.style.display = 'none';
+    popupElt.style.position = 'fixed';
+    document.body.appendChild(popupElt);
+
+    hbox.add_widget(popupBtn, 0);
+    frame.set_widget(hbox);
+    content.add_widget(frame, 0);
+
+    vbox.add_widget(content, 1);
+
+    // --- Status bar ---
+    vbox.add_widget(status, 0);
+
+    top.set_widget(vbox);
+    top.show();
+
+  </script>
+</body>
+</html>

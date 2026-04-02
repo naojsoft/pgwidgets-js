@@ -69,12 +69,7 @@ class Widget {
     set_border_color(color) {
         this.element.style['border-color'] = color;
     }
-/*
-    set_size(width, height) {
-        this.element.style.width = width + 'px';
-        this.element.style.height = height + 'px';
-    }
-*/
+
     /**
      * Resizes the widget to the given dimensions.
      * @param {number} width - Width in pixels.
@@ -83,6 +78,29 @@ class Widget {
     resize(width, height) {
         this.element.style.width = width + 'px';
         this.element.style.height = height + 'px';
+    }
+
+    /**
+     * Returns the current size of the widget.
+     * @returns {number[]} A tuple [width, height] in pixels.
+     */
+    get_size() {
+        return [this.element.offsetWidth, this.element.offsetHeight];
+    }
+
+    /**
+     * Sets the padding of the widget.
+     * @param {number|number[]} padding - A single number for all sides, or
+     *   an array of [left, top, right, bottom] values in pixels.
+     */
+    set_padding(padding) {
+        if (Array.isArray(padding)) {
+            this.element.style.padding =
+                padding[1] + 'px ' + padding[2] + 'px ' +
+                padding[3] + 'px ' + padding[0] + 'px';
+        } else {
+            this.element.style.padding = padding + 'px';
+        }
     }
 
     /* CALLBACK HANDLING */
