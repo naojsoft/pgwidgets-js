@@ -1,0 +1,53 @@
+/*
+ * ColorDialog widget styles
+ */
+.colordialog-sv-container {
+    position: relative;
+    flex-shrink: 0;
+    cursor: crosshair;
+    border: 1px solid #999;
+}
+
+.colordialog-sv-canvas {
+    display: block;
+}
+
+.colordialog-sv-cursor {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+}
+
+.colordialog-hue-container {
+    position: relative;
+    flex-shrink: 0;
+    cursor: crosshair;
+    border: 1px solid #999;
+}
+
+.colordialog-hue-canvas {
+    display: block;
+}
+
+.colordialog-hue-cursor {
+    position: absolute;
+    left: -2px;
+    right: -2px;
+    height: 0;
+    border-top: 2px solid #fff;
+    border-bottom: 2px solid #fff;
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
+    pointer-events: none;
+    transform: translateY(-50%);
+}
+
+.colordialog-swatch {
+    width: 40px;
+    height: 30px;
+    border: 1px solid #999;
+}

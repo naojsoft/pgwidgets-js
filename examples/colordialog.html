@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+    }
+  </style>
+  <link rel="stylesheet" href="../Widgets.css" type="text/css" />
+</head>
+<body>
+  <script type="module">
+    import { Widgets } from "../Widgets.js";
+
+    let top = new Widgets.TopLevel({title: "Color Dialog Demo", resizable: true});
+    top.resize(400, 300);
+
+    let vbox = new Widgets.VBox();
+    vbox.set_spacing(8);
+    vbox.set_padding(10);
+
+    let status = new Widgets.Label("Click the button to open the color dialog.");
+    status.set_padding([6, 4, 6, 4]);
+
+    // color preview
+    let previewLabel = new Widgets.Label("Selected color:");
+    let preview = new Widgets.Label("");
+    let currentColor = '#3366cc';
+    preview.set_color(currentColor);
+    preview.element.style.height = '40px';
+    preview.element.style.border = '1px solid #999';
+
+    let btn = new Widgets.Button("Choose Color...");
+    btn.add_callback('activated', () => {
+        let dlg = new Widgets.ColorDialog({
+            color: currentColor,
+            modal: true
+        });
+        dlg.set_position(50, 50);
+
+        dlg.add_callback('pick', (w, color) => {
+            status.set_text("Picking: " + color);
+        });
+
+        dlg.add_callback('activated', (w, color) => {
+            currentColor = color;
+            preview.set_color(color);
+            status.set_text("Chosen: " + color);
+        });
+
+        dlg.show();
+    });
+    vbox.add_widget(btn, 0);
+    vbox.add_widget(previewLabel, 0);
+    vbox.add_widget(preview, 0);
+
+    // spacer
+    vbox.add_widget(new Widgets.Label(""), 1);
+    vbox.add_widget(status, 0);
+
+    top.set_widget(vbox);
+    top.show();
+
+  </script>
+</body>
+</html>

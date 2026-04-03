@@ -1,0 +1,24 @@
+/*
+ * Dialog widget styles
+ */
+.dialog-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.3);
+    z-index: 10000;
+}
+
+.dialog-widget {
+    background-color: #f0f0f0;
+}
+
+.dialog-widget.dialog-modal {
+    z-index: 10001;
+}
+
+.dialog-button-box {
+    display: flex;
+    justify-content: flex-end;
+    padding: 6px 8px;
+    border-top: 1px solid #ccc;
+}

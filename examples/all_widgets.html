@@ -14,7 +14,7 @@
   <script type="module">
     import { Widgets } from "../Widgets.js";
 
-    let top = new Widgets.TopLevel();
+    let top = new Widgets.TopLevel({title: "All Widgets Demo", resizable: true});
     top.resize(700, 700);
 
     let vbox = new Widgets.VBox();

@@ -21,51 +21,92 @@ class Slider extends Widget {
      * @param {number} [options.max=100] - Maximum value.
      * @param {number} [options.step=1] - Step increment.
      * @param {number} [options.value=50] - Initial value.
+     * @param {boolean} [options.show_value=true] - Whether to display the current value.
      * @param {HTMLElement} [options.element=null] - Optional pre-existing DOM element to use.
      */
     constructor(options = {orientation: 'horizontal', track: false}) {
         super();
         this.element = this.get_option(options, 'element', null);
         if (this.element == null) {
-            this.element = document.createElement('input');
+            this.element = document.createElement('div');
         }
         this.element.className = 'slider-widget';
-        this.element.type = 'range';
+
+        this._input = document.createElement('input');
+        this._input.className = 'slider-input';
+        this._input.type = 'range';
 
         this.dtype = this.get_option(options, 'dtype', 'int');
-        this.element.min = this.get_option(options, 'min', 0);
-        this.element.max = this.get_option(options, 'max', 100);
-        this.element.step = this.get_option(options, 'step', 1);
-        this.element.value = this.get_option(options, 'value', 50);
+        this._input.min = this.get_option(options, 'min', 0);
+        this._input.max = this.get_option(options, 'max', 100);
+        this._input.step = this.get_option(options, 'step', 1);
+        this._input.value = this.get_option(options, 'value', 50);
 
         this.track = this.get_option(options, 'track', false);
+        this._showValue = this.get_option(options, 'show_value', true);
+
+        this.element.appendChild(this._input);
+
+        // value label
+        this._valueLabel = document.createElement('span');
+        this._valueLabel.className = 'slider-value';
+        if (this._showValue) {
+            this.element.appendChild(this._valueLabel);
+        }
 
         // JavaScript hack to bind "this" correctly for our methods
         this.set_value = this.set_value.bind(this);
         this.get_value = this.get_value.bind(this);
         this.set_limits = this.set_limits.bind(this);
         this._cb_redirect = this._cb_redirect.bind(this);
+        this._updateValueLabel = this._updateValueLabel.bind(this);
 
         // 'input' fires continuously while dragging;
         // 'change' fires only on mouse release
         if (this.track) {
-            this.element.addEventListener("input", this._cb_redirect);
+            this._input.addEventListener("input", this._cb_redirect);
         } else {
-            this.element.addEventListener("change", this._cb_redirect);
+            this._input.addEventListener("change", this._cb_redirect);
         }
-        this.element.addEventListener('wheel', (e) => {
+        // always update the label while dragging
+        this._input.addEventListener("input", () => this._updateValueLabel());
+
+        this._input.addEventListener('wheel', (e) => {
             e.preventDefault();
-            let step = Number(this.element.step) || 1;
+            let step = Number(this._input.step) || 1;
             let val = this.get_value() + (e.deltaY < 0 ? step : -step);
-            val = Math.min(Number(this.element.max), Math.max(Number(this.element.min), val));
-            this.element.value = val;
+            val = Math.min(Number(this._input.max), Math.max(Number(this._input.min), val));
+            this._input.value = val;
+            this._updateValueLabel();
             this.make_callback('activated', this.get_value());
         });
 
         this.enable_callback('activated');
+        this._updateValueLabel();
+    }
+
+    /**
+     * Updates the value label display.
+     * @private
+     */
+    _updateValueLabel() {
+        if (this._showValue) {
+            let val = this.get_value();
+            if (this.dtype === 'float') {
+                let decimals = 0;
+                let s = String(this._input.step);
+                if (s.indexOf('.') !== -1) {
+                    decimals = s.split('.')[1].length;
+                }
+                this._valueLabel.textContent = val.toFixed(decimals);
+            } else {
+                this._valueLabel.textContent = val;
+            }
+        }
     }
 
     _cb_redirect(event) {
+        this._updateValueLabel();
         this.make_callback('activated', this.get_value());
     }
 
@@ -74,7 +115,8 @@ class Slider extends Widget {
      * @param {number} num - The value to set.
      */
     set_value(num) {
-        this.element.value = num;
+        this._input.value = num;
+        this._updateValueLabel();
     }
 
     /**
@@ -82,7 +124,7 @@ class Slider extends Widget {
      * @returns {number} The current value (int or float).
      */
     get_value() {
-        let val = Number(this.element.value);
+        let val = Number(this._input.value);
         if (this.dtype === 'int') {
             val = Math.round(val);
         }
@@ -96,15 +138,24 @@ class Slider extends Widget {
      * @param {number} [incrval] - Step increment (optional).
      */
     set_limits(minval, maxval, incrval) {
-        this.element.min = minval;
-        this.element.max = maxval;
+        this._input.min = minval;
+        this._input.max = maxval;
         if (incrval !== undefined) {
-            this.element.step = incrval;
+            this._input.step = incrval;
         }
         // clamp current value to new limits
-        let val = Number(this.element.value);
+        let val = Number(this._input.value);
         val = Math.min(maxval, Math.max(minval, val));
-        this.element.value = val;
+        this._input.value = val;
+        this._updateValueLabel();
+    }
+
+    /**
+     * Sets whether tracking is enabled.
+     * @param {boolean} track - If true, fire continuously; if false, only on release.
+     */
+    set_tracking(track) {
+        this.track = track;
     }
 }
 

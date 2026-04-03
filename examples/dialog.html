@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+    }
+  </style>
+  <link rel="stylesheet" href="../Widgets.css" type="text/css" />
+</head>
+<body>
+  <script type="module">
+    import { Widgets } from "../Widgets.js";
+
+    let top = new Widgets.TopLevel({title: "Dialog Demo", resizable: true});
+    top.resize(500, 400);
+
+    let vbox = new Widgets.VBox();
+    vbox.set_spacing(8);
+    vbox.set_padding(10);
+
+    let status = new Widgets.Label("Click a button to open a dialog.");
+    status.set_padding([6, 4, 6, 4]);
+
+    // --- Modal OK/Cancel dialog ---
+    let btn1 = new Widgets.Button("Open Modal OK/Cancel Dialog");
+    btn1.add_callback('activated', () => {
+        let dlg = new Widgets.Dialog("Confirm Action",
+            [["OK", 1], ["Cancel", 0]],
+            {autoclose: true, moveable: true, modal: true});
+        dlg.resize(300, 180);
+        dlg.set_position(100, 100);
+
+        let area = dlg.get_content_area();
+        area.set_padding(10);
+        let lbl = new Widgets.Label("Are you sure you want to proceed?");
+        area.add_widget(lbl, 1);
+
+        dlg.add_callback('activated', (w, val) => {
+            status.set_text("Dialog result: " + (val === 1 ? "OK" : "Cancel"));
+        });
+        dlg.show();
+    });
+    vbox.add_widget(btn1, 0);
+
+    // --- Yes/No/Cancel dialog ---
+    let btn2 = new Widgets.Button("Open Yes/No/Cancel Dialog");
+    btn2.add_callback('activated', () => {
+        let dlg = new Widgets.Dialog("Save Changes?",
+            [["Yes", "yes"], ["No", "no"], ["Cancel", "cancel"]],
+            {autoclose: true, moveable: true});
+        dlg.resize(350, 180);
+        dlg.set_position(120, 140);
+
+        let area = dlg.get_content_area();
+        area.set_padding(10);
+        let lbl = new Widgets.Label("You have unsaved changes. Save before closing?");
+        area.add_widget(lbl, 1);
+
+        dlg.add_callback('activated', (w, val) => {
+            status.set_text("Dialog result: " + val);
+        });
+        dlg.show();
+    });
+    vbox.add_widget(btn2, 0);
+
+    // --- Dialog with custom content ---
+    let btn3 = new Widgets.Button("Open Input Dialog");
+    btn3.add_callback('activated', () => {
+        let dlg = new Widgets.Dialog("Enter Name",
+            [["OK", 1], ["Cancel", 0]],
+            {autoclose: true, moveable: true, resizable: true});
+        dlg.resize(350, 200);
+        dlg.set_position(140, 180);
+
+        let area = dlg.get_content_area();
+        area.set_padding(10);
+        area.set_spacing(6);
+        area.add_widget(new Widgets.Label("Please enter your name:"), 0);
+        let entry = new Widgets.TextEntry({text: ""});
+        area.add_widget(entry, 0);
+
+        dlg.add_callback('activated', (w, val) => {
+            if (val === 1) {
+                status.set_text("Hello, " + entry.get_text() + "!");
+            } else {
+                status.set_text("Input cancelled.");
+            }
+        });
+        dlg.show();
+    });
+    vbox.add_widget(btn3, 0);
+
+    // spacer
+    vbox.add_widget(new Widgets.Label(""), 1);
+    vbox.add_widget(status, 0);
+
+    top.set_widget(vbox);
+    top.show();
+
+  </script>
+</body>
+</html>

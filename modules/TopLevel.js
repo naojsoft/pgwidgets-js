@@ -13,6 +13,10 @@ class TopLevel extends ContainerWidget {
      * Creates a new TopLevel widget.
      * @param {Object} [options] - Configuration options.
      * @param {HTMLElement} [options.element=null] - Optional pre-existing DOM element to use.
+     * @param {boolean} [options.resizable=false] - Whether the widget can be resized via corner grips.
+     * @param {string|null} [options.title=null] - If provided, displays a draggable title bar.
+     * @param {boolean} [options.moveable] - Whether the widget can be dragged by the title bar.
+     *   Defaults to true if title is set, false otherwise.
      */
     constructor(options={}) {
         super();
@@ -23,14 +27,31 @@ class TopLevel extends ContainerWidget {
         this.element.className = 'toplevel-widget';
         this.element.style.position = 'absolute';
         this.element.style.display = 'flex';
+        this.element.style.flexDirection = 'column';
         this.element.style.overflow = 'hidden';
         this.element.style.margin = '1px';
 
         // JavaScript hack to bind "this" correctly for our methods
         this.set_widget = this.set_widget.bind(this);
         this.set_position = this.set_position.bind(this);
+        this.set_title = this.set_title.bind(this);
+        this.set_moveable = this.set_moveable.bind(this);
         this.show = this.show.bind(this);
         this.hide = this.hide.bind(this);
+
+        this._titleBar = null;
+        this._titleText = null;
+        this._moveable = false;
+        let title = this.get_option(options, 'title', null);
+        if (title !== null) {
+            this._makeTitleBar(title);
+        }
+        // default: moveable if title bar exists, not moveable otherwise
+        this._moveable = this.get_option(options, 'moveable',
+                                         this._titleBar !== null);
+        if (this._titleBar && !this._moveable) {
+            this._titleBar.style.cursor = 'default';
+        }
 
         let resizable = this.get_option(options, 'resizable', false);
         if (resizable) {
@@ -46,6 +67,82 @@ class TopLevel extends ContainerWidget {
     set_position(x, y) {
         this.element.style.left = x + 'px';
         this.element.style.top = y + 'px';
+    }
+
+    /**
+     * Creates the title bar and sets up drag-to-move behavior.
+     * @param {string} title - The title text to display.
+     * @private
+     */
+    _makeTitleBar(title) {
+        this._titleBar = document.createElement('div');
+        this._titleBar.className = 'toplevel-title-bar';
+
+        this._titleText = document.createElement('span');
+        this._titleText.className = 'toplevel-title-text';
+        this._titleText.textContent = title;
+
+        this._titleBar.appendChild(this._titleText);
+        this.element.appendChild(this._titleBar);
+
+        this._makeDraggable();
+    }
+
+    /**
+     * Sets or updates the title bar text.
+     * If no title bar exists yet, one is created.
+     * @param {string} title - The title text to display.
+     */
+    set_title(title) {
+        if (this._titleBar === null) {
+            this._makeTitleBar(title);
+        } else {
+            this._titleText.textContent = title;
+        }
+    }
+
+    /**
+     * Sets whether the TopLevel can be moved by dragging the title bar.
+     * @param {boolean} tf - True to allow moving, false to disallow.
+     */
+    set_moveable(tf) {
+        this._moveable = tf;
+        if (this._titleBar) {
+            this._titleBar.style.cursor = tf ? 'move' : 'default';
+        }
+    }
+
+    /**
+     * Makes the TopLevel draggable via the title bar.
+     * @private
+     */
+    _makeDraggable() {
+        let offsetX, offsetY;
+        let isDragging = false;
+        const element = this.element;
+
+        const onMouseMove = (e) => {
+            if (isDragging) {
+                element.style.left = (e.clientX - offsetX) + 'px';
+                element.style.top = (e.clientY - offsetY) + 'px';
+            }
+        };
+
+        const onMouseUp = () => {
+            isDragging = false;
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        };
+
+        this._titleBar.addEventListener('mousedown', (e) => {
+            if (!this._moveable) return;
+            e.preventDefault();
+            offsetX = e.clientX - (parseInt(element.style.left) || 0);
+            offsetY = e.clientY - (parseInt(element.style.top) || 0);
+            isDragging = true;
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        });
     }
 
     /**

@@ -7,7 +7,7 @@
  */
 import {Widget, ContainerWidget} from "./modules/Widget.js";
 import {Box, VBox, HBox, ButtonBox} from "./modules/Box.js";
-import {TopLevel} from "./modules/Top.js";
+import {TopLevel} from "./modules/TopLevel.js";
 import {ScrollArea} from "./modules/ScrollArea.js";
 import {MDIWidget} from "./modules/MDIWidget.js";
 import {TabWidget, StackWidget} from "./modules/TabWidget.js";
@@ -38,6 +38,8 @@ import {MenuAction} from "./modules/MenuAction.js";
 import {ToolBar} from "./modules/ToolBar.js";
 import {ToolBarAction} from "./modules/ToolBarAction.js";
 import {TextEntrySet} from "./modules/TextEntrySet.js";
+import {Dialog} from "./modules/Dialog.js";
+import {ColorDialog} from "./modules/ColorDialog.js";
 
 
 const Widgets = {Widget, ContainerWidget, Box, VBox, HBox, ButtonBox,
@@ -47,6 +49,6 @@ const Widgets = {Widget, ContainerWidget, Box, VBox, HBox, ButtonBox,
                  RadioButton, ComboBox, ComboBoxNative, TextEntry,
                  Slider, Canvas, SpinBox, ProgressBar, Image, Dial,
                  MenuBar, Menu, MenuAction, ToolBar, ToolBarAction,
-                 TextEntrySet};
+                 TextEntrySet, Dialog, ColorDialog};
 
 export { Widgets };

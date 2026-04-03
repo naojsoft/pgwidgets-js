@@ -1,0 +1,21 @@
+/*
+ * Slider widget styles
+ */
+.slider-widget {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.slider-input {
+    flex: 1;
+    min-width: 60px;
+}
+
+.slider-value {
+    min-width: 2.5em;
+    text-align: right;
+    font-size: 0.9em;
+    color: #333;
+    user-select: none;
+}
