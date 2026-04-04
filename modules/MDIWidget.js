@@ -538,22 +538,33 @@ class MDIWidget extends ContainerWidget {
     cascade_windows() {
         let offsetX = 0;
         let offsetY = 0;
+        let vpW = this._viewport.clientWidth;
+        let vpH = this._viewport.clientHeight;
 
-        for (let subwin of this.children) {
+        for (let i = 0; i < this.children.length; i++) {
+            let subwin = this.children[i];
             let win_elt = subwin.get_element();
             let rec = subwin.get_state();
+
+            // restore saved size (e.g. after tile, minimize, maximize)
+            win_elt.style.width = rec.width;
+            win_elt.style.height = rec.height;
+            if (rec.state === 'minimized') {
+                subwin.child_container.style.display = '';
+            }
+
             win_elt.style.left = offsetX + 'px';
             win_elt.style.top = offsetY + 'px';
-            subwin.update_state(rec);
+            win_elt.style.zIndex = i + 1;
             rec.state = "normal";
 
             offsetX += 20;
             offsetY += 20;
 
-            if (offsetX + win_elt.clientWidth > this.element.clientWidth) {
+            if (offsetX + win_elt.clientWidth > vpW) {
                 offsetX = 0;
             }
-            if (offsetY + win_elt.clientHeight > this.element.clientHeight) {
+            if (offsetY + win_elt.clientHeight > vpH) {
                 offsetY = 0;
             }
         }
@@ -562,8 +573,8 @@ class MDIWidget extends ContainerWidget {
 
     /** Arranges all sub-windows in a tiled grid layout. */
     tile_windows() {
-        const containerWidth = this.element.clientWidth;
-        const containerHeight = this.element.clientHeight;
+        const containerWidth = this._viewport.clientWidth;
+        const containerHeight = this._viewport.clientHeight;
         const columns = Math.ceil(Math.sqrt(this.children.length));
         const rows = Math.ceil(this.children.length / columns);
         const tileWidth = containerWidth / columns;
@@ -575,12 +586,18 @@ class MDIWidget extends ContainerWidget {
         for (let subwin of this.children) {
             let win_elt = subwin.get_element();
             let rec = subwin.get_state();
+            // save original size if in normal state, before tiling overwrites it
+            if (rec.state === 'normal') {
+                subwin.update_state(rec);
+            }
+            if (rec.state === 'minimized') {
+                subwin.child_container.style.display = '';
+            }
             win_elt.style.width = tileWidth + 'px';
             win_elt.style.height = tileHeight + 'px';
             win_elt.style.left = col * tileWidth + 'px';
             win_elt.style.top = row * tileHeight + 'px';
-            subwin.update_state(rec);
-            rec.state = "normal";
+            rec.state = "tiled";
 
             col++;
             if (col >= columns) {
