@@ -1,0 +1,37 @@
+{
+  "name": "pgwidgets",
+  "version": "0.1.0",
+  "description": "A native JavaScript widget library with Qt/GTK-style layout and controls",
+  "type": "module",
+  "main": "Widgets.js",
+  "module": "Widgets.js",
+  "exports": {
+    ".": "./Widgets.js",
+    "./Widgets.css": "./Widgets.css",
+    "./css/*": "./css/*",
+    "./modules/*": "./modules/*"
+  },
+  "files": [
+    "Widgets.js",
+    "Widgets.css",
+    "modules/",
+    "css/",
+    "icons/"
+  ],
+  "keywords": [
+    "widgets",
+    "ui",
+    "gui",
+    "layout",
+    "mdi",
+    "dialog",
+    "toolbar",
+    "menu"
+  ],
+  "author": "PGWidgets Developers",
+  "license": "BSD-3-Clause",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/naojsoft/pgwidgets.git"
+  }
+}

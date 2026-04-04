@@ -41,6 +41,7 @@ import {TextEntrySet} from "./modules/TextEntrySet.js";
 import {Dialog} from "./modules/Dialog.js";
 import {ColorDialog} from "./modules/ColorDialog.js";
 import {ScrollBar} from "./modules/ScrollBar.js";
+import {RemoteInterface} from "./modules/RemoteInterface.js";
 
 
 const Widgets = {Widget, ContainerWidget, Box, VBox, HBox, ButtonBox,
@@ -50,6 +51,7 @@ const Widgets = {Widget, ContainerWidget, Box, VBox, HBox, ButtonBox,
                  RadioButton, ComboBox, ComboBoxNative, TextEntry,
                  Slider, Canvas, SpinBox, ProgressBar, Image, Dial,
                  MenuBar, Menu, MenuAction, ToolBar, ToolBarAction,
-                 TextEntrySet, Dialog, ColorDialog, ScrollBar};
+                 TextEntrySet, Dialog, ColorDialog, ScrollBar,
+                 RemoteInterface};
 
 export { Widgets };

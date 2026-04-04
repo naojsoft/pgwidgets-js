@@ -22,7 +22,7 @@
 
     // image loaded via constructor
     let frame1 = new Widgets.Frame({title: "Image from constructor"});
-    let img1 = new Widgets.Image({url: "../icons/ginga.svg"});
+    let img1 = new Widgets.Image({url: "../icons/pgface.svg"});
     //yimg1.resize(100, 100);
     frame1.set_widget(img1);
     vbox.add_widget(frame1, 1);
@@ -36,8 +36,8 @@
 
     let hbox = new Widgets.HBox();
     hbox.set_spacing(6);
-    let btn1 = new Widgets.Button("Load ginga.svg");
-    btn1.add_callback('activated', () => img2.set_image("../icons/ginga.svg"));
+    let btn1 = new Widgets.Button("Load pgface.svg");
+    btn1.add_callback('activated', () => img2.set_image("../icons/pgface.svg"));
     let btn2 = new Widgets.Button("Load hdots.svg");
     btn2.add_callback('activated', () => img2.set_image("../icons/hdots.svg"));
     let btn3 = new Widgets.Button("Load vdots.svg");

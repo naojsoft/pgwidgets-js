@@ -6,11 +6,16 @@
  */
 class Widget {
 
+    static _nextId = 1;
+    static _registry = new Map();
+
     /**
      * Creates a new Widget instance.
      * Initializes the callback system and enables the 'resize' callback.
      */
     constructor () {
+        this.wid = Widget._nextId++;
+        Widget._registry.set(this.wid, this);
         this.element = null;
         this._enabled = true;
 

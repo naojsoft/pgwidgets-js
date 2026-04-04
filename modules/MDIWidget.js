@@ -3,7 +3,7 @@
 import {ContainerWidget} from "./Widget.js";
 import {ScrollBar} from "./ScrollBar.js";
 
-const default_icon_url = "../icons/ginga.svg";
+const default_icon_url = "../icons/pgface.svg";
 
 
 /**
