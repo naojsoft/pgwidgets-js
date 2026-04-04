@@ -26,6 +26,7 @@ class ComboBox extends Widget {
         this.element.className = 'combobox-widget';
 
         this._editable = this.get_option(options, 'editable', false);
+        this._dropdownLimit = this.get_option(options, 'dropdown_limit', 0);
         this._items = [];
 
         // text input
@@ -159,6 +160,14 @@ class ComboBox extends Widget {
             this._dropdown.style.top = rect.bottom + 'px';
             this._dropdown.style.width = rect.width + 'px';
             this._dropdown.style.display = '';
+
+            // apply dropdown_limit by measuring item height
+            if (this._dropdownLimit > 0 && this._dropdown.children.length > this._dropdownLimit) {
+                let itemH = this._dropdown.children[0].offsetHeight;
+                this._dropdown.style.maxHeight = (itemH * this._dropdownLimit) + 'px';
+            } else {
+                this._dropdown.style.maxHeight = '';
+            }
         }
     }
 

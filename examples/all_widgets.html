@@ -6,6 +6,7 @@
   <style>
     body {
       margin: 0;
+      overflow: hidden;
     }
   </style>
   <link rel="stylesheet" href="../Widgets.css" type="text/css" />
@@ -14,81 +15,422 @@
   <script type="module">
     import { Widgets } from "../Widgets.js";
 
+    // --- Full-page TopLevel with MDI workspace ---
     let top = new Widgets.TopLevel({title: "All Widgets Demo", resizable: true});
-    top.resize(700, 700);
+    top.resize(window.innerWidth - 4, window.innerHeight - 4);
 
     let vbox = new Widgets.VBox();
-    vbox.set_spacing(6);
 
-    let status = new Widgets.Text({text: "Interact with the widgets below"});
+    // --- Menu bar ---
+    let menubar = new Widgets.MenuBar();
+    let windowsMenu = new Widgets.Menu();
+    let cascadeAction = windowsMenu.add_name("Cascade");
+    let tileAction = windowsMenu.add_name("Tile");
+    menubar.add_menu(windowsMenu, "Windows");
+    vbox.add_widget(menubar, 0);
+
+    // --- MDI area ---
+    let mdi = new Widgets.MDIWidget();
+    vbox.add_widget(mdi, 1);
+
+    cascadeAction.add_callback('activated', () => mdi.cascade_windows());
+    tileAction.add_callback('activated', () => mdi.tile_windows());
+
+    // --- Picker dialog (always visible in the MDI) ---
+    let pickerContent = new Widgets.VBox();
+    pickerContent.set_spacing(6);
+    pickerContent.set_padding(8);
+
+    let pickerLabel = new Widgets.TextEntry({text: "Pick a widget:", editable: false});
+    pickerContent.add_widget(pickerLabel, 0);
+
+    let widgetNames = [
+        "Button", "CheckBox", "ComboBox", "ColorDialog", "Dial",
+        "Expander", "Frame", "Label", "ProgressBar",
+        "RadioButton", "ScrollBar", "Slider", "SpinBox",
+        "TextArea", "TextEntry", "TextEntrySet",
+        "ToggleButton", "ToolBar"
+    ];
+    let picker = new Widgets.ComboBox({dropdown_limit: 8});
+    for (let name of widgetNames) {
+        picker.append_text(name);
+    }
+    picker.set_index(0);
+    pickerContent.add_widget(picker, 0);
+    let goBtn = new Widgets.Button("Go!");
+    pickerContent.add_widget(goBtn, 0);
+    pickerContent.add_widget(new Widgets.Label(""), 1);
+
+    let pickerWin = mdi.add_widget(pickerContent, {title: "Widget Picker", width: 220, height: 150});
+    pickerWin.get_element().style.left = '10px';
+    pickerWin.get_element().style.top = '10px';
+
+    // --- Status label at the bottom ---
+    let status = new Widgets.Label("Select a widget from the picker to see a demo.");
+    status.set_padding([6, 4, 6, 4]);
     vbox.add_widget(status, 0);
 
-    // --- Buttons ---
-    let exp_buttons = new Widgets.Expander({title: "Buttons", collapsible: true});
-    let btn_box = new Widgets.HBox();
-    btn_box.set_spacing(4);
-    let btn1 = new Widgets.Button("Button A");
-    btn1.add_callback('activated', () => status.set_text("Button A clicked"));
-    let btn2 = new Widgets.Button("Button B");
-    btn2.add_callback('activated', () => status.set_text("Button B clicked"));
-    btn_box.add_widget(btn1);
-    btn_box.add_widget(btn2);
-    exp_buttons.set_widget(btn_box);
-    vbox.add_widget(exp_buttons, 0);
+    // --- Demo creation functions ---
+    let demoCount = 0;
 
-    // --- CheckBoxes ---
-    let exp_checks = new Widgets.Expander({title: "CheckBoxes", collapsible: true});
-    let check_box = new Widgets.VBox();
-    let cb1 = new Widgets.CheckBox("Option 1");
-    cb1.add_callback('activated', (w, val) => status.set_text("Option 1: " + (val ? "ON" : "OFF")));
-    let cb2 = new Widgets.CheckBox("Option 2");
-    cb2.add_callback('activated', (w, val) => status.set_text("Option 2: " + (val ? "ON" : "OFF")));
-    check_box.add_widget(cb1);
-    check_box.add_widget(cb2);
-    exp_checks.set_widget(check_box);
-    vbox.add_widget(exp_checks, 0);
-
-    // --- ComboBox ---
-    let exp_combo = new Widgets.Expander({title: "ComboBox", collapsible: true});
-    let combo_box = new Widgets.VBox();
-    let combo = new Widgets.ComboBox();
-    let items = ["Apple", "Banana", "Cherry", "Date", "Elderberry"];
-    for (let item of items) {
-        combo.append_text(item);
+    function nextPosition() {
+        demoCount++;
+        return { x: 40 + (demoCount % 6) * 25, y: 20 + (demoCount % 6) * 25 };
     }
-    combo.add_callback('activated', (w, idx, text) => status.set_text("Selected: " + text));
-    combo_box.add_widget(combo);
-    exp_combo.set_widget(combo_box);
-    vbox.add_widget(exp_combo, 0);
 
-    // --- TextEntry ---
-    let exp_entry = new Widgets.Expander({title: "TextEntry", collapsible: true});
-    let entry_box = new Widgets.VBox();
-    let entry = new Widgets.TextEntry({text: "Type here", linehistory: 10});
-    entry.add_callback('activated', () => status.set_text("Entry: " + entry.get_text()));
-    entry_box.add_widget(entry);
-    exp_entry.set_widget(entry_box);
-    vbox.add_widget(exp_entry, 0);
+    function makeDemo(name) {
+        let pos = nextPosition();
+        let content, subwin;
 
-    // --- Slider ---
-    let exp_slider = new Widgets.Expander({title: "Slider", collapsible: true});
-    let slider_box = new Widgets.VBox();
-    let slider = new Widgets.Slider({min: 0, max: 100, value: 50});
-    slider.add_callback('activated', (w, val) => status.set_text("Slider: " + val));
-    slider_box.add_widget(slider);
-    exp_slider.set_widget(slider_box);
-    vbox.add_widget(exp_slider, 0);
+        switch (name) {
 
-    // --- Label with styling ---
-    let exp_label = new Widgets.Expander({title: "Label (styled)", collapsible: true});
-    let label_box = new Widgets.VBox();
-    let lbl = new Widgets.Label("Styled Label");
-    lbl.set_font("monospace", 14);
-    lbl.set_color("#eef", "darkblue");
-    lbl.set_halign("center");
-    label_box.add_widget(lbl);
-    exp_label.set_widget(label_box);
-    vbox.add_widget(exp_label, 0);
+        case "Button": {
+            content = new Widgets.VBox();
+            content.set_spacing(6);
+            content.set_padding(8);
+            let hbox = new Widgets.HBox();
+            hbox.set_spacing(6);
+            let lbl = new Widgets.Label("");
+            let btnA = new Widgets.Button("Button A");
+            btnA.add_callback('activated', () => { lbl.set_text("Button A clicked"); });
+            let btnB = new Widgets.Button("Button B");
+            btnB.add_callback('activated', () => { lbl.set_text("Button B clicked"); });
+            let btnIcon = new Widgets.Button("With Icon");
+            btnIcon.set_icon("../icons/ginga.svg", [16, 16]);
+            btnIcon.add_callback('activated', () => { lbl.set_text("Icon button clicked"); });
+            hbox.add_widget(btnA, 0);
+            hbox.add_widget(btnB, 0);
+            hbox.add_widget(btnIcon, 0);
+            content.add_widget(hbox, 0);
+            content.add_widget(lbl, 1);
+            subwin = mdi.add_widget(content, {title: "Button", width: 350, height: 120});
+            break;
+        }
+
+        case "CheckBox": {
+            content = new Widgets.VBox();
+            content.set_spacing(4);
+            content.set_padding(8);
+            let lbl = new Widgets.Label("");
+            let cb1 = new Widgets.CheckBox("Option 1");
+            cb1.add_callback('activated', (w, val) => lbl.set_text("Option 1: " + (val ? "ON" : "OFF")));
+            let cb2 = new Widgets.CheckBox("Option 2");
+            cb2.add_callback('activated', (w, val) => lbl.set_text("Option 2: " + (val ? "ON" : "OFF")));
+            let cb3 = new Widgets.CheckBox("Option 3");
+            cb3.add_callback('activated', (w, val) => lbl.set_text("Option 3: " + (val ? "ON" : "OFF")));
+            content.add_widget(cb1, 0);
+            content.add_widget(cb2, 0);
+            content.add_widget(cb3, 0);
+            content.add_widget(lbl, 1);
+            subwin = mdi.add_widget(content, {title: "CheckBox", width: 250, height: 160});
+            break;
+        }
+
+        case "ComboBox": {
+            content = new Widgets.VBox();
+            content.set_spacing(6);
+            content.set_padding(8);
+            let lbl = new Widgets.Label("");
+            content.add_widget(new Widgets.Label("Pick-only:"), 0);
+            let combo1 = new Widgets.ComboBox();
+            for (let f of ["Apple", "Banana", "Cherry", "Date", "Elderberry"]) {
+                combo1.append_text(f);
+            }
+            combo1.set_index(0);
+            combo1.add_callback('activated', (w, idx, text) => lbl.set_text("Picked: " + text));
+            content.add_widget(combo1, 0);
+            content.add_widget(new Widgets.Label("Editable:"), 0);
+            let combo2 = new Widgets.ComboBox({editable: true, dropdown_limit: 5});
+            for (let f of ["Red", "Orange", "Yellow", "Green", "Blue", "Indigo", "Violet"]) {
+                combo2.append_text(f);
+            }
+            combo2.add_callback('activated', (w, idx, text) => lbl.set_text("Entered: " + text));
+            content.add_widget(combo2, 0);
+            content.add_widget(lbl, 1);
+            subwin = mdi.add_widget(content, {title: "ComboBox", width: 280, height: 200});
+            break;
+        }
+
+        case "ColorDialog": {
+            let dlg = new Widgets.ColorDialog({color: '#3366cc', modal: false});
+            dlg.set_position(pos.x, pos.y);
+            dlg.add_callback('activated', (w, color) => {
+                status.set_text("Color chosen: " + color);
+            });
+            dlg.add_callback('pick', (w, color) => {
+                status.set_text("Picking: " + color);
+            });
+            dlg.show();
+            return;  // ColorDialog is its own TopLevel, not an MDI subwindow
+        }
+
+        case "Dial": {
+            content = new Widgets.HBox();
+            content.set_spacing(8);
+            content.set_padding(8);
+            let lbl = new Widgets.Label("50");
+            let dial1 = new Widgets.Dial({min: 0, max: 100, value: 50, track: true});
+            dial1.add_callback('activated', (w, val) => lbl.set_text(String(val)));
+            let dial2 = new Widgets.Dial({min: 0, max: 100, value: 25});
+            dial2.add_callback('activated', (w, val) => lbl.set_text(String(val)));
+            content.add_widget(dial1, 0);
+            content.add_widget(dial2, 0);
+            content.add_widget(lbl, 1);
+            subwin = mdi.add_widget(content, {title: "Dial", width: 320, height: 160});
+            break;
+        }
+
+        case "Expander": {
+            content = new Widgets.VBox();
+            content.set_spacing(4);
+            content.set_padding(8);
+            let exp1 = new Widgets.Expander({title: "Section A", collapsible: true});
+            exp1.set_widget(new Widgets.Label("Content of section A."));
+            let exp2 = new Widgets.Expander({title: "Section B", collapsible: true});
+            exp2.set_widget(new Widgets.Label("Content of section B."));
+            content.add_widget(exp1, 0);
+            content.add_widget(exp2, 0);
+            content.add_widget(new Widgets.Label(""), 1);
+            subwin = mdi.add_widget(content, {title: "Expander", width: 280, height: 180});
+            break;
+        }
+
+        case "Frame": {
+            content = new Widgets.VBox();
+            content.set_spacing(6);
+            content.set_padding(8);
+            let frame1 = new Widgets.Frame({title: "Titled Frame"});
+            frame1.set_widget(new Widgets.Label("Content inside a frame."));
+            let frame2 = new Widgets.Frame({title: "Another Frame"});
+            frame2.set_widget(new Widgets.Label("More framed content."));
+            content.add_widget(frame1, 1);
+            content.add_widget(frame2, 1);
+            subwin = mdi.add_widget(content, {title: "Frame", width: 280, height: 200});
+            break;
+        }
+
+        case "Label": {
+            content = new Widgets.VBox();
+            content.set_spacing(6);
+            content.set_padding(8);
+            let lbl1 = new Widgets.Label("Default label");
+            let lbl2 = new Widgets.Label("Centered, colored");
+            lbl2.set_halign("center");
+            lbl2.set_color("#eef", "darkblue");
+            let lbl3 = new Widgets.Label("Monospace, bold");
+            lbl3.set_font("monospace", 12, "bold");
+            content.add_widget(lbl1, 0);
+            content.add_widget(lbl2, 0);
+            content.add_widget(lbl3, 0);
+            content.add_widget(new Widgets.Label(""), 1);
+            subwin = mdi.add_widget(content, {title: "Label", width: 260, height: 150});
+            break;
+        }
+
+        case "ProgressBar": {
+            content = new Widgets.VBox();
+            content.set_spacing(6);
+            content.set_padding(8);
+            let pb = new Widgets.ProgressBar();
+            pb.set_value(0.65);
+            let slider = new Widgets.Slider({min: 0, max: 100, value: 65, track: true});
+            slider.add_callback('activated', (w, val) => pb.set_value(val / 100));
+            content.add_widget(new Widgets.Label("Drag slider to change progress:"), 0);
+            content.add_widget(slider, 0);
+            content.add_widget(pb, 0);
+            content.add_widget(new Widgets.Label(""), 1);
+            subwin = mdi.add_widget(content, {title: "ProgressBar", width: 320, height: 150});
+            break;
+        }
+
+        case "RadioButton": {
+            content = new Widgets.VBox();
+            content.set_spacing(4);
+            content.set_padding(8);
+            let lbl = new Widgets.Label("");
+            let rb1 = new Widgets.RadioButton("Choice A");
+            rb1.add_callback('activated', (w, val) => { if (val) lbl.set_text("Selected: A"); });
+            let rb2 = new Widgets.RadioButton("Choice B", {group: rb1});
+            rb2.add_callback('activated', (w, val) => { if (val) lbl.set_text("Selected: B"); });
+            let rb3 = new Widgets.RadioButton("Choice C", {group: rb1});
+            rb3.add_callback('activated', (w, val) => { if (val) lbl.set_text("Selected: C"); });
+            rb1.set_state(true);
+            content.add_widget(rb1, 0);
+            content.add_widget(rb2, 0);
+            content.add_widget(rb3, 0);
+            content.add_widget(lbl, 1);
+            subwin = mdi.add_widget(content, {title: "RadioButton", width: 250, height: 160});
+            break;
+        }
+
+        case "ScrollBar": {
+            content = new Widgets.VBox();
+            content.set_spacing(8);
+            content.set_padding(8);
+            let lbl = new Widgets.Label("0%");
+            content.add_widget(new Widgets.Label("Horizontal:"), 0);
+            let hsb = new Widgets.ScrollBar({orientation: 'horizontal'});
+            hsb.set_thumb_width(0.2);
+            hsb.add_callback('activated', (w, pct) => lbl.set_text((pct * 100).toFixed(0) + "%"));
+            content.add_widget(hsb, 0);
+            let hbox = new Widgets.HBox();
+            hbox.set_spacing(8);
+            hbox.add_widget(new Widgets.Label("Vertical:"), 0);
+            let vsb = new Widgets.ScrollBar({orientation: 'vertical'});
+            vsb.set_thumb_width(0.3);
+            vsb.add_callback('activated', (w, pct) => lbl.set_text((pct * 100).toFixed(0) + "%"));
+            hbox.add_widget(vsb, 0);
+            hbox.add_widget(lbl, 1);
+            content.add_widget(hbox, 1);
+            subwin = mdi.add_widget(content, {title: "ScrollBar", width: 280, height: 200});
+            break;
+        }
+
+        case "Slider": {
+            content = new Widgets.VBox();
+            content.set_spacing(6);
+            content.set_padding(8);
+            let lbl = new Widgets.Label("");
+            let sl1 = new Widgets.Slider({min: 0, max: 100, value: 50});
+            sl1.add_callback('activated', (w, val) => lbl.set_text("Integer: " + val));
+            let sl2 = new Widgets.Slider({min: 0, max: 1, step: 0.01, value: 0.5, dtype: 'float', track: true});
+            sl2.add_callback('activated', (w, val) => lbl.set_text("Float: " + val));
+            content.add_widget(new Widgets.Label("Integer (0–100):"), 0);
+            content.add_widget(sl1, 0);
+            content.add_widget(new Widgets.Label("Float tracking (0–1):"), 0);
+            content.add_widget(sl2, 0);
+            content.add_widget(lbl, 1);
+            subwin = mdi.add_widget(content, {title: "Slider", width: 320, height: 180});
+            break;
+        }
+
+        case "SpinBox": {
+            content = new Widgets.VBox();
+            content.set_spacing(6);
+            content.set_padding(8);
+            let lbl = new Widgets.Label("");
+            content.add_widget(new Widgets.Label("Integer (0–100):"), 0);
+            let sp1 = new Widgets.SpinBox({min: 0, max: 100, step: 1, value: 50});
+            sp1.add_callback('activated', (w, val) => lbl.set_text("Int: " + val));
+            content.add_widget(sp1, 0);
+            content.add_widget(new Widgets.Label("Float (0–1):"), 0);
+            let sp2 = new Widgets.SpinBox({min: 0, max: 1, step: 0.05, value: 0.5, dtype: 'float'});
+            sp2.add_callback('activated', (w, val) => lbl.set_text("Float: " + val));
+            content.add_widget(sp2, 0);
+            content.add_widget(lbl, 1);
+            subwin = mdi.add_widget(content, {title: "SpinBox", width: 280, height: 180});
+            break;
+        }
+
+        case "TextArea": {
+            let ta = new Widgets.TextArea("This is a multi-line text area.\n\nYou can type freely here.\nResize the window to see it adapt.");
+            subwin = mdi.add_widget(ta, {title: "TextArea", width: 320, height: 200});
+            break;
+        }
+
+        case "TextEntry": {
+            content = new Widgets.VBox();
+            content.set_spacing(6);
+            content.set_padding(8);
+            let lbl = new Widgets.Label("Press Enter to activate.");
+            let entry = new Widgets.TextEntry({text: "Type here", linehistory: 10});
+            entry.add_callback('activated', (w, text) => lbl.set_text("Entered: " + text));
+            content.add_widget(entry, 0);
+            content.add_widget(new Widgets.Label("Password:"), 0);
+            let pwEntry = new Widgets.TextEntry({password: true});
+            pwEntry.add_callback('activated', (w, text) => lbl.set_text("Password: " + text));
+            content.add_widget(pwEntry, 0);
+            content.add_widget(lbl, 1);
+            subwin = mdi.add_widget(content, {title: "TextEntry", width: 300, height: 160});
+            break;
+        }
+
+        case "TextEntrySet": {
+            content = new Widgets.VBox();
+            content.set_spacing(6);
+            content.set_padding(8);
+            let lbl = new Widgets.Label("Press Enter or click Set.");
+            let tes = new Widgets.TextEntrySet({text: "Set", value: "Hello", linehistory: 5});
+            tes.add_callback('activated', (w, text) => lbl.set_text("Value: " + text));
+            content.add_widget(tes, 0);
+            content.add_widget(lbl, 1);
+            subwin = mdi.add_widget(content, {title: "TextEntrySet", width: 300, height: 120});
+            break;
+        }
+
+        case "ToggleButton": {
+            content = new Widgets.VBox();
+            content.set_spacing(6);
+            content.set_padding(8);
+            let lbl = new Widgets.Label("");
+            content.add_widget(new Widgets.Label("Independent toggles:"), 0);
+            let hbox1 = new Widgets.HBox();
+            hbox1.set_spacing(4);
+            let tb1 = new Widgets.ToggleButton("Bold");
+            tb1.add_callback('activated', (w, st) => lbl.set_text("Bold: " + (st ? "on" : "off")));
+            let tb2 = new Widgets.ToggleButton("Italic");
+            tb2.add_callback('activated', (w, st) => lbl.set_text("Italic: " + (st ? "on" : "off")));
+            hbox1.add_widget(tb1, 0);
+            hbox1.add_widget(tb2, 0);
+            content.add_widget(hbox1, 0);
+            content.add_widget(new Widgets.Label("Grouped (exclusive):"), 0);
+            let hbox2 = new Widgets.HBox();
+            hbox2.set_spacing(4);
+            let tg1 = new Widgets.ToggleButton("Left");
+            let tg2 = new Widgets.ToggleButton("Center", {group: tg1});
+            let tg3 = new Widgets.ToggleButton("Right", {group: tg1});
+            tg1.add_callback('activated', (w, st) => { if (st) lbl.set_text("Align: Left"); });
+            tg2.add_callback('activated', (w, st) => { if (st) lbl.set_text("Align: Center"); });
+            tg3.add_callback('activated', (w, st) => { if (st) lbl.set_text("Align: Right"); });
+            hbox2.add_widget(tg1, 0);
+            hbox2.add_widget(tg2, 0);
+            hbox2.add_widget(tg3, 0);
+            content.add_widget(hbox2, 0);
+            content.add_widget(lbl, 1);
+            subwin = mdi.add_widget(content, {title: "ToggleButton", width: 300, height: 180});
+            break;
+        }
+
+        case "ToolBar": {
+            content = new Widgets.VBox();
+            let lbl = new Widgets.Label("Click toolbar items.");
+            lbl.set_padding(8);
+            let tb = new Widgets.ToolBar();
+            let act1 = tb.add_action({text: "New"});
+            act1.add_callback('activated', () => lbl.set_text("New clicked"));
+            let act2 = tb.add_action({text: "Open"});
+            act2.add_callback('activated', () => lbl.set_text("Open clicked"));
+            let act3 = tb.add_action({text: "Save"});
+            act3.add_callback('activated', () => lbl.set_text("Save clicked"));
+            tb.add_separator();
+            let tog1 = tb.add_action({text: "B", toggle: true});
+            tog1.add_callback('activated', (w, st) => lbl.set_text("Bold: " + (st ? "on" : "off")));
+            let tog2 = tb.add_action({text: "I", toggle: true});
+            tog2.add_callback('activated', (w, st) => lbl.set_text("Italic: " + (st ? "on" : "off")));
+            content.add_widget(tb, 0);
+            content.add_widget(lbl, 1);
+            subwin = mdi.add_widget(content, {title: "ToolBar", width: 350, height: 120});
+            break;
+        }
+
+        default:
+            return;
+        }
+
+        // position the new subwindow
+        let el = subwin.get_element();
+        el.style.left = pos.x + 'px';
+        el.style.top = pos.y + 'px';
+    }
+
+    // --- Wire up Go button ---
+    goBtn.add_callback('activated', () => {
+        let text = picker.get_text();
+        if (text && text !== '') {
+            makeDemo(text);
+            status.set_text("Opened demo: " + text);
+        }
+    });
 
     top.set_widget(vbox);
     top.show();

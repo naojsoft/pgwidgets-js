@@ -397,18 +397,19 @@ class MDISubWindow extends ContainerWidget {
         //this.mdi_widget.make_callback('page-switch', ??);
     }
     
-    /** Fires the 'page-close' callback on the parent MDI widget. */
+    /** Fires the 'page-close' callback and closes this sub-window. */
     signal_close() {
         this.mdi_widget.make_callback('page-close', this.get_child());
+        this.close();
     }
 
     /** Closes and removes this sub-window from the MDI workspace. */
     close() {
-        this.mdi_widget.close_child(this.get_child());
+        let mdi = this.mdi_widget;
+        mdi.remove_child(this);
+        mdi.windowStateMap.delete(this.element);
         this.element.remove();
-
-        // TODO: some child should get the page-switch callback
-        //this.mdi_widget.make_callback('page-switch', ??);
+        mdi._updateWorkspaceSize();
     }
 }
     
@@ -469,12 +470,9 @@ class MDIWidget extends ContainerWidget {
             this._viewport.scrollTop = pct * maxScroll;
         });
 
-        // mouse wheel on the viewport
+        // prevent mouse wheel from scrolling the viewport
         this._viewport.addEventListener('wheel', (e) => {
             e.preventDefault();
-            this._viewport.scrollTop += e.deltaY;
-            this._viewport.scrollLeft += e.deltaX;
-            this._syncFromScroll();
         });
 
         this.windowStateMap = new Map();
@@ -718,7 +716,6 @@ class MDIWidget extends ContainerWidget {
     close_child(child) {
         let subwin = this.get_subwin(child);
         if (subwin !== null) {
-            this.remove(child);
             subwin.close();
         }
     }

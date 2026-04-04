@@ -24,10 +24,12 @@
     let status = new Widgets.Label("(no selection)");
     status.set_padding([6, 4, 6, 4]);
 
-    // --- Standard ComboBox (pick only) ---
-    let frame1 = new Widgets.Frame({title: "ComboBox (pick only)"});
-    let colors = ["Red", "Green", "Blue", "Yellow", "Magenta"];
-    let combo = new Widgets.ComboBox();
+    // --- Standard ComboBox (pick only, with dropdown_limit) ---
+    let frame1 = new Widgets.Frame({title: "ComboBox (pick only, limit=5)"});
+    let colors = ["Red", "Orange", "Yellow", "Green", "Cyan",
+                  "Blue", "Indigo", "Violet", "Magenta", "Pink",
+                  "Brown", "Black", "White", "Gray"];
+    let combo = new Widgets.ComboBox({dropdown_limit: 5});
     for (let color of colors) {
         combo.append_text(color);
     }
