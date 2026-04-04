@@ -15,7 +15,7 @@
   <script type="module">
     import { Widgets } from "../Widgets.js";
 
-    let top = new Widgets.TopLevel();
+    let top = new Widgets.TopLevel({title: "ScrollArea Demo", resizable: true});
     top.resize(500, 500);
 
     let fr = new Widgets.Frame({title: "My Lecture", collapsible: true});

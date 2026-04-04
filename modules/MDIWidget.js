@@ -1,6 +1,7 @@
 "use strict";
 
 import {ContainerWidget} from "./Widget.js";
+import {ScrollBar} from "./ScrollBar.js";
 
 const default_icon_url = "../icons/ginga.svg";
 
@@ -118,8 +119,11 @@ class MDISubWindow extends ContainerWidget {
         this.children.push(child);
 
         // Random placement of subwindow
-        style.left = Math.random() * (this.element.innerWidth - width) + 'px';
-        style.top = Math.random() * (this.element.innerHeight - height) + 'px';
+        let wsRect = this.mdi_widget.workspace.getBoundingClientRect();
+        let maxX = Math.max(0, wsRect.width - width);
+        let maxY = Math.max(0, wsRect.height - height);
+        style.left = Math.floor(Math.random() * maxX) + 'px';
+        style.top = Math.floor(Math.random() * maxY) + 'px';
 
         //this.mdi_widget.add_widget(this);
 
@@ -331,7 +335,7 @@ class MDISubWindow extends ContainerWidget {
 
     /** Toggles the sub-window between maximized and normal states. */
     toggle_maximize() {
-        const workspace = this.mdi_widget.element;
+        const workspace = this.mdi_widget._viewport;
         let style = this.element.style;
         const pad = 5;
         // Check if the window is currently maximized
@@ -432,11 +436,46 @@ class MDIWidget extends ContainerWidget {
         }
         this.element.className = 'mdi-widget';
 
+        // viewport clips the workspace
+        this._viewport = document.createElement('div');
+        this._viewport.className = 'mdi-viewport';
+        this.element.appendChild(this._viewport);
+
         // inner workspace holds all sub-windows; sized to fit content
         this.workspace = document.createElement('div');
         this.workspace.className = 'mdi-workspace';
-        this.element.appendChild(this.workspace);
+        this._viewport.appendChild(this.workspace);
 
+        // custom scrollbars
+        this._hScrollBar = new ScrollBar({orientation: 'horizontal'});
+        this._vScrollBar = new ScrollBar({orientation: 'vertical'});
+        this._hScrollBar.get_element().classList.add('mdi-hbar');
+        this._vScrollBar.get_element().classList.add('mdi-vbar');
+
+        this._corner = document.createElement('div');
+        this._corner.className = 'mdi-scrollbar-corner';
+
+        this.element.appendChild(this._hScrollBar.get_element());
+        this.element.appendChild(this._vScrollBar.get_element());
+        this.element.appendChild(this._corner);
+
+        // scrollbar callbacks
+        this._hScrollBar.add_callback('activated', (w, pct) => {
+            let maxScroll = this.workspace.scrollWidth - this._viewport.clientWidth;
+            this._viewport.scrollLeft = pct * maxScroll;
+        });
+        this._vScrollBar.add_callback('activated', (w, pct) => {
+            let maxScroll = this.workspace.scrollHeight - this._viewport.clientHeight;
+            this._viewport.scrollTop = pct * maxScroll;
+        });
+
+        // mouse wheel on the viewport
+        this._viewport.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            this._viewport.scrollTop += e.deltaY;
+            this._viewport.scrollLeft += e.deltaX;
+            this._syncFromScroll();
+        });
 
         this.windowStateMap = new Map();
 
@@ -448,6 +487,12 @@ class MDIWidget extends ContainerWidget {
         this.close_child = this.close_child.bind(this);
         this.set_resistance = this.set_resistance.bind(this);
         this._updateWorkspaceSize = this._updateWorkspaceSize.bind(this);
+        this._syncScrollbars = this._syncScrollbars.bind(this);
+        this._syncFromScroll = this._syncFromScroll.bind(this);
+
+        // observe viewport size changes
+        this._resizeObserver = new ResizeObserver(() => this._syncScrollbars());
+        this._resizeObserver.observe(this._viewport);
 
         for (let name of ['page-switch', 'page-close']) {
             this.enable_callback(name);
@@ -550,7 +595,7 @@ class MDIWidget extends ContainerWidget {
      * Lays out all minimized sub-windows in a row along the bottom of the workspace.
      */
     _layoutMinimized() {
-        const workspaceH = this.element.clientHeight;
+        const workspaceH = this._viewport.clientHeight;
         let x = 0;
         for (let subwin of this.children) {
             let rec = this.windowStateMap.get(subwin.get_element());
@@ -567,13 +612,71 @@ class MDIWidget extends ContainerWidget {
 
     /**
      * Updates the workspace div size to encompass all sub-windows,
-     * ensuring scrollbars appear when windows extend beyond the visible area.
-     * If any window has a negative position, all windows are shifted so the
-     * minimum position becomes 0, and the scroll offset is adjusted to
-     * keep the view stable.
+     * then syncs the custom scrollbars.
      */
     _updateWorkspaceSize() {
-        // no-op for now
+        let maxRight = 0;
+        let maxBottom = 0;
+        let vw = this._viewport.clientWidth;
+        let vh = this._viewport.clientHeight;
+
+        for (let subwin of this.children) {
+            let el = subwin.get_element();
+            let left = parseInt(el.style.left) || 0;
+            let top = parseInt(el.style.top) || 0;
+            let right = left + el.offsetWidth;
+            let bottom = top + el.offsetHeight;
+            if (right > maxRight) maxRight = right;
+            if (bottom > maxBottom) maxBottom = bottom;
+        }
+
+        this.workspace.style.width = Math.max(vw, maxRight) + 'px';
+        this.workspace.style.height = Math.max(vh, maxBottom) + 'px';
+
+        this._syncScrollbars();
+    }
+
+    /**
+     * Updates scrollbar thumb sizes and visibility based on workspace vs viewport.
+     * @private
+     */
+    _syncScrollbars() {
+        let vw = this._viewport.clientWidth;
+        let vh = this._viewport.clientHeight;
+        let ww = this.workspace.scrollWidth;
+        let wh = this.workspace.scrollHeight;
+
+        let showH = ww > vw + 1;
+        let showV = wh > vh + 1;
+
+        this._hScrollBar.get_element().style.display = showH ? '' : 'none';
+        this._vScrollBar.get_element().style.display = showV ? '' : 'none';
+        this._corner.style.display = (showH && showV) ? '' : 'none';
+
+        if (showH) {
+            this._hScrollBar.set_thumb_width(Math.min(1, vw / Math.max(1, ww)));
+        }
+        if (showV) {
+            this._vScrollBar.set_thumb_width(Math.min(1, vh / Math.max(1, wh)));
+        }
+
+        this._syncFromScroll();
+    }
+
+    /**
+     * Syncs scrollbar positions from the viewport's current scroll offset.
+     * @private
+     */
+    _syncFromScroll() {
+        let maxScrollX = this.workspace.scrollWidth - this._viewport.clientWidth;
+        let maxScrollY = this.workspace.scrollHeight - this._viewport.clientHeight;
+
+        if (maxScrollX > 0) {
+            this._hScrollBar.set_scroll_percent(this._viewport.scrollLeft / maxScrollX);
+        }
+        if (maxScrollY > 0) {
+            this._vScrollBar.set_scroll_percent(this._viewport.scrollTop / maxScrollY);
+        }
     }
 
     /**

@@ -11,7 +11,7 @@
 @import "css/MDIWidget.css";
 @import "css/Splitter.css";
 @import "css/TabWidget.css";
-@import "css/Scrollable.css";
+@import "css/ScrollArea.css";
 @import "css/Expander.css";
 
 /* regular widgets */
@@ -33,3 +33,4 @@
 @import "css/TextEntrySet.css";
 @import "css/Dialog.css";
 @import "css/ColorDialog.css";
+@import "css/ScrollBar.css";

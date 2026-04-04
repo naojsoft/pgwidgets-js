@@ -7,13 +7,44 @@
     height: 100%;
     background-color: #f0f0f0;
     border: 2px;
-    overflow: auto;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: 1fr auto;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.mdi-viewport {
+    grid-column: 1;
+    grid-row: 1;
+    overflow: hidden;
+    position: relative;
 }
 
 .mdi-workspace {
-    position: relative;
+    position: absolute;
+    top: 0;
+    left: 0;
     min-width: 100%;
     min-height: 100%;
+}
+
+.mdi-hbar {
+    grid-column: 1;
+    grid-row: 2;
+}
+
+.mdi-vbar {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+.mdi-scrollbar-corner {
+    grid-column: 2;
+    grid-row: 2;
+    width: 15px;
+    height: 15px;
+    background-color: #e0e0e0;
 }
 
 .minimized-container {
