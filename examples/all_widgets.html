@@ -46,7 +46,7 @@
 
     let widgetNames = [
         "Button", "CheckBox", "ComboBox", "ColorDialog", "Dial",
-        "Expander", "Frame", "Label", "ProgressBar",
+        "Expander", "Frame", "Image", "Label", "ProgressBar",
         "RadioButton", "ScrollBar", "Slider", "SpinBox",
         "TextArea", "TextEntry", "TextEntrySet",
         "ToggleButton", "ToolBar"
@@ -206,6 +206,12 @@
             content.add_widget(frame1, 1);
             content.add_widget(frame2, 1);
             subwin = mdi.add_widget(content, {title: "Frame", width: 280, height: 200});
+            break;
+        }
+
+        case "Image": {
+            let img = new Widgets.Image({url: "../icons/pgwidgets-logo.svg"});
+            subwin = mdi.add_widget(img, {title: "Image", width: 360, height: 240});
             break;
         }
 
