@@ -71,29 +71,28 @@ if '/' not in sys.path:
 
     // Run the demo
     pyodide.runPython(`
-from pgwidgets_js.pyodide import (TopLevel, VBox, HBox, Button, Label,
-                                   TextEntry, Slider, TreeView)
+from pgwidgets_js.pyodide import Widgets
 
-top = TopLevel(title="Pyodide Demo", resizable=True)
+top = Widgets.TopLevel(title="Pyodide Demo", resizable=True)
 top.resize(600, 500)
 
-vbox = VBox(spacing=6, padding=8)
+vbox = Widgets.VBox(spacing=6, padding=8)
 
-status = Label("Select an item or interact with controls.")
+status = Widgets.Label("Select an item or interact with controls.")
 
 # -- Some basic widgets --
-hbox_controls = HBox(spacing=6)
-entry = TextEntry(text="Type here")
+hbox_controls = Widgets.HBox(spacing=6)
+entry = Widgets.TextEntry(text="Type here")
 entry.on("activated", lambda text: status.set_text(f"Entered: {text}"))
 
-slider = Slider(min=0, max=100, value=50, track=True)
+slider = Widgets.Slider(min=0, max=100, value=50, track=True)
 slider.on("activated", lambda val: status.set_text(f"Slider: {val}"))
 
 hbox_controls.add_widget(entry, 1)
 hbox_controls.add_widget(slider, 1)
 
 # -- TreeView --
-tree = TreeView(
+tree = Widgets.TreeView(
     columns=[
         {"label": "", "type": "icon", "icon_size": 16},
         "Name",
@@ -131,14 +130,14 @@ tree.on("selected", on_selected)
 tree.on("activated", lambda vals: status.set_text(f"Activated: {vals[1]}"))
 
 # -- Buttons --
-hbox_btns = HBox(spacing=4)
-btn_expand = Button("Expand All")
+hbox_btns = Widgets.HBox(spacing=4)
+btn_expand = Widgets.Button("Expand All")
 btn_expand.on("activated", lambda: tree.expand_all())
-btn_collapse = Button("Collapse All")
+btn_collapse = Widgets.Button("Collapse All")
 btn_collapse.on("activated", lambda: tree.collapse_all())
 hbox_btns.add_widget(btn_expand, 0)
 hbox_btns.add_widget(btn_collapse, 0)
-hbox_btns.add_widget(Label("Click column headers to sort."), 0)
+hbox_btns.add_widget(Widgets.Label("Click column headers to sort."), 0)
 
 vbox.add_widget(hbox_controls, 0)
 vbox.add_widget(hbox_btns, 0)

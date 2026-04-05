@@ -141,15 +141,15 @@ Pythonic wrappers with normal construction syntax, automatic type
 conversion, and callback management.
 
 ```python
-from pgwidgets_js.pyodide import TopLevel, VBox, Button, Label
+from pgwidgets_js.pyodide import Widgets
 
-top = TopLevel(title="Hello", resizable=True)
+top = Widgets.TopLevel(title="Hello", resizable=True)
 top.resize(400, 300)
 
-vbox = VBox(spacing=8, padding=10)
+vbox = Widgets.VBox(spacing=8, padding=10)
 
-label = Label("Click the button!")
-button = Button("Click me")
+label = Widgets.Label("Click the button!")
+button = Widgets.Button("Click me")
 button.on("activated", lambda: label.set_text("Clicked!"))
 
 vbox.add_widget(button, 0)

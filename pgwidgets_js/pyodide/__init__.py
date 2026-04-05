@@ -5,14 +5,14 @@ No WebSocket server needed. Widgets are created as JS objects in the
 same browser context.
 
 Usage:
-    from pgwidgets_js.pyodide import TopLevel, VBox, Button, Label
+    from pgwidgets_js.pyodide import Widgets
 
-    top = TopLevel(title="Hello", resizable=True)
+    top = Widgets.TopLevel(title="Hello", resizable=True)
     top.resize(400, 300)
 
-    vbox = VBox(spacing=8)
-    btn = Button("Click me")
-    label = Label("Hello from Pyodide!")
+    vbox = Widgets.VBox(spacing=8)
+    btn = Widgets.Button("Click me")
+    label = Widgets.Label("Hello from Pyodide!")
 
     btn.on("activated", lambda: label.set_text("Clicked!"))
 
@@ -28,4 +28,15 @@ from pgwidgets_js.pyodide.widget import build_all_widget_classes, Widget
 _classes = build_all_widget_classes()
 globals().update(_classes)
 
-__all__ = list(_classes.keys()) + ["Widget"]
+
+class _WidgetNamespace:
+    """Namespace that exposes all widget classes as attributes,
+    e.g. Widgets.MenuBar(), Widgets.Button("OK")."""
+    pass
+
+
+Widgets = _WidgetNamespace()
+for _name, _cls in _classes.items():
+    setattr(Widgets, _name, _cls)
+
+__all__ = list(_classes.keys()) + ["Widget", "Widgets"]
