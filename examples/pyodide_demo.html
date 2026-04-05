@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>pgwidgets Pyodide Demo</title>
+  <link rel="stylesheet" href="../pgwidgets_js/static/Widgets.css" type="text/css" />
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.27.5/full/pyodide.js"></script>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    #loading {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: sans-serif; font-size: 18px; color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading">Loading Pyodide...</div>
+
+  <!-- Load pgwidgets JS modules so Widgets is available globally -->
+  <script type="module">
+    import { Widgets } from "../pgwidgets_js/static/Widgets.js";
+    window.Widgets = Widgets;
+    window._pgwidgetsReady = true;
+  </script>
+
+  <script type="module">
+    // Wait for Widgets to be available
+    function waitForWidgets() {
+      return new Promise(resolve => {
+        const check = () => {
+          if (window._pgwidgetsReady) resolve();
+          else setTimeout(check, 50);
+        };
+        check();
+      });
+    }
+
+    await waitForWidgets();
+
+    let pyodide = await loadPyodide();
+
+    // Mount the pgwidgets_js package so Pyodide can import it
+    let basePath = new URL('..', window.location.href).pathname;
+    pyodide.FS.mkdirTree('/pgwidgets_js');
+    pyodide.FS.mkdirTree('/pgwidgets_js/pyodide');
+
+    // Fetch and mount the Python files
+    async function mountFile(url, fsPath) {
+      let resp = await fetch(url);
+      let text = await resp.text();
+      pyodide.FS.writeFile(fsPath, text);
+    }
+
+    await Promise.all([
+      mountFile(basePath + 'pgwidgets_js/__init__.py', '/pgwidgets_js/__init__.py'),
+      mountFile(basePath + 'pgwidgets_js/defs.py', '/pgwidgets_js/defs.py'),
+      mountFile(basePath + 'pgwidgets_js/pyodide/__init__.py', '/pgwidgets_js/pyodide/__init__.py'),
+      mountFile(basePath + 'pgwidgets_js/pyodide/widget.py', '/pgwidgets_js/pyodide/widget.py'),
+    ]);
+
+    // Add to Python path
+    pyodide.runPython(`
+import sys
+if '/' not in sys.path:
+    sys.path.insert(0, '/')
+    `);
+
+    document.getElementById('loading').remove();
+
+    // Run the demo
+    pyodide.runPython(`
+from pgwidgets_js.pyodide import (TopLevel, VBox, HBox, Button, Label,
+                                   TextEntry, Slider, TreeView)
+
+top = TopLevel(title="Pyodide Demo", resizable=True)
+top.resize(600, 500)
+
+vbox = VBox(spacing=6, padding=8)
+
+status = Label("Select an item or interact with controls.")
+
+# -- Some basic widgets --
+hbox_controls = HBox(spacing=6)
+entry = TextEntry(text="Type here")
+entry.on("activated", lambda text: status.set_text(f"Entered: {text}"))
+
+slider = Slider(min=0, max=100, value=50, track=True)
+slider.on("activated", lambda val: status.set_text(f"Slider: {val}"))
+
+hbox_controls.add_widget(entry, 1)
+hbox_controls.add_widget(slider, 1)
+
+# -- TreeView --
+tree = TreeView(
+    columns=[
+        {"label": "", "type": "icon", "icon_size": 16},
+        "Name",
+        "Type",
+        {"label": "Size (KB)", "type": "number"},
+    ],
+    selection_mode="multi",
+    alternate_row_colors=True,
+)
+
+folder_icon = "../pgwidgets_js/static/icons/folder.svg"
+file_icon = "../pgwidgets_js/static/icons/file.svg"
+
+tree.set_tree([
+    {"values": [folder_icon, "Documents", "Folder", ""], "children": [
+        {"values": [file_icon, "report.pdf", "PDF", 2400]},
+        {"values": [file_icon, "notes.txt", "Text", 12]},
+    ]},
+    {"values": [folder_icon, "Pictures", "Folder", ""], "children": [
+        {"values": [file_icon, "photo1.jpg", "JPEG", 3200]},
+        {"values": [file_icon, "photo2.png", "PNG", 1800]},
+    ]},
+    {"values": [folder_icon, "Music", "Folder", ""], "children": [
+        {"values": [file_icon, "song1.mp3", "MP3", 4500]},
+    ]},
+])
+
+def on_selected(items):
+    if len(items) == 1:
+        status.set_text(f"Selected: {items[0]['values'][1]}")
+    elif len(items) > 1:
+        status.set_text(f"Selected: {len(items)} items")
+
+tree.on("selected", on_selected)
+tree.on("activated", lambda vals: status.set_text(f"Activated: {vals[1]}"))
+
+# -- Buttons --
+hbox_btns = HBox(spacing=4)
+btn_expand = Button("Expand All")
+btn_expand.on("activated", lambda: tree.expand_all())
+btn_collapse = Button("Collapse All")
+btn_collapse.on("activated", lambda: tree.collapse_all())
+hbox_btns.add_widget(btn_expand, 0)
+hbox_btns.add_widget(btn_collapse, 0)
+hbox_btns.add_widget(Label("Click column headers to sort."), 0)
+
+vbox.add_widget(hbox_controls, 0)
+vbox.add_widget(hbox_btns, 0)
+vbox.add_widget(tree, 1)
+vbox.add_widget(status, 0)
+
+top.set_widget(vbox)
+top.show()
+
+print("Pyodide demo ready!")
+    `);
+  </script>
+</body>
+</html>
