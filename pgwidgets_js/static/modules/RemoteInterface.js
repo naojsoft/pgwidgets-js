@@ -154,6 +154,7 @@ class RemoteInterface {
             widget.wid = msg.wid;
             Widget._registry.set(widget.wid, widget);
         }
+        this._autoListen(widget);
         return {type: "result", id: msg.id, wid: widget.wid};
     }
 
@@ -171,6 +172,11 @@ class RemoteInterface {
         }
         let args = this._resolveArgs(msg.args || []);
         let result = widget[msg.method](...args);
+        // Auto-listen on any widget returned by a method call
+        // (e.g. MDIWidget.add_widget returns an MDISubWindow)
+        if (result instanceof Widget) {
+            this._autoListen(result);
+        }
         let response = {type: "result", id: msg.id};
         if (result !== undefined) {
             response.value = this._serializeValue(result);
@@ -216,6 +222,29 @@ class RemoteInterface {
             this._listeners.delete(key);
         }
         return {type: "result", id: msg.id};
+    }
+
+    /**
+     * Auto-registers a 'configure' callback on a widget so that
+     * browser-side moves/resizes are forwarded to the client for
+     * journal replay on reconnect.
+     * @private
+     */
+    _autoListen(widget) {
+        let key = widget.wid + ":configure";
+        if (this._listeners.has(key)) {
+            return;  // already listening
+        }
+        let cb = (w, ...args) => {
+            this._send({
+                type: "callback",
+                wid: widget.wid,
+                action: "configure",
+                args: args.map(a => this._serializeValue(a))
+            });
+        };
+        this._listeners.set(key, cb);
+        widget.add_callback('configure', cb);
     }
 
     /**

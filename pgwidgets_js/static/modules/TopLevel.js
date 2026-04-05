@@ -129,7 +129,13 @@ class TopLevel extends ContainerWidget {
         };
 
         const onMouseUp = () => {
-            isDragging = false;
+            if (isDragging) {
+                isDragging = false;
+                this.make_callback('configure',
+                    parseInt(element.style.left) || 0,
+                    parseInt(element.style.top) || 0,
+                    element.offsetWidth, element.offsetHeight);
+            }
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);
         };
@@ -209,6 +215,10 @@ class TopLevel extends ContainerWidget {
         const onMouseUp = () => {
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);
+            this.make_callback('configure',
+                parseInt(element.style.left) || 0,
+                parseInt(element.style.top) || 0,
+                element.offsetWidth, element.offsetHeight);
         };
 
         grip.addEventListener('mousedown', (e) => {

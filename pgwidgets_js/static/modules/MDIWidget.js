@@ -138,6 +138,16 @@ class MDISubWindow extends ContainerWidget {
     }
 
     /**
+     * Sets the position of the sub-window within the MDI workspace.
+     * @param {number} x - Left position in pixels.
+     * @param {number} y - Top position in pixels.
+     */
+    set_position(x, y) {
+        this.element.style.left = x + 'px';
+        this.element.style.top = y + 'px';
+    }
+
+    /**
      * Saves the current window geometry into the state record.
      * @param {Object} rec - The state record to update.
      * @returns {Object} The updated state record.
@@ -212,7 +222,13 @@ class MDISubWindow extends ContainerWidget {
 
         document.addEventListener('mousemove', this.handleDrag);
         document.addEventListener('mouseup', () => {
-            isMoving = false;
+            if (isMoving) {
+                isMoving = false;
+                this.make_callback('configure',
+                    parseInt(element.style.left) || 0,
+                    parseInt(element.style.top) || 0,
+                    element.offsetWidth, element.offsetHeight);
+            }
         });
     }
     
@@ -289,6 +305,10 @@ class MDISubWindow extends ContainerWidget {
         const onMouseUp = () => {
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);
+            this.make_callback('configure',
+                parseInt(element.style.left) || 0,
+                parseInt(element.style.top) || 0,
+                element.offsetWidth, element.offsetHeight);
         };
 
         grip.addEventListener('mousedown', (e) => {

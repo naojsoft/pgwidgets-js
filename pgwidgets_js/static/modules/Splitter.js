@@ -149,6 +149,7 @@ class Splitter extends ContainerWidget {
         this.activeIndex = -1;
         document.removeEventListener('mousemove', this.onMouseMove);
         document.removeEventListener('mouseup', this.onMouseUp);
+        this.make_callback('configure', this.get_sizes());
     }
 
     /**
