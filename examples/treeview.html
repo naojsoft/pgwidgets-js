@@ -22,8 +22,12 @@
     let status = new Widgets.Label("Select an item.");
 
     // -- Tree example --
+    const folderIcon = "../pgwidgets_js/static/icons/folder.svg";
+    const fileIcon = "../pgwidgets_js/static/icons/file.svg";
+
     let tree = new Widgets.TreeView({
         columns: [
+            { label: "", type: "icon", icon_size: 16 },
             "Name",
             "Type",
             { label: "Size (KB)", type: "number" },
@@ -33,39 +37,39 @@
     });
 
     tree.set_tree([
-        { values: ["Documents", "Folder", ""], children: [
-            { values: ["report.pdf", "PDF", 2400] },
-            { values: ["notes.txt", "Text", 12] },
-            { values: ["Presentations", "Folder", ""], children: [
-                { values: ["slides.pptx", "PowerPoint", 5100] },
-                { values: ["demo.key", "Keynote", 8300] },
+        { values: [folderIcon, "Documents", "Folder", ""], children: [
+            { values: [fileIcon, "report.pdf", "PDF", 2400] },
+            { values: [fileIcon, "notes.txt", "Text", 12] },
+            { values: [folderIcon, "Presentations", "Folder", ""], children: [
+                { values: [fileIcon, "slides.pptx", "PowerPoint", 5100] },
+                { values: [fileIcon, "demo.key", "Keynote", 8300] },
             ]},
         ]},
-        { values: ["Pictures", "Folder", ""], children: [
-            { values: ["photo1.jpg", "JPEG", 3200] },
-            { values: ["photo2.png", "PNG", 1800] },
-            { values: ["Vacation", "Folder", ""], children: [
-                { values: ["beach.jpg", "JPEG", 4100] },
-                { values: ["sunset.jpg", "JPEG", 3900] },
-                { values: ["mountains.jpg", "JPEG", 5200] },
+        { values: [folderIcon, "Pictures", "Folder", ""], children: [
+            { values: [fileIcon, "photo1.jpg", "JPEG", 3200] },
+            { values: [fileIcon, "photo2.png", "PNG", 1800] },
+            { values: [folderIcon, "Vacation", "Folder", ""], children: [
+                { values: [fileIcon, "beach.jpg", "JPEG", 4100] },
+                { values: [fileIcon, "sunset.jpg", "JPEG", 3900] },
+                { values: [fileIcon, "mountains.jpg", "JPEG", 5200] },
             ]},
         ]},
-        { values: ["Music", "Folder", ""], children: [
-            { values: ["song1.mp3", "MP3", 4500] },
-            { values: ["song2.flac", "FLAC", 32000] },
+        { values: [folderIcon, "Music", "Folder", ""], children: [
+            { values: [fileIcon, "song1.mp3", "MP3", 4500] },
+            { values: [fileIcon, "song2.flac", "FLAC", 32000] },
         ]},
     ]);
 
     tree.add_callback('selected', (w, items) => {
         if (items.length === 1) {
-            status.set_text("Selected: " + items[0][0]);
+            status.set_text("Selected: " + items[0].values[1]);
         } else {
             status.set_text("Selected: " + items.length + " items");
         }
     });
 
     tree.add_callback('activated', (w, values) => {
-        status.set_text("Activated: " + values[0]);
+        status.set_text("Activated: " + values[1]);
     });
 
     // -- Buttons --

@@ -4,7 +4,7 @@ import {Widget} from "./Widget.js";
 
 /**
  * A scrollbar widget with a draggable thumb.
- * Fires 'activated' callback with the current scroll position (0–1)
+ * Fires 'activated' callback with the current scroll position (0-1)
  * when the user drags the thumb or clicks the track.
  * @extends Widget
  */

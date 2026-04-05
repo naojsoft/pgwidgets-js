@@ -37,7 +37,7 @@ class Dial extends Widget {
         this.value = this.get_option(options, 'value', 50);
         this.track = this.get_option(options, 'track', false);
 
-        // angle range: 210° to 510° (300° sweep, clockwise from lower-left
+        // angle range: 210 to 510 (300 degree sweep, clockwise from lower-left
         // through top to lower-right, gap at bottom)
         this._startAngle = 210;
         this._endAngle = 510;

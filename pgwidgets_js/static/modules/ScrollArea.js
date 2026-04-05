@@ -33,7 +33,7 @@ class ScrollArea extends ContainerWidget {
         this._viewport.className = 'scrollarea-viewport';
         this.element.appendChild(this._viewport);
 
-        // content wrapper — holds the child, sized naturally
+        // content wrapper - holds the child, sized naturally
         this._content = document.createElement('div');
         this._content.className = 'scrollarea-content';
         this._viewport.appendChild(this._content);
@@ -57,7 +57,7 @@ class ScrollArea extends ContainerWidget {
         this.set_widget = this.set_widget.bind(this);
         this._syncScrollbars = this._syncScrollbars.bind(this);
 
-        // scrollbar callbacks — scroll the content
+        // scrollbar callbacks - scroll the content
         this._hScrollBar.add_callback('activated', (w, pct) => {
             let maxScroll = this._content.scrollWidth - this._viewport.clientWidth;
             this._viewport.scrollLeft = pct * maxScroll;

@@ -173,3 +173,8 @@
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
+.treeview-icon {
+    display: block;
+    object-fit: contain;
+}

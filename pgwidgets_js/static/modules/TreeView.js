@@ -49,7 +49,7 @@ class TreeView extends Widget {
             this.enable_callback(name);
         }
 
-        // Implicit root node — never rendered
+        // Implicit root node - never rendered
         this._root = { values: [], children: [], expanded: true, depth: -1,
                         element: null, parent: null };
         this._selection = [];   // currently selected nodes
@@ -73,7 +73,7 @@ class TreeView extends Widget {
         this._viewport.className = 'treeview-viewport';
         this._bodyArea.appendChild(this._viewport);
 
-        // Content wrapper — rows go here, sized naturally
+        // Content wrapper - rows go here, sized naturally
         this._body = document.createElement('div');
         this._body.className = 'treeview-body';
         this._viewport.appendChild(this._body);
@@ -91,7 +91,7 @@ class TreeView extends Widget {
         this._bodyArea.appendChild(this._hScrollBar.get_element());
         this._bodyArea.appendChild(this._corner);
 
-        // Scrollbar callbacks — scroll the content
+        // Scrollbar callbacks - scroll the content
         this._vScrollBar.add_callback('activated', (w, pct) => {
             let maxScroll = this._body.scrollHeight - this._viewport.clientHeight;
             this._viewport.scrollTop = pct * maxScroll;
@@ -124,15 +124,26 @@ class TreeView extends Widget {
         this.set_data = this.set_data.bind(this);
         this.add_item = this.add_item.bind(this);
         this.remove_item = this.remove_item.bind(this);
+        this.update_tree = this.update_tree.bind(this);
+        this.remove_items = this.remove_items.bind(this);
         this.clear = this.clear.bind(this);
         this.expand_all = this.expand_all.bind(this);
         this.collapse_all = this.collapse_all.bind(this);
+        this.get_expanded = this.get_expanded.bind(this);
+        this.get_collapsed = this.get_collapsed.bind(this);
         this.get_selected = this.get_selected.bind(this);
         this.set_selected = this.set_selected.bind(this);
+        this.set_column_width = this.set_column_width.bind(this);
+        this.select_path = this.select_path.bind(this);
+        this.select_paths = this.select_paths.bind(this);
+        this.select_all = this.select_all.bind(this);
+        this.set_optimal_column_widths = this.set_optimal_column_widths.bind(this);
         this.sort_by_column = this.sort_by_column.bind(this);
+        this.scroll_to_path = this.scroll_to_path.bind(this);
+        this.scroll_to_end = this.scroll_to_end.bind(this);
     }
 
-    // ── Column parsing ─────────────────────────────────────────────
+    // -- Column parsing --
 
     /**
      * Normalise the columns option into [{label, type}, ...].
@@ -143,11 +154,13 @@ class TreeView extends Widget {
             if (typeof c === 'string') {
                 return { label: c, type: 'string' };
             }
-            return { label: c.label || '', type: c.type || 'string' };
+            let col = { label: c.label || '', type: c.type || 'string' };
+            if (c.icon_size) col.icon_size = c.icon_size;
+            return col;
         });
     }
 
-    // ── Column grid template ──────────────────────────────────────
+    // -- Column grid template --
 
     _gridTemplate() {
         // indent + toggle columns, then data columns
@@ -163,7 +176,7 @@ class TreeView extends Widget {
         }
     }
 
-    // ── Header ──────────────────────────────────────���─────────────
+    // -- Header --
 
     _buildHeader() {
         this._header.innerHTML = '';
@@ -285,7 +298,7 @@ class TreeView extends Widget {
         }
     }
 
-    // ── Public API ────────────────────────────────────────────────
+    // -- Public API --
 
     /**
      * Set columns (replaces existing header).
@@ -339,37 +352,108 @@ class TreeView extends Widget {
 
     /**
      * Add a single item.
-     * @param {Object|null} parent - Parent node (null for top-level).
+     * @param {Object|Array|null} parent - Parent node, index path, or null for top-level.
      * @param {Array} values - Column values.
-     * @returns {Object} The new node (use as parent for sub-items).
+     * @returns {Array} The index path of the new node.
      */
     add_item(parent, values) {
-        if (parent == null) parent = this._root;
+        let parentNode = this._resolveNode(parent) || this._root;
         let node = {
             values: Array.isArray(values) ? values : [values],
             children: [],
             expanded: false,
-            depth: parent.depth + 1,
+            depth: parentNode.depth + 1,
             element: null,
-            parent: parent,
+            parent: parentNode,
         };
-        parent.children.push(node);
+        parentNode.children.push(node);
         this._applySort();
         this._renderAll();
-        return node;
+        return this._pathOfNode(node);
     }
 
     /**
      * Remove an item and all its descendants.
-     * @param {Object} node - The node to remove.
+     * @param {Object|Array} node - The node or index path to remove.
      */
     remove_item(node) {
+        node = this._resolveNode(node);
         if (!node || !node.parent) return;
         let siblings = node.parent.children;
         let idx = siblings.indexOf(node);
         if (idx >= 0) siblings.splice(idx, 1);
         // Remove from selection
         this._selection = this._selection.filter(n => n !== node);
+        this._renderAll();
+    }
+
+    /**
+     * Batch add or update items with a single re-render.
+     * Each entry is an object:
+     *   { path: [...], values: [...] }
+     *     - If the path resolves to an existing node, its values are updated.
+     *     - If the path does not exist but its parent does, a new child is added.
+     *       The last element of the path is ignored for adds (appended at end).
+     *   { parent: [...], values: [...] }
+     *     - Adds a new child under parent (null/omitted for top-level).
+     *   { parent: [...], values: [...], children: [...] }
+     *     - Adds a subtree. children follows the same format as set_tree data.
+     * @param {Array} items - Array of update/add descriptors.
+     */
+    update_tree(items) {
+        for (let item of items) {
+            if (item.path) {
+                let node = this._nodeAtPath(item.path);
+                if (node) {
+                    // Update existing node
+                    node.values = Array.isArray(item.values) ? item.values : [item.values];
+                } else {
+                    // Path doesn't exist - add under parent (all but last index)
+                    let parentPath = item.path.slice(0, -1);
+                    let parentNode = parentPath.length > 0
+                        ? this._nodeAtPath(parentPath) : this._root;
+                    if (parentNode) {
+                        this._addNodeFromData(parentNode,
+                            { values: item.values, children: item.children });
+                    }
+                }
+            } else {
+                // Add under parent
+                let parentNode = item.parent
+                    ? this._nodeAtPath(item.parent) : this._root;
+                if (!parentNode) parentNode = this._root;
+                this._addNodeFromData(parentNode,
+                    { values: item.values, children: item.children });
+            }
+        }
+        this._applySort();
+        this._renderAll();
+    }
+
+    /**
+     * Remove multiple items by path with a single re-render.
+     * Paths are sorted deepest-first and highest-index-first so that
+     * removals don't invalidate subsequent paths.
+     * @param {Array} paths - Array of index paths.
+     */
+    remove_items(paths) {
+        // Sort: longer paths first, then by last index descending
+        let sorted = paths.slice().sort((a, b) => {
+            if (a.length !== b.length) return b.length - a.length;
+            for (let i = 0; i < a.length; i++) {
+                if (a[i] !== b[i]) return b[i] - a[i];
+            }
+            return 0;
+        });
+
+        for (let path of sorted) {
+            let node = this._nodeAtPath(path);
+            if (!node || !node.parent) continue;
+            let siblings = node.parent.children;
+            let idx = siblings.indexOf(node);
+            if (idx >= 0) siblings.splice(idx, 1);
+            this._selection = this._selection.filter(n => n !== node);
+        }
         this._renderAll();
     }
 
@@ -397,10 +481,39 @@ class TreeView extends Widget {
     }
 
     /**
+     * Get paths of all expanded branch nodes.
+     * @returns {Array} Array of index paths.
+     */
+    get_expanded() {
+        let paths = [];
+        this._walkNodes(this._root, (node) => {
+            if (node.children.length > 0 && node.expanded) {
+                paths.push(this._pathOfNode(node));
+            }
+        });
+        return paths;
+    }
+
+    /**
+     * Get paths of all collapsed branch nodes.
+     * @returns {Array} Array of index paths.
+     */
+    get_collapsed() {
+        let paths = [];
+        this._walkNodes(this._root, (node) => {
+            if (node.children.length > 0 && !node.expanded) {
+                paths.push(this._pathOfNode(node));
+            }
+        });
+        return paths;
+    }
+
+    /**
      * Expand a specific node.
-     * @param {Object} node
+     * @param {Object|Array} node - Node or index path.
      */
     expand_item(node) {
+        node = this._resolveNode(node);
         if (node && node.children.length > 0) {
             node.expanded = true;
             this._renderAll();
@@ -410,9 +523,10 @@ class TreeView extends Widget {
 
     /**
      * Collapse a specific node.
-     * @param {Object} node
+     * @param {Object|Array} node - Node or index path.
      */
     collapse_item(node) {
+        node = this._resolveNode(node);
         if (node && node.children.length > 0) {
             node.expanded = false;
             this._renderAll();
@@ -422,20 +536,150 @@ class TreeView extends Widget {
 
     /**
      * Get the currently selected item(s).
-     * @returns {Array} Array of value arrays for selected nodes.
+     * @returns {Array} Array of {path, values} objects.
      */
     get_selected() {
-        return this._selection.map(n => n.values);
+        return this._selection.map(n => ({
+            path: this._pathOfNode(n),
+            values: n.values,
+        }));
     }
 
     /**
-     * Set the selection to a specific node.
-     * @param {Object|null} node - Node to select (null to clear).
+     * Set the selection.
+     * @param {Array} items - Array of node objects or index paths.
+     *   A single path/node may be passed directly (not wrapped in an array).
+     *   Pass null or [] to clear.
      */
-    set_selected(node) {
-        this._selection = node ? [node] : [];
+    set_selected(items) {
+        if (items == null) {
+            this._selection = [];
+        } else if (!Array.isArray(items)) {
+            // single node object
+            this._selection = [items];
+        } else if (items.length > 0 && typeof items[0] === 'number') {
+            // single path like [0, 2]
+            let node = this._resolveNode(items);
+            this._selection = node ? [node] : [];
+        } else {
+            // array of paths or nodes
+            this._selection = items
+                .map(ref => this._resolveNode(ref))
+                .filter(n => n != null);
+        }
         this._updateSelectionDisplay();
         this.make_callback('selected', this.get_selected());
+    }
+
+    /**
+     * Select or deselect the node at the given path.
+     * @param {Array} path - Index path.
+     * @param {boolean} state - true to select, false to deselect.
+     */
+    select_path(path, state) {
+        let node = this._nodeAtPath(path);
+        if (!node) return;
+        let idx = this._selection.indexOf(node);
+        if (state && idx < 0) {
+            this._selection.push(node);
+        } else if (!state && idx >= 0) {
+            this._selection.splice(idx, 1);
+        }
+        this._updateSelectionDisplay();
+        this.make_callback('selected', this.get_selected());
+    }
+
+    /**
+     * Select or deselect multiple nodes by path.
+     * @param {Array} paths - Array of index paths.
+     * @param {boolean} state - true to select, false to deselect.
+     */
+    select_paths(paths, state) {
+        for (let path of paths) {
+            let node = this._nodeAtPath(path);
+            if (!node) continue;
+            let idx = this._selection.indexOf(node);
+            if (state && idx < 0) {
+                this._selection.push(node);
+            } else if (!state && idx >= 0) {
+                this._selection.splice(idx, 1);
+            }
+        }
+        this._updateSelectionDisplay();
+        this.make_callback('selected', this.get_selected());
+    }
+
+    /**
+     * Select or deselect all nodes.
+     * @param {boolean} state - true to select all, false to deselect all.
+     */
+    select_all(state) {
+        if (state) {
+            this._selection = [];
+            this._walkNodes(this._root, (node) => this._selection.push(node));
+        } else {
+            this._selection = [];
+        }
+        this._updateSelectionDisplay();
+        this.make_callback('selected', this.get_selected());
+    }
+
+    /**
+     * Set the width of a single column.
+     * @param {number} colIndex - Column index (0-based).
+     * @param {number|string} width - Pixel width (number) or CSS value (e.g. '2fr').
+     */
+    set_column_width(colIndex, width) {
+        if (colIndex < 0 || colIndex >= this._colWidths.length) return;
+        this._colWidths[colIndex] = typeof width === 'number' ? width + 'px' : width;
+        this._applyGridTemplate();
+    }
+
+    /**
+     * Auto-size all columns to fit their content.
+     * Measures the widest cell in each column (including the header)
+     * and sets pixel widths accordingly.
+     */
+    set_optimal_column_widths() {
+        let numCols = this._columns.length;
+        if (numCols === 0) return;
+
+        // Create an off-screen measurement container
+        let measure = document.createElement('div');
+        measure.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font:inherit;';
+        this.element.appendChild(measure);
+
+        let widths = new Array(numCols).fill(0);
+
+        // Measure header labels
+        for (let i = 0; i < numCols; i++) {
+            measure.textContent = this._columns[i].label;
+            // header has padding(6px each side) + sort indicator space
+            widths[i] = Math.max(widths[i], measure.offsetWidth + 30);
+        }
+
+        // Measure all rows
+        this._walkNodes(this._root, (node) => {
+            for (let i = 0; i < numCols; i++) {
+                let val = i < node.values.length ? node.values[i] : '';
+                let colType = i < this._columns.length ? this._columns[i].type : 'string';
+                if (colType === 'icon') {
+                    let size = this._columns[i].icon_size || 16;
+                    widths[i] = Math.max(widths[i], size + 12);
+                } else {
+                    measure.textContent = val != null ? String(val) : '';
+                    // cell padding: 6px each side
+                    widths[i] = Math.max(widths[i], measure.offsetWidth + 12);
+                }
+            }
+        });
+
+        this.element.removeChild(measure);
+
+        for (let i = 0; i < numCols; i++) {
+            this._colWidths[i] = widths[i] + 'px';
+        }
+        this._applyGridTemplate();
     }
 
     /**
@@ -451,7 +695,34 @@ class TreeView extends Widget {
         this._renderAll();
     }
 
-    // ── Internal: data loading ────────────────────────────────────
+    /**
+     * Scroll so the node at the given path is visible.
+     * Expands ancestor nodes if needed.
+     * @param {Array} path - Index path, e.g. [0, 2, 1].
+     */
+    scroll_to_path(path) {
+        // Expand all ancestors so the target is visible
+        let node = this._root;
+        for (let i = 0; i < path.length - 1; i++) {
+            let idx = path[i];
+            if (idx < 0 || idx >= node.children.length) return;
+            node = node.children[idx];
+            if (node.children.length > 0) node.expanded = true;
+        }
+        let target = this._nodeAtPath(path);
+        if (!target) return;
+        this._renderAll();
+        this._scrollToNode(target);
+    }
+
+    /** Scroll to the last visible row. */
+    scroll_to_end() {
+        let vp = this._viewport;
+        vp.scrollTop = this._body.scrollHeight - vp.clientHeight;
+        this._syncFromScroll();
+    }
+
+    // -- Internal: data loading --
 
     _addNodeFromData(parent, data) {
         let values = data.values || [];
@@ -472,7 +743,7 @@ class TreeView extends Widget {
         return node;
     }
 
-    // ── Internal: rendering ───────────────────────────────────────
+    // -- Internal: rendering --
 
     _renderAll() {
         this._body.innerHTML = '';
@@ -529,8 +800,20 @@ class TreeView extends Widget {
             let cell = document.createElement('span');
             cell.className = 'treeview-cell';
             let val = i < node.values.length ? node.values[i] : '';
-            cell.textContent = val != null ? String(val) : '';
-            cell.title = cell.textContent;
+            let colType = i < this._columns.length ? this._columns[i].type : 'string';
+
+            if (colType === 'icon' && val) {
+                let img = document.createElement('img');
+                img.className = 'treeview-icon';
+                img.src = val;
+                let size = this._columns[i].icon_size || 16;
+                img.width = size;
+                img.height = size;
+                cell.appendChild(img);
+            } else {
+                cell.textContent = val != null ? String(val) : '';
+                cell.title = cell.textContent;
+            }
             row.appendChild(cell);
         }
 
@@ -543,7 +826,7 @@ class TreeView extends Widget {
         return row;
     }
 
-    // ── Internal: selection ───────────────────────────────────────
+    // -- Internal: selection --
 
     _onRowClick(e, node) {
         if (this._selectionMode === 'none') return;
@@ -588,7 +871,7 @@ class TreeView extends Widget {
         }
     }
 
-    // ── Internal: keyboard ────────────────────────────────────────
+    // -- Internal: keyboard --
 
     _onKeyDown(e) {
         if (this._selection.length === 0) return;
@@ -647,12 +930,19 @@ class TreeView extends Widget {
     }
 
     _scrollToNode(node) {
-        if (node.element) {
-            node.element.scrollIntoView({ block: 'nearest' });
+        if (!node.element) return;
+        let vp = this._viewport;
+        let rowTop = node.element.offsetTop;
+        let rowBottom = rowTop + node.element.offsetHeight;
+        if (rowTop < vp.scrollTop) {
+            vp.scrollTop = rowTop;
+        } else if (rowBottom > vp.scrollTop + vp.clientHeight) {
+            vp.scrollTop = rowBottom - vp.clientHeight;
         }
+        this._syncFromScroll();
     }
 
-    // ── Internal: scrollbar sync ───────────────────────────────────
+    // -- Internal: scrollbar sync --
 
     /** Update scrollbar thumb sizes and visibility based on content vs viewport size. */
     _syncScrollbars() {
@@ -691,7 +981,46 @@ class TreeView extends Widget {
         }
     }
 
-    // ── Internal: tree traversal helpers ──────────────────────────
+    // -- Internal: path helpers --
+
+    /**
+     * Resolve an index path (e.g. [0, 2, 1]) to the internal node.
+     * Returns null if the path is invalid.
+     */
+    _nodeAtPath(path) {
+        let node = this._root;
+        for (let idx of path) {
+            if (idx < 0 || idx >= node.children.length) return null;
+            node = node.children[idx];
+        }
+        return node === this._root ? null : node;
+    }
+
+    /**
+     * Return the index path from root to the given node.
+     */
+    _pathOfNode(node) {
+        let path = [];
+        while (node && node.parent) {
+            let idx = node.parent.children.indexOf(node);
+            if (idx < 0) return null;
+            path.unshift(idx);
+            node = node.parent;
+        }
+        return path;
+    }
+
+    /**
+     * Accept either a node object or an index-path array.
+     * Returns the internal node, or null.
+     */
+    _resolveNode(ref) {
+        if (ref == null) return null;
+        if (Array.isArray(ref)) return this._nodeAtPath(ref);
+        return ref;
+    }
+
+    // -- Internal: tree traversal helpers --
 
     _walkNodes(node, fn) {
         if (node !== this._root) fn(node);
@@ -734,7 +1063,7 @@ class TreeView extends Widget {
                 else if (isNaN(nb)) cmp = -1;
                 else cmp = na - nb;
             } else {
-                cmp = String(va).localeCompare(String(vb));
+                cmp = String(va).localeCompare(String(vb), undefined, {sensitivity: 'base'});
             }
             return ascending ? cmp : -cmp;
         });

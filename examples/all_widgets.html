@@ -430,36 +430,38 @@
         }
 
         case "TreeView": {
+            const _fi = "../pgwidgets_js/static/icons/folder.svg";
+            const _di = "../pgwidgets_js/static/icons/file.svg";
             content = new Widgets.VBox();
             content.set_spacing(4);
             let lbl = new Widgets.Label("");
             let tree = new Widgets.TreeView({
-                columns: ["Name", "Type", {label: "Size (KB)", type: "number"}],
+                columns: [{label: "", type: "icon", icon_size: 16}, "Name", "Type", {label: "Size (KB)", type: "number"}],
                 selection_mode: "multi",
                 alternate_row_colors: true,
             });
             tree.set_tree([
-                { values: ["Documents", "Folder", ""], children: [
-                    { values: ["report.pdf", "PDF", 2400] },
-                    { values: ["notes.txt", "Text", 12] },
-                    { values: ["Slides", "Folder", ""], children: [
-                        { values: ["deck.pptx", "PPTX", 5100] },
+                { values: [_fi, "Documents", "Folder", ""], children: [
+                    { values: [_di, "report.pdf", "PDF", 2400] },
+                    { values: [_di, "notes.txt", "Text", 12] },
+                    { values: [_fi, "Slides", "Folder", ""], children: [
+                        { values: [_di, "deck.pptx", "PPTX", 5100] },
                     ]},
                 ]},
-                { values: ["Pictures", "Folder", ""], children: [
-                    { values: ["photo1.jpg", "JPEG", 3200] },
-                    { values: ["photo2.png", "PNG", 1800] },
+                { values: [_fi, "Pictures", "Folder", ""], children: [
+                    { values: [_di, "photo1.jpg", "JPEG", 3200] },
+                    { values: [_di, "photo2.png", "PNG", 1800] },
                 ]},
-                { values: ["readme.txt", "Text", 1] },
+                { values: [_di, "readme.txt", "Text", 1] },
             ]);
             tree.add_callback('selected', (w, items) => {
-                if (items.length === 1) lbl.set_text("Selected: " + items[0][0]);
+                if (items.length === 1) lbl.set_text("Selected: " + items[0].values[1]);
                 else lbl.set_text("Selected: " + items.length + " items");
             });
-            tree.add_callback('activated', (w, vals) => lbl.set_text("Activated: " + vals[0]));
+            tree.add_callback('activated', (w, vals) => lbl.set_text("Activated: " + vals[1]));
             content.add_widget(tree, 1);
             content.add_widget(lbl, 0);
-            subwin = mdi.add_widget(content, {title: "TreeView", width: 380, height: 280});
+            subwin = mdi.add_widget(content, {title: "TreeView", width: 420, height: 280});
             break;
         }
 

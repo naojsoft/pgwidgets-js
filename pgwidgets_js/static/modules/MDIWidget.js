@@ -250,7 +250,7 @@ class MDISubWindow extends ContainerWidget {
             grip.className = 'mdi-grip mdi-grip-' + corner.name;
             grip.style.cursor = corner.cursor;
 
-            // no inner content needed — CSS handles the triangle
+            // no inner content needed - CSS handles the triangle
             grip.innerHTML = '';
 
             element.appendChild(grip);
