@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="../Widgets.css" type="text/css" />
+  <style>
+    body { margin: 0; overflow: hidden; }
+  </style>
+</head>
+<body>
+  <script type="module">
+    import { Widgets } from "../Widgets.js";
+
+    let top = new Widgets.TopLevel({title: "TreeView Demo", resizable: true});
+    top.resize(600, 500);
+
+    let vbox = new Widgets.VBox();
+    vbox.set_padding(8);
+    vbox.set_spacing(6);
+
+    let status = new Widgets.Label("Select an item.");
+
+    // -- Tree example --
+    let tree = new Widgets.TreeView({
+        columns: [
+            "Name",
+            "Type",
+            { label: "Size (KB)", type: "number" },
+        ],
+        selection_mode: "multi",
+        alternate_row_colors: true,
+    });
+
+    tree.set_tree([
+        { values: ["Documents", "Folder", ""], children: [
+            { values: ["report.pdf", "PDF", 2400] },
+            { values: ["notes.txt", "Text", 12] },
+            { values: ["Presentations", "Folder", ""], children: [
+                { values: ["slides.pptx", "PowerPoint", 5100] },
+                { values: ["demo.key", "Keynote", 8300] },
+            ]},
+        ]},
+        { values: ["Pictures", "Folder", ""], children: [
+            { values: ["photo1.jpg", "JPEG", 3200] },
+            { values: ["photo2.png", "PNG", 1800] },
+            { values: ["Vacation", "Folder", ""], children: [
+                { values: ["beach.jpg", "JPEG", 4100] },
+                { values: ["sunset.jpg", "JPEG", 3900] },
+                { values: ["mountains.jpg", "JPEG", 5200] },
+            ]},
+        ]},
+        { values: ["Music", "Folder", ""], children: [
+            { values: ["song1.mp3", "MP3", 4500] },
+            { values: ["song2.flac", "FLAC", 32000] },
+        ]},
+    ]);
+
+    tree.add_callback('selected', (w, items) => {
+        if (items.length === 1) {
+            status.set_text("Selected: " + items[0][0]);
+        } else {
+            status.set_text("Selected: " + items.length + " items");
+        }
+    });
+
+    tree.add_callback('activated', (w, values) => {
+        status.set_text("Activated: " + values[0]);
+    });
+
+    // -- Buttons --
+    let hbox = new Widgets.HBox();
+    hbox.set_spacing(4);
+
+    let btnExpand = new Widgets.Button("Expand All");
+    btnExpand.add_callback('activated', () => tree.expand_all());
+    let btnCollapse = new Widgets.Button("Collapse All");
+    btnCollapse.add_callback('activated', () => tree.collapse_all());
+    hbox.add_widget(btnExpand, 0);
+    hbox.add_widget(btnCollapse, 0);
+    hbox.add_widget(new Widgets.Label("Click column headers to sort."), 0);
+
+    vbox.add_widget(hbox, 0);
+    vbox.add_widget(tree, 1);
+    vbox.add_widget(status, 0);
+
+    top.set_widget(vbox);
+    top.show();
+  </script>
+</body>
+</html>

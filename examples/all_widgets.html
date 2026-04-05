@@ -50,7 +50,7 @@
         "ProgressBar", "RadioButton", "ScrollArea", "ScrollBar",
         "Slider", "SpinBox", "Splitter",
         "TextArea", "TextEntry", "TextEntrySet",
-        "ToggleButton", "ToolBar", "VBox/HBox"
+        "ToggleButton", "ToolBar", "TreeView", "VBox/HBox"
     ];
     let picker = new Widgets.ComboBox({dropdown_limit: 8});
     for (let name of widgetNames) {
@@ -426,6 +426,40 @@
             content.add_widget(tes, 0);
             content.add_widget(lbl, 1);
             subwin = mdi.add_widget(content, {title: "TextEntrySet", width: 300, height: 120});
+            break;
+        }
+
+        case "TreeView": {
+            content = new Widgets.VBox();
+            content.set_spacing(4);
+            let lbl = new Widgets.Label("");
+            let tree = new Widgets.TreeView({
+                columns: ["Name", "Type", {label: "Size (KB)", type: "number"}],
+                selection_mode: "multi",
+                alternate_row_colors: true,
+            });
+            tree.set_tree([
+                { values: ["Documents", "Folder", ""], children: [
+                    { values: ["report.pdf", "PDF", 2400] },
+                    { values: ["notes.txt", "Text", 12] },
+                    { values: ["Slides", "Folder", ""], children: [
+                        { values: ["deck.pptx", "PPTX", 5100] },
+                    ]},
+                ]},
+                { values: ["Pictures", "Folder", ""], children: [
+                    { values: ["photo1.jpg", "JPEG", 3200] },
+                    { values: ["photo2.png", "PNG", 1800] },
+                ]},
+                { values: ["readme.txt", "Text", 1] },
+            ]);
+            tree.add_callback('selected', (w, items) => {
+                if (items.length === 1) lbl.set_text("Selected: " + items[0][0]);
+                else lbl.set_text("Selected: " + items.length + " items");
+            });
+            tree.add_callback('activated', (w, vals) => lbl.set_text("Activated: " + vals[0]));
+            content.add_widget(tree, 1);
+            content.add_widget(lbl, 0);
+            subwin = mdi.add_widget(content, {title: "TreeView", width: 380, height: 280});
             break;
         }
 

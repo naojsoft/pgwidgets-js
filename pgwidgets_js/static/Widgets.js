@@ -42,6 +42,7 @@ import {Dialog} from "./modules/Dialog.js";
 import {ColorDialog} from "./modules/ColorDialog.js";
 import {ScrollBar} from "./modules/ScrollBar.js";
 import {RemoteInterface} from "./modules/RemoteInterface.js";
+import {TreeView} from "./modules/TreeView.js";
 
 
 const Widgets = {Widget, ContainerWidget, Box, VBox, HBox, ButtonBox,
@@ -52,6 +53,6 @@ const Widgets = {Widget, ContainerWidget, Box, VBox, HBox, ButtonBox,
                  Slider, Canvas, SpinBox, ProgressBar, Image, Dial,
                  MenuBar, Menu, MenuAction, ToolBar, ToolBarAction,
                  TextEntrySet, Dialog, ColorDialog, ScrollBar,
-                 RemoteInterface};
+                 TreeView, RemoteInterface};
 
 export { Widgets };
