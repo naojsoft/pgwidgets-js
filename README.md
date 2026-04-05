@@ -87,6 +87,7 @@ top.show();
 | **TextArea** | Multi-line text editor |
 | **Image** | Image display widget |
 | **Canvas** | HTML5 canvas for custom drawing |
+| **TreeView** | Hierarchical tree/table with columns, sorting, icons, and multi-selection |
 
 ### Menus & Toolbars
 
@@ -132,37 +133,70 @@ import { Widgets } from "pgwidgets";
 import "pgwidgets/Widgets.css";
 ```
 
-## Remote Interface
+## Using from Python (Pyodide)
 
-pgwidgets can be controlled from external programs over WebSocket. The
-browser page connects to a server, which sends JSON messages to create
-widgets, call methods, and receive callbacks.
+pgwidgets can be used directly from Python in the browser via
+[Pyodide](https://pyodide.org). The `pgwidgets_js.pyodide` module provides
+Pythonic wrappers with normal construction syntax, automatic type
+conversion, and callback management.
 
 ```python
-# Python (synchronous API)
-from pgwidgets import PGWidgets
+from pgwidgets_js.pyodide import TopLevel, VBox, Button, Label
 
-pg = PGWidgets()
-pg.wait_for_connection()
+top = TopLevel(title="Hello", resizable=True)
+top.resize(400, 300)
 
-top = pg.create("TopLevel", {"title": "Remote App", "resizable": True})
-btn = pg.create("Button", "Click me")
-status = pg.create("Label", "Ready")
+vbox = VBox(spacing=8, padding=10)
 
-vbox = pg.create("VBox")
-pg.call(vbox, "add_widget", pg.wref(btn), 0)
-pg.call(vbox, "add_widget", pg.wref(status), 1)
-pg.call(top, "set_widget", pg.wref(vbox))
-pg.call(top, "show")
+label = Label("Click the button!")
+button = Button("Click me")
+button.on("activated", lambda: label.set_text("Clicked!"))
 
-def on_click(wid, *args):
-    pg.call(status, "set_text", "Clicked!")
-
-pg.listen(btn, "activated", on_click)
+vbox.add_widget(button, 0)
+vbox.add_widget(label, 1)
+top.set_widget(vbox)
+top.show()
 ```
 
-See `examples/remote_demo.py` (async) and `examples/remote_demo_sync.py`
-(synchronous) for complete working examples.
+No WebSocket server needed -- everything runs in the browser. See
+`examples/pyodide_demo.html` for a minimal example and
+`examples/all_widgets_pyodide.html` for a full demo of all widgets
+written in Python.
+
+## Remote Interface (WebSocket)
+
+pgwidgets can also be controlled from a Python server over WebSocket
+using the [pgwidgets-python](https://github.com/naojsoft/pgwidgets-python)
+package. The browser page connects to the server, which sends JSON
+messages to create widgets, call methods, and receive callbacks.
+
+```python
+from pgwidgets.sync import Application
+
+app = Application()
+app.start()
+W = app.get_widgets()
+app.wait_for_connection()
+
+top = W.TopLevel(title="Remote App", resizable=True)
+top.resize(400, 300)
+
+vbox = W.VBox(spacing=8)
+btn = W.Button("Click me")
+status = W.Label("Ready")
+
+btn.on("activated", lambda: status.set_text("Clicked!"))
+
+vbox.add_widget(btn, 0)
+vbox.add_widget(status, 1)
+top.set_widget(vbox)
+top.show()
+
+app.run()
+```
+
+See `examples/remote_demo.py` and `examples/remote_demo_async.py`
+for complete working examples.
 
 ## Running the Examples
 
@@ -174,7 +208,10 @@ python -m http.server --bind localhost 8000
 
 Then open any example in your browser:
 
-- [all_widgets.html](http://localhost:8000/examples/all_widgets.html) -- MDI workspace showcasing every widget
+- [all_widgets.html](http://localhost:8000/examples/all_widgets.html) -- MDI workspace showcasing every widget (JavaScript)
+- [all_widgets_pyodide.html](http://localhost:8000/examples/all_widgets_pyodide.html) -- Same demo, written entirely in Python via Pyodide
+- [pyodide_demo.html](http://localhost:8000/examples/pyodide_demo.html) -- Minimal Pyodide example
+- [treeview.html](http://localhost:8000/examples/treeview.html) -- TreeView with icons, sorting, and multi-selection
 - [mdi_widget.html](http://localhost:8000/examples/mdi_widget.html) -- MDI with cascade/tile
 - [dialog.html](http://localhost:8000/examples/dialog.html) -- Modal and non-modal dialogs
 - [colordialog.html](http://localhost:8000/examples/colordialog.html) -- Color picker dialog
