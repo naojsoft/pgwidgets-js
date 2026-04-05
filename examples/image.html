@@ -22,7 +22,7 @@
 
     // image loaded via constructor
     let frame1 = new Widgets.Frame({title: "Image from constructor"});
-    let img1 = new Widgets.Image({url: "../icons/pgface.svg"});
+    let img1 = new Widgets.Image({url: "../pgwidgets_js/static/icons/pgicon.svg"});
     //yimg1.resize(100, 100);
     frame1.set_widget(img1);
     vbox.add_widget(frame1, 1);
@@ -36,12 +36,12 @@
 
     let hbox = new Widgets.HBox();
     hbox.set_spacing(6);
-    let btn1 = new Widgets.Button("Load pgface.svg");
-    btn1.add_callback('activated', () => img2.set_image("../icons/pgface.svg"));
+    let btn1 = new Widgets.Button("Load pgicon.svg");
+    btn1.add_callback('activated', () => img2.set_image("../pgwidgets_js/static/icons/pgicon.svg"));
     let btn2 = new Widgets.Button("Load hdots.svg");
-    btn2.add_callback('activated', () => img2.set_image("../icons/hdots.svg"));
+    btn2.add_callback('activated', () => img2.set_image("../pgwidgets_js/static/icons/hdots.svg"));
     let btn3 = new Widgets.Button("Load vdots.svg");
-    btn3.add_callback('activated', () => img2.set_image("../icons/vdots.svg"));
+    btn3.add_callback('activated', () => img2.set_image("../pgwidgets_js/static/icons/vdots.svg"));
     hbox.add_widget(btn1, 0);
     hbox.add_widget(btn2, 0);
     hbox.add_widget(btn3, 0);

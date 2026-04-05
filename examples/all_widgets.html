@@ -46,10 +46,11 @@
 
     let widgetNames = [
         "Button", "CheckBox", "ComboBox", "ColorDialog", "Dial",
-        "Expander", "Frame", "Image", "Label", "ProgressBar",
-        "RadioButton", "ScrollBar", "Slider", "SpinBox",
+        "Expander", "Frame", "GridBox", "Image", "Label",
+        "ProgressBar", "RadioButton", "ScrollArea", "ScrollBar",
+        "Slider", "SpinBox", "Splitter",
         "TextArea", "TextEntry", "TextEntrySet",
-        "ToggleButton", "ToolBar"
+        "ToggleButton", "ToolBar", "VBox/HBox"
     ];
     let picker = new Widgets.ComboBox({dropdown_limit: 8});
     for (let name of widgetNames) {
@@ -96,7 +97,7 @@
             let btnB = new Widgets.Button("Button B");
             btnB.add_callback('activated', () => { lbl.set_text("Button B clicked"); });
             let btnIcon = new Widgets.Button("With Icon");
-            btnIcon.set_icon("../icons/pgface.svg", [16, 16]);
+            btnIcon.set_icon("../pgwidgets_js/static/icons/pgicon.svg", [16, 16]);
             btnIcon.add_callback('activated', () => { lbl.set_text("Icon button clicked"); });
             hbox.add_widget(btnA, 0);
             hbox.add_widget(btnB, 0);
@@ -209,8 +210,27 @@
             break;
         }
 
+        case "GridBox": {
+            content = new Widgets.VBox();
+            content.set_padding(8);
+            content.set_spacing(6);
+            let lbl = new Widgets.Label("");
+            let grid = new Widgets.GridBox({rows: 3, columns: 3});
+            for (let r = 0; r < 3; r++) {
+                for (let c = 0; c < 3; c++) {
+                    let btn = new Widgets.Button(`(${r},${c})`);
+                    btn.add_callback('activated', () => lbl.set_text(`Clicked row=${r} col=${c}`));
+                    grid.add_widget(btn, r, c);
+                }
+            }
+            content.add_widget(grid, 1);
+            content.add_widget(lbl, 0);
+            subwin = mdi.add_widget(content, {title: "GridBox", width: 280, height: 200});
+            break;
+        }
+
         case "Image": {
-            let img = new Widgets.Image({url: "../icons/pgwidgets-logo.svg"});
+            let img = new Widgets.Image({url: "../pgwidgets_js/static/icons/pgwidgets-logo.svg"});
             subwin = mdi.add_widget(img, {title: "Image", width: 360, height: 240});
             break;
         }
@@ -266,6 +286,27 @@
             content.add_widget(rb3, 0);
             content.add_widget(lbl, 1);
             subwin = mdi.add_widget(content, {title: "RadioButton", width: 250, height: 160});
+            break;
+        }
+
+        case "ScrollArea": {
+            let bigContent = new Widgets.VBox();
+            bigContent.set_spacing(4);
+            bigContent.set_padding(8);
+            for (let i = 0; i < 30; i++) {
+                let row = new Widgets.HBox();
+                row.set_spacing(4);
+                for (let j = 0; j < 8; j++) {
+                    let lbl = new Widgets.Label(`Item ${i * 8 + j}`);
+                    lbl.set_padding([2, 6, 2, 6]);
+                    lbl.set_color(i % 2 === 0 ? "#f8f8f8" : "#fff", "#333");
+                    row.add_widget(lbl, 0);
+                }
+                bigContent.add_widget(row, 0);
+            }
+            let scroll = new Widgets.ScrollArea();
+            scroll.set_widget(bigContent);
+            subwin = mdi.add_widget(scroll, {title: "ScrollArea", width: 320, height: 200});
             break;
         }
 
@@ -325,6 +366,30 @@
             content.add_widget(sp2, 0);
             content.add_widget(lbl, 1);
             subwin = mdi.add_widget(content, {title: "SpinBox", width: 280, height: 180});
+            break;
+        }
+
+        case "Splitter": {
+            content = new Widgets.VBox();
+            content.set_padding(4);
+            content.set_spacing(4);
+            let lbl = new Widgets.Label("Drag the handles to resize panes.");
+            let hsplit = new Widgets.Splitter({orientation: 'horizontal'});
+            let pane1 = new Widgets.Label("Left");
+            pane1.set_halign("center");
+            pane1.set_color("#e8f0fe", "#333");
+            let pane2 = new Widgets.Label("Center");
+            pane2.set_halign("center");
+            pane2.set_color("#fef7e0", "#333");
+            let pane3 = new Widgets.Label("Right");
+            pane3.set_halign("center");
+            pane3.set_color("#e8fee8", "#333");
+            hsplit.add_widget(pane1);
+            hsplit.add_widget(pane2);
+            hsplit.add_widget(pane3);
+            content.add_widget(hsplit, 1);
+            content.add_widget(lbl, 0);
+            subwin = mdi.add_widget(content, {title: "Splitter", width: 360, height: 180});
             break;
         }
 
@@ -416,6 +481,46 @@
             content.add_widget(tb, 0);
             content.add_widget(lbl, 1);
             subwin = mdi.add_widget(content, {title: "ToolBar", width: 350, height: 120});
+            break;
+        }
+
+        case "VBox/HBox": {
+            content = new Widgets.VBox();
+            content.set_spacing(6);
+            content.set_padding(8);
+            let lbl = new Widgets.Label("stretch=0 keeps natural size, stretch=1 fills space");
+            // HBox with mixed stretch
+            let hbox = new Widgets.HBox();
+            hbox.set_spacing(4);
+            let fixed1 = new Widgets.Button("Fixed (0)");
+            let stretch1 = new Widgets.Label("Stretch (1)");
+            stretch1.set_color("#e8f0fe", "#333");
+            stretch1.set_halign("center");
+            let fixed2 = new Widgets.Button("Fixed (0)");
+            hbox.add_widget(fixed1, 0);
+            hbox.add_widget(stretch1, 1);
+            hbox.add_widget(fixed2, 0);
+            content.add_widget(new Widgets.Label("HBox — horizontal:"), 0);
+            content.add_widget(hbox, 0);
+            // Nested VBox inside
+            let innerVbox = new Widgets.VBox();
+            innerVbox.set_spacing(4);
+            let topLabel = new Widgets.Label("Top (stretch=0)");
+            topLabel.set_color("#fef7e0", "#333");
+            topLabel.set_halign("center");
+            let midLabel = new Widgets.Label("Middle (stretch=1)");
+            midLabel.set_color("#e8fee8", "#333");
+            midLabel.set_halign("center");
+            let botLabel = new Widgets.Label("Bottom (stretch=0)");
+            botLabel.set_color("#fee8e8", "#333");
+            botLabel.set_halign("center");
+            innerVbox.add_widget(topLabel, 0);
+            innerVbox.add_widget(midLabel, 1);
+            innerVbox.add_widget(botLabel, 0);
+            content.add_widget(new Widgets.Label("VBox — vertical:"), 0);
+            content.add_widget(innerVbox, 1);
+            content.add_widget(lbl, 0);
+            subwin = mdi.add_widget(content, {title: "VBox / HBox", width: 360, height: 280});
             break;
         }
 

@@ -1,0 +1,7 @@
+include Widgets.js
+include Widgets.css
+include LICENSE.md
+recursive-include modules *.js
+recursive-include css *.css
+recursive-include icons *.svg
+recursive-include pgwidgets_js *.py *.html

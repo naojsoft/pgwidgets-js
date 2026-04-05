@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pgwidgets-js"
+dynamic = ["version"]
+description = "pgwidgets JavaScript widget library — static assets for use with Python servers"
+readme = "README.md"
+license = {text = "BSD-3-Clause"}
+requires-python = ">=3.12"
+authors = [
+    {name = "PGWidgets Developers"},
+]
+keywords = ["widgets", "ui", "gui", "javascript", "websocket"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: JavaScript",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: User Interfaces",
+]
+
+[project.urls]
+Homepage = "https://github.com/naojsoft/pgwidgets"
+Repository = "https://github.com/naojsoft/pgwidgets"
+
+[tool.setuptools_scm]
+version_scheme = "guess-next-dev"
+local_scheme = "node-and-date"
+
+[tool.setuptools.packages.find]
+include = ["pgwidgets_js*"]
+
+[tool.setuptools.package-data]
+pgwidgets_js = [
+    "static/**/*",
+]

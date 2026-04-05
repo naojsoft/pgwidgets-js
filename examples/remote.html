@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+    }
+  </style>
+  <link rel="stylesheet" href="../Widgets.css" type="text/css" />
+</head>
+<body>
+  <script type="module">
+    import { Widgets } from "../Widgets.js";
+
+    // Connect to the remote server.
+    // The server builds the UI by sending JSON messages over the WebSocket.
+    let remote = new Widgets.RemoteInterface(Widgets, {
+        url: 'ws://localhost:9500'
+    });
+  </script>
+</body>
+</html>

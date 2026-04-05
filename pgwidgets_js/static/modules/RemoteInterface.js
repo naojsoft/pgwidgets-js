@@ -148,6 +148,12 @@ class RemoteInterface {
         }
         let args = this._resolveArgs(msg.args || []);
         let widget = new cls(...args);
+        // if the client assigned a wid, re-register under that id
+        if (msg.wid !== undefined) {
+            Widget._registry.delete(widget.wid);
+            widget.wid = msg.wid;
+            Widget._registry.set(widget.wid, widget);
+        }
         return {type: "result", id: msg.id, wid: widget.wid};
     }
 

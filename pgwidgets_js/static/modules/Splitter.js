@@ -76,11 +76,11 @@ class Splitter extends ContainerWidget {
         if (this.orientation === 'vertical') {
             handle.classList.add('vertical');
             image.width = 24;
-            image.src = "../icons/hdots.svg";
+            image.src = new URL("../icons/hdots.svg", import.meta.url).href;
         } else {
             handle.classList.add('horizontal');
             image.height = 24;
-            image.src = "../icons/vdots.svg";
+            image.src = new URL("../icons/vdots.svg", import.meta.url).href;
         }
         handle.appendChild(image);
 

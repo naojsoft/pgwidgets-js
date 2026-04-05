@@ -1,0 +1,37 @@
+/*
+ * Styles for all widgets
+ */
+
+/* base widget */
+@import "css/Widget.css";
+
+/* container widgets */
+@import "css/TopLevel.css";
+@import "css/Box.css";
+@import "css/MDIWidget.css";
+@import "css/Splitter.css";
+@import "css/TabWidget.css";
+@import "css/ScrollArea.css";
+@import "css/Expander.css";
+
+/* regular widgets */
+@import "css/Button.css";
+@import "css/CheckBox.css";
+@import "css/ComboBox.css";
+@import "css/Text.css";
+@import "css/SpinBox.css";
+@import "css/ToggleButton.css";
+@import "css/RadioButton.css";
+@import "css/ProgressBar.css";
+@import "css/Frame.css";
+@import "css/GridBox.css";
+@import "css/Image.css";
+@import "css/Dial.css";
+@import "css/Menu.css";
+@import "css/ToolBar.css";
+@import "css/Slider.css";
+@import "css/TextEntrySet.css";
+@import "css/Dialog.css";
+@import "css/ColorDialog.css";
+@import "css/ScrollBar.css";
+@import "css/TextArea.css";

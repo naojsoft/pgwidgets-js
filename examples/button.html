@@ -51,13 +51,13 @@
 
     // icon only
     let btn3 = new Widgets.Button("");
-    btn3.set_icon("../icons/pgface.svg", [24, 24]);
+    btn3.set_icon("../pgwidgets_js/static/icons/pgicon.svg", [24, 24]);
     btn3.add_callback('activated', () => status.set_text("Icon button clicked!"));
     hbox2.add_widget(btn3);
 
     // icon + text
     let btn4 = new Widgets.Button("PGWidgets");
-    btn4.set_icon("../icons/pgface.svg", [32, 32]);
+    btn4.set_icon("../pgwidgets_js/static/icons/pgicon.svg", [32, 32]);
     btn4.add_callback('activated', () => status.set_text("Icon+text button clicked!"));
     hbox2.add_widget(btn4);
 

@@ -8,15 +8,13 @@
   "exports": {
     ".": "./Widgets.js",
     "./Widgets.css": "./Widgets.css",
-    "./css/*": "./css/*",
-    "./modules/*": "./modules/*"
+    "./css/*": "./pgwidgets_js/static/css/*",
+    "./modules/*": "./pgwidgets_js/static/modules/*"
   },
   "files": [
     "Widgets.js",
     "Widgets.css",
-    "modules/",
-    "css/",
-    "icons/"
+    "pgwidgets_js/static/"
   ],
   "keywords": [
     "widgets",
