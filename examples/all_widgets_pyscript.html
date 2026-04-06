@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>All Widgets (PyScript)</title>
+  <link rel="stylesheet" href="../pgwidgets_js/static/Widgets.css" type="text/css" />
+  <link rel="stylesheet" href="https://pyscript.net/releases/2024.11.1/core.css" />
+  <script type="module" src="https://pyscript.net/releases/2024.11.1/core.js"></script>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    #loading {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: sans-serif; font-size: 18px; color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading">Loading PyScript...</div>
+
+  <!-- Load pgwidgets JS so Widgets is on window before Python runs -->
+  <script type="module">
+    import { Widgets } from "../pgwidgets_js/static/Widgets.js";
+    window.Widgets = Widgets;
+  </script>
+
+  <script type="py" src="./all_widgets_pyscript.py"
+          config="./pyscript.toml"></script>
+</body>
+</html>

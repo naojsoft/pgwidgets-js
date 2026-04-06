@@ -133,12 +133,13 @@ import { Widgets } from "pgwidgets";
 import "pgwidgets/Widgets.css";
 ```
 
-## Using from Python (Pyodide)
+## Using from Python (Pyodide / PyScript)
 
 pgwidgets can be used directly from Python in the browser via
-[Pyodide](https://pyodide.org). The `pgwidgets_js.pyodide` module provides
-Pythonic wrappers with normal construction syntax, automatic type
-conversion, and callback management.
+[Pyodide](https://pyodide.org) or [PyScript](https://pyscript.net).
+The `pgwidgets_js.pyodide` module provides Pythonic wrappers with
+normal construction syntax, automatic type conversion, and callback
+management.
 
 ```python
 from pgwidgets_js.pyodide import Widgets
@@ -158,10 +159,11 @@ top.set_widget(vbox)
 top.show()
 ```
 
-No WebSocket server needed -- everything runs in the browser. See
-`examples/pyodide_demo.html` for a minimal example and
-`examples/all_widgets_pyodide.html` for a full demo of all widgets
-written in Python.
+No WebSocket server needed -- everything runs in the browser. The same
+Python code works with both Pyodide and PyScript; only the HTML loader
+differs. See `examples/pyodide_demo.html` for a minimal Pyodide example,
+`examples/all_widgets_pyodide.html` for a full demo via Pyodide, and
+`examples/all_widgets_pyscript.html` for the same demo via PyScript.
 
 ## Remote Interface (WebSocket)
 
@@ -210,6 +212,7 @@ Then open any example in your browser:
 
 - [all_widgets.html](http://localhost:8000/examples/all_widgets.html) -- MDI workspace showcasing every widget (JavaScript)
 - [all_widgets_pyodide.html](http://localhost:8000/examples/all_widgets_pyodide.html) -- Same demo, written entirely in Python via Pyodide
+- [all_widgets_pyscript.html](http://localhost:8000/examples/all_widgets_pyscript.html) -- Same demo via PyScript
 - [pyodide_demo.html](http://localhost:8000/examples/pyodide_demo.html) -- Minimal Pyodide example
 - [treeview.html](http://localhost:8000/examples/treeview.html) -- TreeView with icons, sorting, and multi-selection
 - [mdi_widget.html](http://localhost:8000/examples/mdi_widget.html) -- MDI with cascade/tile

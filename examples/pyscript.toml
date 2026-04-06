@@ -1,0 +1,5 @@
+[files]
+"../pgwidgets_js/__init__.py" = "/pgwidgets_js/__init__.py"
+"../pgwidgets_js/defs.py" = "/pgwidgets_js/defs.py"
+"../pgwidgets_js/pyodide/__init__.py" = "/pgwidgets_js/pyodide/__init__.py"
+"../pgwidgets_js/pyodide/widget.py" = "/pgwidgets_js/pyodide/widget.py"
