@@ -123,7 +123,7 @@ Copy the repository and include it directly:
 ```bash
 npm install pgwidgets          # once published
 # or install directly from GitHub:
-npm install github:ejeschke/pgwidgets
+npm install github:naojsoft/pgwidgets
 ```
 
 Then in your bundled app:
@@ -199,6 +199,26 @@ app.run()
 
 See `examples/remote_demo.py` and `examples/remote_demo_async.py`
 for complete working examples.
+
+## Building Desktop Apps with Electron
+
+Because pgwidgets is just a browser library with no dependencies, it
+runs unchanged inside an [Electron](https://electronjs.org) renderer
+process. This lets you ship pgwidgets UIs as native desktop apps with
+their own window chrome, system menus, and access to the file system.
+
+A minimal example lives in `examples/electron/`:
+
+```bash
+cd examples/electron
+npm install     # one-time, installs Electron locally
+npm start       # launches the all_widgets demo in an Electron window
+```
+
+The Electron entry point (`main.js`) is about 20 lines and simply
+creates a `BrowserWindow` that loads an HTML file -- no
+Electron-specific changes are needed in pgwidgets itself. To use your
+own UI, edit `main.js` to point at a different HTML file.
 
 ## Running the Examples
 

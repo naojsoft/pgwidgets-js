@@ -1,0 +1,13 @@
+{
+  "name": "pgwidgets-electron-demo",
+  "version": "1.0.0",
+  "description": "Minimal Electron demo using pgwidgets",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "type": "commonjs",
+  "devDependencies": {
+    "electron": "^41.1.1"
+  }
+}
