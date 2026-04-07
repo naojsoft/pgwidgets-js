@@ -15,6 +15,7 @@ import {Splitter} from "./modules/Splitter.js";
 import {Expander} from "./modules/Expander.js";
 import {Text} from "./modules/TextWidget.js";
 import {TextArea} from "./modules/TextArea.js";
+import {TextSource} from "./modules/TextSource.js";
 import {Label} from "./modules/Label.js";
 import {Button} from "./modules/Button.js";
 import {CheckBox} from "./modules/CheckBox.js";
@@ -47,7 +48,7 @@ import {TreeView} from "./modules/TreeView.js";
 
 const Widgets = {Widget, ContainerWidget, Box, VBox, HBox, ButtonBox,
                  TopLevel, ScrollArea, MDIWidget, Splitter, TabWidget,
-                 StackWidget, Expander, Page, Text, Label, TextArea,
+                 StackWidget, Expander, Page, Text, Label, TextArea, TextSource,
                  Frame, GridBox, Button, ToggleButton, CheckBox,
                  RadioButton, ComboBox, ComboBoxNative, TextEntry,
                  Slider, Canvas, SpinBox, ProgressBar, Image, Dial,

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>TextSource Demo</title>
+  <link rel="stylesheet" href="../pgwidgets_js/static/Widgets.css" />
+  <style>
+    body { margin: 0; overflow: hidden; font-family: sans-serif; }
+  </style>
+</head>
+<body>
+  <script type="module">
+    import { Widgets } from "../pgwidgets_js/static/Widgets.js";
+
+    let top = new Widgets.TopLevel({title: "TextSource Demo", resizable: true});
+    top.resize(800, 500);
+
+    let vbox = new Widgets.VBox();
+    vbox.set_spacing(6);
+    vbox.set_padding(8);
+
+    // Controls row
+    let controls = new Widgets.HBox();
+    controls.set_spacing(8);
+
+    let lnToggle = new Widgets.CheckBox("Line numbers");
+    lnToggle.set_state(true);
+    let iconToggle = new Widgets.CheckBox("Icon gutter");
+    iconToggle.set_state(true);
+
+    let wrapLabel = new Widgets.Label("Wrap:");
+    let wrapCombo = new Widgets.ComboBox();
+    wrapCombo.append_text("none");
+    wrapCombo.append_text("hard");
+    wrapCombo.append_text("word");
+    wrapCombo.set_index(0);
+
+    controls.add_widget(lnToggle, 0);
+    controls.add_widget(iconToggle, 0);
+    controls.add_widget(wrapLabel, 0);
+    controls.add_widget(wrapCombo, 0);
+    controls.add_widget(new Widgets.Label(""), 1);
+    vbox.add_widget(controls, 0);
+
+    // The TextSource
+    let initial =
+      "// TextSource widget demo\n" +
+      "function hello(name) {\n" +
+      "    console.log('Hello, ' + name + '!');\n" +
+      "}\n" +
+      "\n" +
+      "hello('world');\n" +
+      "\n" +
+      "// Try typing, selecting, cut/copy/paste.\n" +
+      "// Toggle line numbers, icon gutter, and wrap mode above.\n" +
+      "// The next line is very long so you can test horizontal scrolling: " +
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n";
+
+    let src = new Widgets.TextSource(initial, {
+      wrap: 'none',
+      line_numbers: true,
+      icon_gutter: true,
+    });
+    src.set_icon(0, "../pgwidgets_js/static/icons/file.svg");
+    src.set_icon(5, "../pgwidgets_js/static/icons/folder.svg");
+    vbox.add_widget(src, 1);
+
+    // Wire up the controls
+    lnToggle.add_callback('activated', (w, st) => src.set_line_numbers(st));
+    iconToggle.add_callback('activated', (w, st) => src.set_icon_gutter(st));
+    wrapCombo.add_callback('activated', (w, idx, text) => src.set_wrap(text));
+
+    // Status bar
+    let status = new Widgets.Label("Ready.");
+    vbox.add_widget(status, 0);
+    src.add_callback('changed', () => {
+      status.set_text(`${src.get_length()} characters`);
+    });
+    src.add_callback('line_clicked', (w, line) => {
+      status.set_text(`Clicked line ${line + 1}`);
+    });
+    src.add_callback('icon_clicked', (w, line) => {
+      status.set_text(`Clicked icon on line ${line + 1}`);
+    });
+
+    top.set_widget(vbox);
+    top.show();
+  </script>
+</body>
+</html>
