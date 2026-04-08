@@ -69,7 +69,8 @@ class Widget {
      * @param {number} width - Border width in pixels.
      */
     set_border_width(width) {
-        this.element.style['border-width'] = width + 'px';
+        this.element.style.borderWidth = width + 'px';
+        this.element.style.borderStyle = width > 0 ? 'solid' : 'none';
     }
 
     /**

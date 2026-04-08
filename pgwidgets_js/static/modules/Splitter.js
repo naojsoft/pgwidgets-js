@@ -60,6 +60,12 @@ class Splitter extends ContainerWidget {
         pane.className = 'splitter-pane';
         pane.style.flex = '1 1 0';
         pane.style.overflow = 'hidden';
+        // Minimum pane extent in the split direction.
+        if (this.orientation === 'vertical') {
+            pane.style.minHeight = '20px';
+        } else {
+            pane.style.minWidth = '20px';
+        }
         pane.appendChild(child.get_element());
         this.element.appendChild(pane);
         this.panes.push(pane);
@@ -139,10 +145,13 @@ class Splitter extends ContainerWidget {
             newSizeB = minSize;
         }
 
+        // Use flex-grow proportional to the new sizes so the panes
+        // continue to expand/shrink in proportion when the splitter
+        // itself is resized.
         let paneA = this.panes[this.activeIndex];
         let paneB = this.panes[this.activeIndex + 1];
-        paneA.style.flex = '0 0 ' + newSizeA + 'px';
-        paneB.style.flex = '0 0 ' + newSizeB + 'px';
+        paneA.style.flex = newSizeA + ' 1 0';
+        paneB.style.flex = newSizeB + ' 1 0';
     }
 
     onMouseUp(e) {
@@ -158,7 +167,7 @@ class Splitter extends ContainerWidget {
      */
     set_sizes(sizes) {
         for (let i = 0; i < sizes.length && i < this.panes.length; i++) {
-            this.panes[i].style.flex = '0 0 ' + sizes[i] + 'px';
+            this.panes[i].style.flex = sizes[i] + ' 1 0';
         }
     }
 

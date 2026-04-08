@@ -19,6 +19,8 @@
 
     // horizontal splitter with three panes
     const hsplitter = new Widgets.Splitter({orientation: 'horizontal'});
+    hsplitter.set_border_width(1);
+    hsplitter.set_border_color("black");
     hsplitter.add_widget(new Widgets.Text({text: "Left pane"}));
 
     // nest a vertical splitter in the middle pane

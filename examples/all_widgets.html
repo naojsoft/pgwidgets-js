@@ -371,10 +371,12 @@
 
         case "Splitter": {
             content = new Widgets.VBox();
-            content.set_padding(4);
+            content.set_padding(2);
             content.set_spacing(4);
             let lbl = new Widgets.Label("Drag the handles to resize panes.");
             let hsplit = new Widgets.Splitter({orientation: 'horizontal'});
+            hsplit.set_border_width(1);
+            hsplit.set_border_color("black");
             let pane1 = new Widgets.Label("Left");
             pane1.set_halign("center");
             pane1.set_color("#e8f0fe", "#333");
