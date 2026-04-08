@@ -235,6 +235,7 @@ class TextSource extends Widget {
         this._resizeObserver = new ResizeObserver(() => this._syncScrollbars());
         this._resizeObserver.observe(this._main);
         this._resizeObserver.observe(this._edit);
+        this._resizeObserver.observe(this._editWrap);
 
         // -- input handling --
         // We intercept beforeinput so all edits go through the model first.
@@ -559,7 +560,7 @@ class TextSource extends Widget {
             this._edit.style.whiteSpace = 'pre';
             this._edit.style.wordBreak = 'normal';
             this._edit.style.width = 'max-content';
-            this._edit.style.minWidth = '100%';
+            this._edit.style.minWidth = '';
         } else if (this._wrap === 'hard') {
             // hard wrap: break at any character
             this._edit.style.whiteSpace = 'pre-wrap';

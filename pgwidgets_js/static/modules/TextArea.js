@@ -1,9 +1,15 @@
 "use_strict";
 
 import {Widget} from "./Widget.js";
+import {ScrollBar} from "./ScrollBar.js";
 
 /**
  * A multi-line editable text area widget.
+ *
+ * Uses a native <textarea> for editing but wraps it in a grid container
+ * so pgwidgets ScrollBar widgets can be used for horizontal and vertical
+ * scrolling (matching the look of other pgwidgets).
+ *
  * @extends Widget
  */
 class TextArea extends Widget {
@@ -16,15 +22,15 @@ class TextArea extends Widget {
      * @param {boolean} [options.editable=true] - Whether the text area is editable.
      * @param {HTMLElement} [options.element=null] - Optional pre-existing DOM element to use.
      */
-    constructor(text='', options={wrap: false, editable: true}) {
+    constructor(text='', options={}) {
         super();
         this.element = this.get_option(options, 'element', null);
         if (this.element == null) {
-            this.element = document.createElement('textarea');
+            this.element = document.createElement('div');
         }
         this.element.className = 'textarea-widget';
 
-        // JavaScript hack to bind "this" correctly for our methods
+        // Method bindings
         this.set_text = this.set_text.bind(this);
         this.get_text = this.get_text.bind(this);
         this.append_text = this.append_text.bind(this);
@@ -32,68 +38,121 @@ class TextArea extends Widget {
         this.set_editable = this.set_editable.bind(this);
         this.set_wrap = this.set_wrap.bind(this);
         this.set_limit = this.set_limit.bind(this);
+        this._syncScrollbars = this._syncScrollbars.bind(this);
+        this._syncFromScroll = this._syncFromScroll.bind(this);
 
         super.init_style();
 
-        this.element.readOnly = ! this.get_option(options, 'editable', true);
-        this.element.wrap = this.get_option(options, 'wrap', false) ? 'soft' : 'off';
+        // Inner <textarea> for actual editing
+        this._textarea = document.createElement('textarea');
+        this._textarea.className = 'textarea-text';
+        this._textarea.readOnly = ! this.get_option(options, 'editable', true);
+        this._textarea.wrap = this.get_option(options, 'wrap', false) ? 'soft' : 'off';
+
+        // ScrollBar widgets
+        this._vScrollBar = new ScrollBar({orientation: 'vertical'});
+        this._hScrollBar = new ScrollBar({orientation: 'horizontal'});
+        this._vScrollBar.get_element().classList.add('textarea-vbar');
+        this._hScrollBar.get_element().classList.add('textarea-hbar');
+
+        this._corner = document.createElement('div');
+        this._corner.className = 'textarea-corner';
+
+        this.element.appendChild(this._textarea);
+        this.element.appendChild(this._vScrollBar.get_element());
+        this.element.appendChild(this._hScrollBar.get_element());
+        this.element.appendChild(this._corner);
+
+        // Drive textarea scroll from the ScrollBars
+        this._vScrollBar.add_callback('activated', (w, pct) => {
+            let maxScroll = this._textarea.scrollHeight - this._textarea.clientHeight;
+            this._textarea.scrollTop = Math.max(0, pct * maxScroll);
+        });
+        this._hScrollBar.add_callback('activated', (w, pct) => {
+            let maxScroll = this._textarea.scrollWidth - this._textarea.clientWidth;
+            this._textarea.scrollLeft = Math.max(0, pct * maxScroll);
+        });
+
+        // Keep scrollbars in sync when the textarea scrolls natively
+        this._textarea.addEventListener('scroll', () => this._syncFromScroll());
+        this._textarea.addEventListener('input', () => this._syncScrollbars());
+
+        this._resizeObserver = new ResizeObserver(() => this._syncScrollbars());
+        this._resizeObserver.observe(this._textarea);
 
         if (text) {
             this.set_text(text);
         }
+        requestAnimationFrame(() => this._syncScrollbars());
     }
 
-    /**
-     * Sets the text area content.
-     * @param {string} text - The text to set.
-     */
     set_text(text) {
-        this.element.value = text;
+        this._textarea.value = text;
+        this._syncScrollbars();
     }
 
-    /**
-     * Returns the current text area content.
-     * @returns {string} The text content.
-     */
     get_text() {
-        return this.element.value;
+        return this._textarea.value;
     }
 
-    /**
-     * Appends text to the end of the current content.
-     * @param {string} text - The text to append.
-     */
     append_text(text) {
-        this.element.value += text;
+        this._textarea.value += text;
+        this._syncScrollbars();
     }
 
-    /** Clears all text content. */
     clear() {
-        this.element.value = '';
+        this._textarea.value = '';
+        this._syncScrollbars();
     }
 
-    /**
-     * Sets whether the text area is editable.
-     * @param {boolean} tf - True for editable, false for read-only.
-     */
     set_editable(tf) {
-        this.element.readOnly = !tf;
+        this._textarea.readOnly = !tf;
     }
 
-    /**
-     * Sets whether word wrapping is enabled.
-     * @param {boolean} tf - True to enable wrapping, false to disable.
-     */
     set_wrap(tf) {
-        this.element.wrap = tf ? 'soft' : 'off';
+        this._textarea.wrap = tf ? 'soft' : 'off';
+        this._syncScrollbars();
     }
 
-    /**
-     * Sets the visible number of text rows.
-     * @param {number} numlines - Number of visible rows.
-     */
     set_limit(numlines) {
-        this.element.rows = numlines;
+        this._textarea.rows = numlines;
+    }
+
+    // -----------------------------------------------------------------
+    // Scrollbar sync
+    // -----------------------------------------------------------------
+
+    _syncScrollbars() {
+        let vw = this._textarea.clientWidth;
+        let vh = this._textarea.clientHeight;
+        let cw = this._textarea.scrollWidth;
+        let ch = this._textarea.scrollHeight;
+
+        let showH = cw > vw + 1;
+        let showV = ch > vh + 1;
+
+        this._hScrollBar.get_element().style.display = showH ? '' : 'none';
+        this._vScrollBar.get_element().style.display = showV ? '' : 'none';
+        this._corner.style.display = (showH && showV) ? '' : 'none';
+
+        if (showH) {
+            this._hScrollBar.set_thumb_width(Math.min(1, vw / Math.max(1, cw)));
+        }
+        if (showV) {
+            this._vScrollBar.set_thumb_width(Math.min(1, vh / Math.max(1, ch)));
+        }
+        this._syncFromScroll();
+    }
+
+    _syncFromScroll() {
+        let maxX = this._textarea.scrollWidth - this._textarea.clientWidth;
+        let maxY = this._textarea.scrollHeight - this._textarea.clientHeight;
+        if (maxX > 0) {
+            this._hScrollBar.set_scroll_percent(this._textarea.scrollLeft / maxX);
+        }
+        if (maxY > 0) {
+            this._vScrollBar.set_scroll_percent(this._textarea.scrollTop / maxY);
+        }
     }
 
 }
