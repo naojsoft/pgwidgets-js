@@ -33,11 +33,15 @@ class Splitter extends ContainerWidget {
 
         this.handles = [];
         this.panes = [];
+        this.paneMins = [];
         this.activeHandle = null;
         this.activeIndex = -1;
 
+        this.enable_callback('configure');
+
         // JavaScript hack to bind "this" correctly for our methods
         this.add_widget = this.add_widget.bind(this);
+        this.set_minimum_size = this.set_minimum_size.bind(this);
         this.onMouseDown = this.onMouseDown.bind(this);
         this.onMouseMove = this.onMouseMove.bind(this);
         this.onMouseUp = this.onMouseUp.bind(this);
@@ -60,16 +64,37 @@ class Splitter extends ContainerWidget {
         pane.className = 'splitter-pane';
         pane.style.flex = '1 1 0';
         pane.style.overflow = 'hidden';
-        // Minimum pane extent in the split direction.
+        // Minimum pane extent in the split direction (default 20px).
+        const defaultMin = 20;
         if (this.orientation === 'vertical') {
-            pane.style.minHeight = '20px';
+            pane.style.minHeight = defaultMin + 'px';
         } else {
-            pane.style.minWidth = '20px';
+            pane.style.minWidth = defaultMin + 'px';
         }
         pane.appendChild(child.get_element());
         this.element.appendChild(pane);
         this.panes.push(pane);
+        this.paneMins.push(defaultMin);
         this.children.push(child);
+    }
+
+    /**
+     * Set the minimum size (in pixels) of the pane containing `child`
+     * along the splitter's orientation. A value of 0 allows the pane
+     * to be collapsed entirely; the handle(s) always remain visible.
+     * @param {Widget} child - A widget previously added via add_widget.
+     * @param {number} min_px - Minimum pane extent in pixels.
+     */
+    set_minimum_size(child, min_px) {
+        let idx = this.children.indexOf(child);
+        if (idx < 0) return;
+        let pane = this.panes[idx];
+        this.paneMins[idx] = min_px;
+        if (this.orientation === 'vertical') {
+            pane.style.minHeight = min_px + 'px';
+        } else {
+            pane.style.minWidth = min_px + 'px';
+        }
     }
 
     _add_handle() {
@@ -134,15 +159,16 @@ class Splitter extends ContainerWidget {
         let newSizeA = this.startSizeA + delta;
         let newSizeB = this.startSizeB - delta;
 
-        // enforce minimum pane size
-        const minSize = 20;
-        if (newSizeA < minSize) {
-            newSizeB -= (minSize - newSizeA);
-            newSizeA = minSize;
+        // enforce per-pane minimum sizes
+        const minA = this.paneMins[this.activeIndex];
+        const minB = this.paneMins[this.activeIndex + 1];
+        if (newSizeA < minA) {
+            newSizeB -= (minA - newSizeA);
+            newSizeA = minA;
         }
-        if (newSizeB < minSize) {
-            newSizeA -= (minSize - newSizeB);
-            newSizeB = minSize;
+        if (newSizeB < minB) {
+            newSizeA -= (minB - newSizeB);
+            newSizeB = minB;
         }
 
         // Use flex-grow proportional to the new sizes so the panes

@@ -101,8 +101,9 @@ WIDGETS = {
             "add_widget": ["child"],
             "set_sizes": ["sizes"],
             "get_sizes": [],
+            "set_minimum_size": ["child", "min_px"],
         },
-        "callbacks": [],
+        "callbacks": ["configure"],
     },
 
     "Frame": {
@@ -335,6 +336,52 @@ WIDGETS = {
             "set_limit": ["numlines"],
         },
         "callbacks": [],
+    },
+
+    "TextSource": {
+        "base": "widget",
+        "args": ["text"],
+        "options": ["wrap", "line_numbers", "icon_gutter", "editable",
+                    "font_family", "font_size"],
+        "methods": {
+            "set_text": ["text"],
+            "get_text": [],
+            "get_length": [],
+            "insert_text": ["offset", "text", "tags"],
+            "delete_range": ["start", "end"],
+            "clear": [],
+            "set_editable": ["tf"],
+            "set_wrap": ["mode"],
+            "set_line_numbers": ["tf"],
+            "set_icon_gutter": ["tf"],
+            "set_icon": ["line", "icon_url"],
+            "get_cursor": [],
+            "set_cursor": ["offset"],
+            "get_selection": [],
+            "set_selection": ["start", "end"],
+            # Tags
+            "create_tag": ["name", "attrs"],
+            "remove_tag_def": ["name"],
+            "apply_tag": ["name", "start", "end"],
+            "remove_tag": ["name", "start", "end"],
+            "get_tags_at": ["offset"],
+            # Live refs
+            "create_ref": ["offset", "gravity"],
+            "remove_ref": ["ref"],
+            # Undo/redo
+            "undo": [],
+            "redo": [],
+            "can_undo": [],
+            "can_redo": [],
+            # Find/replace
+            "find": ["query", "opts"],
+            "find_all": ["query", "opts"],
+            "replace": ["query", "replacement", "opts"],
+            # Scrolling
+            "scroll_to": ["ref_or_offset"],
+            "scroll_to_cursor": [],
+        },
+        "callbacks": ["changed", "cursor_moved", "line_clicked", "icon_clicked"],
     },
 
     # -- Value widgets --
