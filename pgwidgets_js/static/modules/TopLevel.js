@@ -39,6 +39,8 @@ class TopLevel extends ContainerWidget {
         this.show = this.show.bind(this);
         this.hide = this.hide.bind(this);
 
+        this.enable_callback('move');
+
         this._titleBar = null;
         this._titleText = null;
         this._moveable = false;
@@ -131,10 +133,9 @@ class TopLevel extends ContainerWidget {
         const onMouseUp = () => {
             if (isDragging) {
                 isDragging = false;
-                this.make_callback('configure',
+                this.make_callback('move',
                     parseInt(element.style.left) || 0,
-                    parseInt(element.style.top) || 0,
-                    element.offsetWidth, element.offsetHeight);
+                    parseInt(element.style.top) || 0);
             }
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);
@@ -215,10 +216,14 @@ class TopLevel extends ContainerWidget {
         const onMouseUp = () => {
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);
-            this.make_callback('configure',
-                parseInt(element.style.left) || 0,
-                parseInt(element.style.top) || 0,
-                element.offsetWidth, element.offsetHeight);
+            // If the nw/sw/ne corners shifted the origin, also report a
+            // 'move' for the new position. 'resize' is emitted
+            // automatically by the base-class ResizeObserver.
+            if (corner !== 'se') {
+                this.make_callback('move',
+                    parseInt(element.style.left) || 0,
+                    parseInt(element.style.top) || 0);
+            }
         };
 
         grip.addEventListener('mousedown', (e) => {

@@ -57,13 +57,34 @@ class Dial extends Widget {
         this._valueArc.classList.add('dial-value-arc');
         this._svg.appendChild(this._valueArc);
 
+        // knob radius in viewBox units
+        this._knobR = 35;
+
+        // clip path to keep any knob icon inside the knob circle
+        this._defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+        this._clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+        this._clipId = 'dial-clip-' + this.wid;
+        this._clipPath.setAttribute('id', this._clipId);
+        this._clipCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        this._clipCircle.setAttribute('cx', '50');
+        this._clipCircle.setAttribute('cy', '50');
+        this._clipCircle.setAttribute('r', this._knobR);
+        this._clipPath.appendChild(this._clipCircle);
+        this._defs.appendChild(this._clipPath);
+        this._svg.appendChild(this._defs);
+
         // knob circle
         this._knob = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         this._knob.setAttribute('cx', '50');
         this._knob.setAttribute('cy', '50');
-        this._knob.setAttribute('r', '35');
+        this._knob.setAttribute('r', this._knobR);
         this._knob.classList.add('dial-knob');
         this._svg.appendChild(this._knob);
+
+        // optional icon image displayed inside the knob
+        this._knobIcon = null;
+        this._knobIconUrl = null;
+        this._knobIconSize = null;
 
         // indicator line
         this._indicator = document.createElementNS('http://www.w3.org/2000/svg', 'line');
@@ -85,6 +106,8 @@ class Dial extends Widget {
         this.get_value = this.get_value.bind(this);
         this.set_limits = this.set_limits.bind(this);
         this.set_tracking = this.set_tracking.bind(this);
+        this.set_knob_diameter = this.set_knob_diameter.bind(this);
+        this.set_icon = this.set_icon.bind(this);
         this._onMouseDown = this._onMouseDown.bind(this);
         this._onMouseMove = this._onMouseMove.bind(this);
         this._onMouseUp = this._onMouseUp.bind(this);
@@ -160,9 +183,21 @@ class Dial extends Widget {
         let angle = this._startAngle + frac * (this._endAngle - this._startAngle);
         let rad = angle * Math.PI / 180;
 
-        // update indicator line
-        let ix = 50 + 30 * Math.sin(rad);
-        let iy = 50 - 30 * Math.cos(rad);
+        // keep knob circle and clip in sync with current radius
+        this._knob.setAttribute('r', this._knobR);
+        this._clipCircle.setAttribute('r', this._knobR);
+
+        // When a knob icon is set, it replaces the default knob circle and
+        // indicator — the icon itself rotates with the value and the user
+        // is expected to draw their own pointer mark into the image.
+        let hasIcon = !!this._knobIcon;
+        this._knob.style.display = hasIcon ? 'none' : '';
+        this._indicator.style.display = hasIcon ? 'none' : '';
+
+        // update indicator line (stay inside the knob)
+        let indLen = Math.max(0, this._knobR - 3);
+        let ix = 50 + indLen * Math.sin(rad);
+        let iy = 50 - indLen * Math.cos(rad);
         this._indicator.setAttribute('x2', ix);
         this._indicator.setAttribute('y2', iy);
 
@@ -177,6 +212,82 @@ class Dial extends Widget {
         } else {
             this._valueArc.setAttribute('d', '');
         }
+
+        // update knob icon, if any — rotate with the dial value. The icon's
+        // natural (unrotated) orientation corresponds to the middle of the
+        // dial range (pointing straight up).
+        if (this._knobIcon) {
+            let size = this._knobIconSize != null
+                ? this._knobIconSize
+                : this._knobR * 2;
+            this._knobIcon.setAttribute('x', 50 - size / 2);
+            this._knobIcon.setAttribute('y', 50 - size / 2);
+            this._knobIcon.setAttribute('width', size);
+            this._knobIcon.setAttribute('height', size);
+            let rotDeg = angle - 360;
+            this._knobIcon.setAttribute('transform',
+                `rotate(${rotDeg} 50 50)`);
+        }
+    }
+
+    /**
+     * Converts a pixel length to viewBox units using the current SVG size.
+     * The SVG viewBox is fixed at 100x100.
+     * @param {number} px - Length in pixels.
+     * @returns {number} Length in viewBox units.
+     * @private
+     */
+    _pxToVb(px) {
+        let rect = this._svg.getBoundingClientRect();
+        let side = Math.min(rect.width, rect.height);
+        if (!side) return px;  // fallback: treat as viewBox units
+        return px * 100 / side;
+    }
+
+    /**
+     * Sets the diameter of the knob in pixels.
+     * @param {number} len_px - Knob diameter in pixels.
+     */
+    set_knob_diameter(len_px) {
+        let vb = this._pxToVb(len_px);
+        // clamp so the knob stays inside the arc (radius 43)
+        this._knobR = Math.max(1, Math.min(42, vb / 2));
+        this._updateVisual();
+    }
+
+    /**
+     * Sets an icon image to display inside the knob.
+     * If `size` is omitted, the icon fills most of the knob area.
+     * Pass `url=null` to remove a previously set icon.
+     * @param {string|null} url - Image URL, or null to clear.
+     * @param {number} [size] - Icon size in pixels (square).
+     */
+    set_icon(url, size) {
+        if (url == null) {
+            if (this._knobIcon) {
+                this._svg.removeChild(this._knobIcon);
+                this._knobIcon = null;
+            }
+            this._knobIconUrl = null;
+            this._knobIconSize = null;
+            this._updateVisual();
+            return;
+        }
+        this._knobIconUrl = url;
+        this._knobIconSize = (size != null) ? this._pxToVb(size) : null;
+        if (!this._knobIcon) {
+            this._knobIcon = document.createElementNS(
+                'http://www.w3.org/2000/svg', 'image');
+            this._knobIcon.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+            this._knobIcon.setAttribute('clip-path', 'url(#' + this._clipId + ')');
+            this._knobIcon.classList.add('dial-knob-icon');
+            // Insert above knob but below indicator
+            this._svg.insertBefore(this._knobIcon, this._indicator);
+        }
+        this._knobIcon.setAttributeNS(
+            'http://www.w3.org/1999/xlink', 'href', url);
+        this._knobIcon.setAttribute('href', url);
+        this._updateVisual();
     }
 
     /**

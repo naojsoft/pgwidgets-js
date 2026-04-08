@@ -37,7 +37,7 @@ class Splitter extends ContainerWidget {
         this.activeHandle = null;
         this.activeIndex = -1;
 
-        this.enable_callback('configure');
+        this.enable_callback('sizing');
 
         // JavaScript hack to bind "this" correctly for our methods
         this.add_widget = this.add_widget.bind(this);
@@ -195,7 +195,7 @@ class Splitter extends ContainerWidget {
         this.activeIndex = -1;
         document.removeEventListener('mousemove', this.onMouseMove);
         document.removeEventListener('mouseup', this.onMouseUp);
-        this.make_callback('configure', this.get_sizes());
+        this.make_callback('sizing', this.get_sizes());
     }
 
     /**

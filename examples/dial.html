@@ -87,6 +87,24 @@
     frame3.set_widget(hbox3);
     vbox.add_widget(frame3, 0);
 
+    // --- Dial with a custom knob icon ---
+    let frame4 = new Widgets.Frame({title: "Dial with knob icon"});
+    let hbox4 = new Widgets.HBox();
+    hbox4.set_spacing(10);
+
+    let dial4 = new Widgets.Dial({min: 0, max: 100, value: 30, track: true});
+    dial4.resize(100, 100);
+    dial4.set_icon("../pgwidgets_js/static/icons/pgwidgets-logo.svg");
+    let label4 = new Widgets.Label("30");
+    label4.resize(40, 20);
+
+    dial4.add_callback('activated', (w, val) => label4.set_text(String(val)));
+
+    hbox4.add_widget(dial4, 0);
+    hbox4.add_widget(label4, 0);
+    frame4.set_widget(hbox4);
+    vbox.add_widget(frame4, 0);
+
     top.set_widget(vbox);
     top.show();
 

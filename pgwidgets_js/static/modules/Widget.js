@@ -40,9 +40,28 @@ class Widget {
         for (let name of ['resize']) {
             this.enable_callback(name);
         }
-        //this.element.addEventListener('resize',
-        //                              (e) => this.make_callback('resize', e.clientWidth, e.clientHeight));
 
+        // Install a ResizeObserver on this.element to emit a universal
+        // 'resize' callback whenever the widget changes size. The
+        // subclass constructor sets this.element AFTER super() returns,
+        // so defer to a microtask so it's available.
+        queueMicrotask(() => this._installResizeObserver());
+    }
+
+    /** @private */
+    _installResizeObserver() {
+        if (!this.element || this._widgetResizeObserver) return;
+        let prevW = -1, prevH = -1;
+        this._widgetResizeObserver = new ResizeObserver((entries) => {
+            let rect = entries[0].contentRect;
+            let w = Math.round(rect.width);
+            let h = Math.round(rect.height);
+            if (w === prevW && h === prevH) return;
+            prevW = w;
+            prevH = h;
+            this.make_callback('resize', w, h);
+        });
+        this._widgetResizeObserver.observe(this.element);
     }
 
     /**

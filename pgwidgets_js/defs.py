@@ -5,7 +5,9 @@ Each entry maps a JS class name to its constructor signature and
 public methods.  The 'args' list gives positional constructor args;
 'options' lists keyword args that go into the options object.
 'methods' maps method names to their parameter names (excluding self/widget).
-'callbacks' lists the callback actions the widget supports.
+'callbacks' lists the widget-specific callback actions. In addition,
+every widget supports a base 'resize' callback, fired as
+(widget, width_px, height_px) whenever its size changes.
 
 This is the canonical source for widget definitions. Language-specific
 wrappers (pgwidgets-python, pyodide, etc.) import from here.
@@ -103,7 +105,7 @@ WIDGETS = {
             "get_sizes": [],
             "set_minimum_size": ["child", "min_px"],
         },
-        "callbacks": ["configure"],
+        "callbacks": ["sizing"],
     },
 
     "Frame": {
@@ -197,7 +199,7 @@ WIDGETS = {
             "set_title": ["title"],
             "set_moveable": ["tf"],
         },
-        "callbacks": [],
+        "callbacks": ["move"],
     },
 
     "Page": {
@@ -440,6 +442,8 @@ WIDGETS = {
             "get_value": [],
             "set_limits": ["minval", "maxval", "incrval"],
             "set_tracking": ["track"],
+            "set_knob_diameter": ["len_px"],
+            "set_icon": ["url", "size"],
         },
         "callbacks": ["activated"],
     },

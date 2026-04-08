@@ -174,10 +174,14 @@
             dial1.add_callback('activated', (w, val) => lbl.set_text(String(val)));
             let dial2 = new Widgets.Dial({min: 0, max: 100, value: 25});
             dial2.add_callback('activated', (w, val) => lbl.set_text(String(val)));
+            let dial3 = new Widgets.Dial({min: 0, max: 100, value: 75, track: true});
+            dial3.set_icon("../pgwidgets_js/static/icons/pgwidgets-logo.svg");
+            dial3.add_callback('activated', (w, val) => lbl.set_text(String(val)));
             content.add_widget(dial1, 0);
             content.add_widget(dial2, 0);
+            content.add_widget(dial3, 0);
             content.add_widget(lbl, 1);
-            subwin = mdi.add_widget(content, {title: "Dial", width: 320, height: 160});
+            subwin = mdi.add_widget(content, {title: "Dial", width: 420, height: 160});
             break;
         }
 

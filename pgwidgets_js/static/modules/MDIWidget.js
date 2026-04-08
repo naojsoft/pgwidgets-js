@@ -41,6 +41,8 @@ class MDISubWindow extends ContainerWidget {
         this.signal_close = this.signal_close.bind(this);
         this.close = this.close.bind(this);
 
+        this.enable_callback('move');
+
         this.element = document.createElement('div');
         this.element.className = 'mdi-window';
         let style = this.element.style;
@@ -224,10 +226,9 @@ class MDISubWindow extends ContainerWidget {
         document.addEventListener('mouseup', () => {
             if (isMoving) {
                 isMoving = false;
-                this.make_callback('configure',
+                this.make_callback('move',
                     parseInt(element.style.left) || 0,
-                    parseInt(element.style.top) || 0,
-                    element.offsetWidth, element.offsetHeight);
+                    parseInt(element.style.top) || 0);
             }
         });
     }
@@ -305,10 +306,13 @@ class MDISubWindow extends ContainerWidget {
         const onMouseUp = () => {
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);
-            this.make_callback('configure',
-                parseInt(element.style.left) || 0,
-                parseInt(element.style.top) || 0,
-                element.offsetWidth, element.offsetHeight);
+            // nw/sw/ne corners also move the window origin.
+            // 'resize' is emitted automatically via ResizeObserver.
+            if (corner !== 'se') {
+                this.make_callback('move',
+                    parseInt(element.style.left) || 0,
+                    parseInt(element.style.top) || 0);
+            }
         };
 
         grip.addEventListener('mousedown', (e) => {
