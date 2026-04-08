@@ -3,6 +3,47 @@
 import {Widget} from "./Widget.js";
 import {ScrollBar} from "./ScrollBar.js";
 
+
+/**
+ * A live reference to a position in a TextSource buffer.
+ * The position automatically updates as text is inserted or deleted.
+ *
+ * Gravity controls behavior when text is inserted exactly AT the
+ * ref's position:
+ *   - 'right' (default): the ref moves with the inserted text (i.e. it
+ *     ends up after the new text)
+ *   - 'left': the ref stays before the inserted text
+ *
+ * If a delete range covers the ref's position, the ref snaps to the
+ * start of the deleted range.
+ */
+class TextBufferRef {
+    constructor(buffer, offset, gravity = 'right') {
+        this._buffer = buffer;
+        this._offset = offset;
+        this._gravity = gravity;
+        this._valid = true;
+    }
+    /** Current character offset of this ref. */
+    get_offset() { return this._offset; }
+    get_gravity() { return this._gravity; }
+    is_valid() { return this._valid; }
+    /** Returns [line, column] (both 0-based) of this ref's offset. */
+    get_line_column() {
+        let text = this._buffer.get_text();
+        let line = 0;
+        let lastNl = -1;
+        for (let i = 0; i < this._offset && i < text.length; i++) {
+            if (text[i] === '\n') {
+                line++;
+                lastNl = i;
+            }
+        }
+        return [line, this._offset - lastNl - 1];
+    }
+}
+
+
 /**
  * A multi-line rich text editor widget, inspired by GtkSourceView.
  *
@@ -83,6 +124,21 @@ class TextSource extends Widget {
         this._cursor = 0;
         this._selStart = 0;
         this._selEnd = 0;
+
+        // -- live refs and tags --
+        // Set of TextBufferRef instances we are tracking
+        this._refs = new Set();
+        // name -> attribute object (background, foreground, bold, etc.)
+        this._tagDefs = new Map();
+        // Active tag intervals: { name, start, end, seq }
+        this._tags = [];
+        this._tagSeq = 0;
+
+        // -- undo/redo --
+        this._undoStack = [];
+        this._redoStack = [];
+        this._undoLimit = 500;
+        this._inUndoRedo = false;
 
         // -- build DOM --
         this._buildDOM();
@@ -184,6 +240,8 @@ class TextSource extends Widget {
         // We intercept beforeinput so all edits go through the model first.
         this._edit.addEventListener('beforeinput', (e) => this._onBeforeInput(e));
         this._edit.addEventListener('keydown', (e) => this._onKeyDown(e));
+        this._edit.addEventListener('cut', (e) => this._onCut(e));
+        this._edit.addEventListener('copy', (e) => this._onCopy(e));
         // Keep cursor/selection in sync
         document.addEventListener('selectionchange', () => {
             if (document.activeElement === this._edit) {
@@ -202,6 +260,13 @@ class TextSource extends Widget {
         this._cursor = 0;
         this._selStart = 0;
         this._selEnd = 0;
+        // Reset tags and invalidate refs - this is a destructive replace.
+        this._tags = [];
+        for (let ref of this._refs) {
+            ref._offset = 0;
+            ref._valid = false;
+        }
+        this._refs.clear();
         this._render();
         this.make_callback('changed');
     }
@@ -221,18 +286,10 @@ class TextSource extends Widget {
      * @param {number} offset - Character offset (0..length).
      * @param {string} text - The text to insert.
      */
-    insert_text(offset, text) {
+    insert_text(offset, text, tags = null) {
         if (text == null || text === '') return;
         offset = this._clampOffset(offset);
-        this._text = this._text.slice(0, offset) + text +
-                     this._text.slice(offset);
-        // shift cursor/selection if the insert was at or before it
-        let n = text.length;
-        if (this._cursor >= offset) this._cursor += n;
-        if (this._selStart >= offset) this._selStart += n;
-        if (this._selEnd >= offset) this._selEnd += n;
-        this._render();
-        this.make_callback('changed');
+        this._replaceRange(offset, offset, text, { tags });
     }
 
     /**
@@ -245,19 +302,170 @@ class TextSource extends Widget {
         end = this._clampOffset(end);
         if (start > end) [start, end] = [end, start];
         if (start === end) return;
-        this._text = this._text.slice(0, start) + this._text.slice(end);
-        let n = end - start;
-        // update cursor/selection
-        let adjust = (o) => {
-            if (o <= start) return o;
-            if (o >= end) return o - n;
-            return start;
-        };
-        this._cursor = adjust(this._cursor);
-        this._selStart = adjust(this._selStart);
-        this._selEnd = adjust(this._selEnd);
+        this._replaceRange(start, end, '');
+    }
+
+    /**
+     * The single mutation primitive. Replaces [start, end) with newText
+     * and updates refs, tags, cursor/selection, and the undo stack.
+     */
+    _replaceRange(start, end, newText, opts = {}) {
+        let oldText = this._text.slice(start, end);
+        if (oldText === '' && newText === '') return;
+        let cursorBefore = [this._cursor, this._selStart, this._selEnd];
+
+        this._text = this._text.slice(0, start) + newText + this._text.slice(end);
+
+        // Update refs/tags: first delete [start,end), then insert newText
+        if (end > start) {
+            this._updateRefsOnDelete(start, end);
+            this._updateTagsOnDelete(start, end);
+            let n = end - start;
+            let adjust = (o) => {
+                if (o <= start) return o;
+                if (o >= end) return o - n;
+                return start;
+            };
+            this._cursor = adjust(this._cursor);
+            this._selStart = adjust(this._selStart);
+            this._selEnd = adjust(this._selEnd);
+        }
+        if (newText.length > 0) {
+            let n = newText.length;
+            this._updateRefsOnInsert(start, n);
+            this._updateTagsOnInsert(start, n);
+            if (this._cursor > start || this._cursor === start) {
+                // keep cursor right of the insert (typical typing behavior)
+            }
+        }
+        // Position cursor after the inserted text
+        let newPos = start + newText.length;
+        this._cursor = newPos;
+        this._selStart = newPos;
+        this._selEnd = newPos;
+
+        if (opts.tags) {
+            for (let name of opts.tags) {
+                this._addTagInterval(name, start, start + newText.length);
+            }
+        }
+
+        if (!this._inUndoRedo && opts.pushUndo !== false) {
+            this._undoStack.push({
+                start, oldText, newText,
+                cursorBefore,
+                cursorAfter: [this._cursor, this._selStart, this._selEnd],
+            });
+            if (this._undoStack.length > this._undoLimit) {
+                this._undoStack.shift();
+            }
+            this._redoStack = [];
+        }
+
         this._render();
         this.make_callback('changed');
+    }
+
+    // -----------------------------------------------------------------
+    // Public API - undo / redo
+    // -----------------------------------------------------------------
+
+    can_undo() { return this._undoStack.length > 0; }
+    can_redo() { return this._redoStack.length > 0; }
+
+    undo() {
+        let rec = this._undoStack.pop();
+        if (!rec) return false;
+        this._inUndoRedo = true;
+        try {
+            this._replaceRange(rec.start, rec.start + rec.newText.length,
+                               rec.oldText, { pushUndo: false });
+            [this._cursor, this._selStart, this._selEnd] = rec.cursorBefore;
+            this._applySelectionToDOM();
+        } finally {
+            this._inUndoRedo = false;
+        }
+        this._redoStack.push(rec);
+        return true;
+    }
+
+    redo() {
+        let rec = this._redoStack.pop();
+        if (!rec) return false;
+        this._inUndoRedo = true;
+        try {
+            this._replaceRange(rec.start, rec.start + rec.oldText.length,
+                               rec.newText, { pushUndo: false });
+            [this._cursor, this._selStart, this._selEnd] = rec.cursorAfter;
+            this._applySelectionToDOM();
+        } finally {
+            this._inUndoRedo = false;
+        }
+        this._undoStack.push(rec);
+        return true;
+    }
+
+    // -----------------------------------------------------------------
+    // Public API - find / replace
+    // -----------------------------------------------------------------
+
+    /**
+     * Find `query` in the buffer.
+     * @param {string} query
+     * @param {Object} [opts]
+     * @param {number} [opts.start=0] - Offset to start searching from.
+     * @param {boolean} [opts.case_insensitive=false]
+     * @returns {?[number, number]} [start, end] match, or null.
+     */
+    find(query, opts = {}) {
+        if (!query) return null;
+        let start = opts.start != null ? opts.start : 0;
+        let hay = this._text, needle = query;
+        if (opts.case_insensitive) {
+            hay = hay.toLowerCase();
+            needle = needle.toLowerCase();
+        }
+        let i = hay.indexOf(needle, start);
+        return i === -1 ? null : [i, i + query.length];
+    }
+
+    /** Return all non-overlapping match ranges for query. */
+    find_all(query, opts = {}) {
+        let out = [];
+        let from = 0;
+        while (true) {
+            let m = this.find(query, { ...opts, start: from });
+            if (!m) break;
+            out.push(m);
+            from = m[1] > m[0] ? m[1] : m[0] + 1;
+        }
+        return out;
+    }
+
+    /**
+     * Replace occurrences of `query` with `replacement`.
+     * @param {string} query
+     * @param {string} replacement
+     * @param {Object} [opts]
+     * @param {boolean} [opts.all=false] - Replace all (else first from start).
+     * @param {boolean} [opts.case_insensitive=false]
+     * @param {number} [opts.start=0]
+     * @returns {number} Number of replacements performed.
+     */
+    replace(query, replacement, opts = {}) {
+        if (!query) return 0;
+        let matches = opts.all
+            ? this.find_all(query, opts)
+            : (() => {
+                let m = this.find(query, opts);
+                return m ? [m] : [];
+            })();
+        // Apply from the end so earlier offsets stay valid.
+        for (let i = matches.length - 1; i >= 0; i--) {
+            let [s, e] = matches[i];
+            this._replaceRange(s, e, replacement);
+        }
+        return matches.length;
     }
 
     /** Clears all text content. */
@@ -376,21 +584,38 @@ class TextSource extends Widget {
     }
 
     _renderEdit() {
-        // Split text into lines and render each as a separate div for
-        // predictable line heights and line-number alignment.
         this._edit.innerHTML = '';
-        let lines = this._text.split('\n');
-        for (let i = 0; i < lines.length; i++) {
-            let div = document.createElement('div');
-            div.className = 'textsource-line';
-            div.dataset.lineIndex = String(i);
-            if (lines[i] === '') {
-                // Empty line - use a <br> so the line has measurable height
-                div.appendChild(document.createElement('br'));
-            } else {
-                div.textContent = lines[i];
+        let text = this._text;
+        let lineStart = 0;
+        let lineIndex = 0;
+        for (let i = 0; i <= text.length; i++) {
+            if (i === text.length || text[i] === '\n') {
+                let lineEnd = i;
+                let div = document.createElement('div');
+                div.className = 'textsource-line';
+                div.dataset.lineIndex = String(lineIndex);
+                if (lineEnd === lineStart) {
+                    div.appendChild(document.createElement('br'));
+                } else if (this._tags.length === 0) {
+                    div.textContent = text.slice(lineStart, lineEnd);
+                } else {
+                    let segs = this._segmentsForRange(lineStart, lineEnd);
+                    for (let seg of segs) {
+                        let chunk = text.slice(seg.start, seg.end);
+                        if (seg.tags.length === 0) {
+                            div.appendChild(document.createTextNode(chunk));
+                        } else {
+                            let span = document.createElement('span');
+                            span.textContent = chunk;
+                            this._applyStyleToSpan(span, this._mergedStyle(seg.tags));
+                            div.appendChild(span);
+                        }
+                    }
+                }
+                this._edit.appendChild(div);
+                lineIndex++;
+                lineStart = i + 1;
             }
-            this._edit.appendChild(div);
         }
     }
 
@@ -447,95 +672,116 @@ class TextSource extends Widget {
         let selEnd = Math.max(this._selStart, this._selEnd);
 
         let handled = true;
+        let insertData = null;
         switch (e.inputType) {
             case 'insertText':
             case 'insertCompositionText':
             case 'insertFromPaste':
             case 'insertFromDrop':
-            case 'insertReplacementText': {
-                let data = e.data != null ? e.data :
-                           (e.dataTransfer ? e.dataTransfer.getData('text/plain') : '');
-                if (selStart !== selEnd) {
-                    this._text = this._text.slice(0, selStart) +
-                                 data + this._text.slice(selEnd);
-                } else {
-                    this._text = this._text.slice(0, selStart) + data +
-                                 this._text.slice(selStart);
-                }
-                let newPos = selStart + data.length;
-                this._cursor = newPos;
-                this._selStart = newPos;
-                this._selEnd = newPos;
+            case 'insertReplacementText':
+                insertData = e.data != null ? e.data :
+                    (e.dataTransfer ? e.dataTransfer.getData('text/plain') : '');
                 break;
-            }
             case 'insertParagraph':
-            case 'insertLineBreak': {
-                this._text = this._text.slice(0, selStart) + '\n' +
-                             this._text.slice(selEnd);
-                let newPos = selStart + 1;
-                this._cursor = newPos;
-                this._selStart = newPos;
-                this._selEnd = newPos;
+            case 'insertLineBreak':
+                insertData = '\n';
                 break;
-            }
-            case 'deleteContentBackward': {
-                if (selStart !== selEnd) {
-                    this._text = this._text.slice(0, selStart) +
-                                 this._text.slice(selEnd);
-                    this._cursor = selStart;
-                } else if (selStart > 0) {
-                    this._text = this._text.slice(0, selStart - 1) +
-                                 this._text.slice(selStart);
-                    this._cursor = selStart - 1;
-                }
-                this._selStart = this._cursor;
-                this._selEnd = this._cursor;
-                break;
-            }
-            case 'deleteContentForward': {
-                if (selStart !== selEnd) {
-                    this._text = this._text.slice(0, selStart) +
-                                 this._text.slice(selEnd);
-                    this._cursor = selStart;
-                } else if (selStart < this._text.length) {
-                    this._text = this._text.slice(0, selStart) +
-                                 this._text.slice(selStart + 1);
-                    this._cursor = selStart;
-                }
-                this._selStart = this._cursor;
-                this._selEnd = this._cursor;
-                break;
-            }
+            case 'deleteContentBackward':
             case 'deleteWordBackward':
-            case 'deleteWordForward':
             case 'deleteSoftLineBackward':
-            case 'deleteSoftLineForward':
             case 'deleteHardLineBackward':
-            case 'deleteHardLineForward': {
-                // For now, fall back to simple character delete
-                if (selStart !== selEnd) {
-                    this._text = this._text.slice(0, selStart) +
-                                 this._text.slice(selEnd);
-                    this._cursor = selStart;
+                if (selStart === selEnd && selStart > 0) {
+                    selStart = selStart - 1;
                 }
-                this._selStart = this._cursor;
-                this._selEnd = this._cursor;
+                insertData = '';
                 break;
-            }
+            case 'deleteContentForward':
+            case 'deleteWordForward':
+            case 'deleteSoftLineForward':
+            case 'deleteHardLineForward':
+                if (selStart === selEnd && selStart < this._text.length) {
+                    selEnd = selStart + 1;
+                }
+                insertData = '';
+                break;
+            case 'deleteByCut':
+            case 'deleteByDrag':
+                // Clipboard/drag payload is handled by the 'cut'/drag event;
+                // here we just need to delete the selection through the model.
+                insertData = '';
+                break;
             default:
                 handled = false;
         }
         if (handled) {
             e.preventDefault();
-            this._render();
-            this.make_callback('changed');
+            if (selStart !== selEnd) {
+                this.delete_range(selStart, selEnd);
+            }
+            if (insertData) {
+                this.insert_text(selStart, insertData);
+            } else {
+                this._cursor = selStart;
+                this._selStart = selStart;
+                this._selEnd = selStart;
+                this._applySelectionToDOM();
+            }
+        }
+    }
+
+    _onCopy(e) {
+        this._captureSelection();
+        let sel = this.get_selection();
+        if (!sel) return;
+        e.preventDefault();
+        let data = this._text.slice(sel[0], sel[1]);
+        if (e.clipboardData) e.clipboardData.setData('text/plain', data);
+    }
+
+    _onCut(e) {
+        this._captureSelection();
+        let sel = this.get_selection();
+        if (!sel) return;
+        e.preventDefault();
+        let data = this._text.slice(sel[0], sel[1]);
+        if (e.clipboardData) e.clipboardData.setData('text/plain', data);
+        if (this._editable) {
+            this._replaceRange(sel[0], sel[1], '');
         }
     }
 
     _onKeyDown(e) {
+        // Backspace: handle explicitly so a non-empty selection is
+        // deleted, otherwise remove the char before the cursor.
+        if (e.key === 'Backspace' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            if (!this._editable) return;
+            e.preventDefault();
+            this._captureSelection();
+            let s = Math.min(this._selStart, this._selEnd);
+            let ee = Math.max(this._selStart, this._selEnd);
+            if (s !== ee) {
+                this._replaceRange(s, ee, '');
+            } else if (s > 0) {
+                this._replaceRange(s - 1, s, '');
+            }
+            return;
+        }
+        // Undo / redo
+        let mod = e.ctrlKey || e.metaKey;
+        if (mod && !e.altKey) {
+            let key = e.key.toLowerCase();
+            if (key === 'z' && !e.shiftKey) {
+                e.preventDefault();
+                this.undo();
+                return;
+            }
+            if ((key === 'z' && e.shiftKey) || key === 'y') {
+                e.preventDefault();
+                this.redo();
+                return;
+            }
+        }
         // Let the browser handle arrows, home, end, page up/down, etc.
-        // Cut/copy/paste: let the browser do cut/copy natively;
-        // paste goes through beforeinput (insertFromPaste).
     }
 
     // -----------------------------------------------------------------
@@ -683,6 +929,236 @@ class TextSource extends Widget {
     // Helpers
     // -----------------------------------------------------------------
 
+    // -----------------------------------------------------------------
+    // Public API - live refs (TextBufferRef)
+    // -----------------------------------------------------------------
+
+    /**
+     * Create a live reference to an offset that updates as the buffer
+     * is edited.
+     * @param {number} offset
+     * @param {string} [gravity='right'] - 'left' or 'right'
+     * @returns {TextBufferRef}
+     */
+    create_ref(offset, gravity = 'right') {
+        offset = this._clampOffset(offset);
+        let ref = new TextBufferRef(this, offset, gravity);
+        this._refs.add(ref);
+        return ref;
+    }
+
+    /** Stop tracking a ref. */
+    remove_ref(ref) {
+        this._refs.delete(ref);
+        ref._valid = false;
+    }
+
+    _updateRefsOnInsert(offset, n) {
+        for (let ref of this._refs) {
+            if (ref._offset > offset ||
+                (ref._offset === offset && ref._gravity === 'right')) {
+                ref._offset += n;
+            }
+        }
+    }
+
+    _updateRefsOnDelete(start, end) {
+        let n = end - start;
+        for (let ref of this._refs) {
+            if (ref._offset <= start) continue;
+            if (ref._offset >= end) {
+                ref._offset -= n;
+            } else {
+                ref._offset = start;
+            }
+        }
+    }
+
+    // -----------------------------------------------------------------
+    // Public API - tags
+    // -----------------------------------------------------------------
+
+    /**
+     * Define (or redefine) a named tag.
+     * @param {string} name
+     * @param {Object} attrs - Any of: background, foreground, bold,
+     *   italic, underline, strikethrough, font_family, font_size.
+     */
+    create_tag(name, attrs = {}) {
+        this._tagDefs.set(name, Object.assign({}, attrs));
+        this._render();
+    }
+
+    /** Remove a tag definition and all of its applied intervals. */
+    remove_tag_def(name) {
+        this._tagDefs.delete(name);
+        this._tags = this._tags.filter(t => t.name !== name);
+        this._render();
+    }
+
+    /** Apply a previously-defined tag to a range. */
+    apply_tag(name, start, end) {
+        if (!this._tagDefs.has(name)) {
+            throw new Error(`Unknown tag: ${name}`);
+        }
+        start = this._clampOffset(start);
+        end = this._clampOffset(end);
+        if (start > end) [start, end] = [end, start];
+        if (start === end) return;
+        this._addTagInterval(name, start, end);
+        this._render();
+    }
+
+    _addTagInterval(name, start, end) {
+        this._tags.push({ name, start, end, seq: ++this._tagSeq });
+    }
+
+    /** Remove (clip out) a tag from the given range. */
+    remove_tag(name, start, end) {
+        start = this._clampOffset(start);
+        end = this._clampOffset(end);
+        if (start > end) [start, end] = [end, start];
+        let next = [];
+        for (let t of this._tags) {
+            if (t.name !== name || t.end <= start || t.start >= end) {
+                next.push(t);
+                continue;
+            }
+            if (t.start < start) {
+                next.push({ name: t.name, start: t.start, end: start, seq: t.seq });
+            }
+            if (t.end > end) {
+                next.push({ name: t.name, start: end, end: t.end, seq: t.seq });
+            }
+        }
+        this._tags = next;
+        this._render();
+    }
+
+    /** Returns an array of tag names active at the given offset. */
+    get_tags_at(offset) {
+        let names = new Set();
+        for (let t of this._tags) {
+            if (t.start <= offset && offset < t.end) names.add(t.name);
+        }
+        return Array.from(names);
+    }
+
+    _updateTagsOnInsert(offset, n) {
+        for (let t of this._tags) {
+            if (t.start >= offset) t.start += n;
+            if (t.end > offset || (t.end === offset && t.start === t.end)) {
+                t.end += n;
+            } else if (t.end > offset) {
+                t.end += n;
+            }
+        }
+        // Cleanup pass: ensure end >= start
+        for (let t of this._tags) if (t.end < t.start) t.end = t.start;
+    }
+
+    _updateTagsOnDelete(start, end) {
+        let n = end - start;
+        let next = [];
+        for (let t of this._tags) {
+            let s = t.start, e = t.end;
+            if (e <= start) { next.push(t); continue; }
+            if (s >= end) {
+                next.push({ name: t.name, start: s - n, end: e - n, seq: t.seq });
+                continue;
+            }
+            // overlap
+            let ns = s < start ? s : start;
+            let ne = e > end ? e - n : start;
+            if (ne > ns) {
+                next.push({ name: t.name, start: ns, end: ne, seq: t.seq });
+            }
+        }
+        this._tags = next;
+    }
+
+    // -----------------------------------------------------------------
+    // Styled rendering helpers
+    // -----------------------------------------------------------------
+
+    /**
+     * For a given line span [lineStart, lineEnd) (in absolute offsets),
+     * return an array of segments [{start, end, names: [...]}, ...]
+     * covering the entire range.
+     */
+    _segmentsForRange(lineStart, lineEnd) {
+        // Collect tag boundary points within the line
+        let points = new Set([lineStart, lineEnd]);
+        let active = [];
+        for (let t of this._tags) {
+            if (t.end <= lineStart || t.start >= lineEnd) continue;
+            active.push(t);
+            points.add(Math.max(t.start, lineStart));
+            points.add(Math.min(t.end, lineEnd));
+        }
+        let sorted = Array.from(points).sort((a, b) => a - b);
+        let segs = [];
+        for (let i = 0; i < sorted.length - 1; i++) {
+            let s = sorted[i], e = sorted[i + 1];
+            if (s >= e) continue;
+            // Find tags covering this segment, ordered by seq (last wins).
+            let inSeg = active.filter(t => t.start <= s && t.end >= e);
+            inSeg.sort((a, b) => a.seq - b.seq);
+            segs.push({ start: s, end: e, tags: inSeg.map(t => t.name) });
+        }
+        return segs;
+    }
+
+    /** Compute merged CSS style object for a list of tag names. */
+    _mergedStyle(tagNames) {
+        let merged = {};
+        for (let name of tagNames) {
+            let attrs = this._tagDefs.get(name);
+            if (!attrs) continue;
+            for (let k of Object.keys(attrs)) merged[k] = attrs[k];
+        }
+        return merged;
+    }
+
+    _applyStyleToSpan(span, attrs) {
+        if (attrs.background != null) span.style.background = attrs.background;
+        if (attrs.foreground != null) span.style.color = attrs.foreground;
+        if (attrs.bold) span.style.fontWeight = 'bold';
+        if (attrs.italic) span.style.fontStyle = 'italic';
+        let deco = [];
+        if (attrs.underline) deco.push('underline');
+        if (attrs.strikethrough) deco.push('line-through');
+        if (deco.length) span.style.textDecoration = deco.join(' ');
+        if (attrs.font_family != null) span.style.fontFamily = attrs.font_family;
+        if (attrs.font_size != null) span.style.fontSize = attrs.font_size + 'px';
+    }
+
+    // -----------------------------------------------------------------
+    // Scroll-to helpers
+    // -----------------------------------------------------------------
+
+    /** Scroll the view so that the given ref (or offset) is visible. */
+    scroll_to(refOrOffset) {
+        let offset = (refOrOffset && typeof refOrOffset.get_offset === 'function')
+            ? refOrOffset.get_offset() : refOrOffset;
+        offset = this._clampOffset(offset);
+        // Determine line index of offset
+        let line = 0;
+        for (let i = 0; i < offset; i++) {
+            if (this._text[i] === '\n') line++;
+        }
+        let lineDiv = this._edit.children[line];
+        if (lineDiv && lineDiv.scrollIntoView) {
+            lineDiv.scrollIntoView({ block: 'nearest' });
+            this._syncFromScroll();
+        }
+    }
+
+    /** Scroll so the cursor is visible. */
+    scroll_to_cursor() {
+        this.scroll_to(this._cursor);
+    }
+
     _clampOffset(offset) {
         if (offset < 0) return 0;
         if (offset > this._text.length) return this._text.length;
@@ -690,4 +1166,4 @@ class TextSource extends Widget {
     }
 }
 
-export { TextSource };
+export { TextSource, TextBufferRef };

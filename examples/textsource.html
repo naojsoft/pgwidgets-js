@@ -65,6 +65,55 @@
     src.set_icon(5, "../pgwidgets_js/static/icons/folder.svg");
     vbox.add_widget(src, 1);
 
+    // -- Define some tags and apply them to the initial text --
+    src.create_tag("comment", { foreground: "#888", italic: true });
+    src.create_tag("keyword", { foreground: "#0066cc", bold: true });
+    src.create_tag("string",  { foreground: "#a31515" });
+    src.create_tag("hilite",  { background: "#fff3a8" });
+    src.create_tag("error",   { underline: true, foreground: "#c00" });
+
+    // Highlight the two comment lines
+    let text = src.get_text();
+    let lineStart = 0;
+    text.split('\n').forEach((line, i) => {
+      if (line.startsWith("//")) {
+        src.apply_tag("comment", lineStart, lineStart + line.length);
+      }
+      lineStart += line.length + 1;
+    });
+    // "function" keyword on line 1
+    let fnIdx = text.indexOf("function");
+    if (fnIdx >= 0) src.apply_tag("keyword", fnIdx, fnIdx + "function".length);
+    // String literals on line 2 ('Hello, ' and '!')
+    let s1 = text.indexOf("'Hello, '");
+    if (s1 >= 0) src.apply_tag("string", s1, s1 + "'Hello, '".length);
+    let s2 = text.indexOf("'!'");
+    if (s2 >= 0) src.apply_tag("string", s2, s2 + "'!'".length);
+    // The hello('world') call
+    let s3 = text.indexOf("'world'");
+    if (s3 >= 0) src.apply_tag("string", s3, s3 + "'world'".length);
+    // Highlight 'console' as an error for demo
+    let er = text.indexOf("console");
+    if (er >= 0) src.apply_tag("error", er, er + "console".length);
+
+    // Tag controls row
+    let tagRow = new Widgets.HBox();
+    tagRow.set_spacing(6);
+    let hiliteBtn = new Widgets.Button("Highlight selection");
+    let clearHiliteBtn = new Widgets.Button("Clear highlight");
+    tagRow.add_widget(hiliteBtn, 0);
+    tagRow.add_widget(clearHiliteBtn, 0);
+    tagRow.add_widget(new Widgets.Label(""), 1);
+    vbox.add_widget(tagRow, 0);
+
+    hiliteBtn.add_callback('activated', () => {
+      let sel = src.get_selection();
+      if (sel) src.apply_tag("hilite", sel[0], sel[1]);
+    });
+    clearHiliteBtn.add_callback('activated', () => {
+      src.remove_tag("hilite", 0, src.get_length());
+    });
+
     // Wire up the controls
     lnToggle.add_callback('activated', (w, st) => src.set_line_numbers(st));
     iconToggle.add_callback('activated', (w, st) => src.set_icon_gutter(st));

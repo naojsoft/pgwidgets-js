@@ -49,7 +49,7 @@
         "Expander", "Frame", "GridBox", "Image", "Label",
         "ProgressBar", "RadioButton", "ScrollArea", "ScrollBar",
         "Slider", "SpinBox", "Splitter",
-        "TextArea", "TextEntry", "TextEntrySet",
+        "TextArea", "TextEntry", "TextEntrySet", "TextSource",
         "ToggleButton", "ToolBar", "TreeView", "VBox/HBox"
     ];
     let picker = new Widgets.ComboBox({dropdown_limit: 8});
@@ -396,6 +396,43 @@
         case "TextArea": {
             let ta = new Widgets.TextArea("This is a multi-line text area.\n\nYou can type freely here.\nResize the window to see it adapt.");
             subwin = mdi.add_widget(ta, {title: "TextArea", width: 320, height: 200});
+            break;
+        }
+
+        case "TextSource": {
+            let initial =
+                "// TextSource widget demo\n" +
+                "function hello(name) {\n" +
+                "    console.log('Hello, ' + name + '!');\n" +
+                "}\n" +
+                "\n" +
+                "hello('world');\n" +
+                "\n" +
+                "// Line numbers, icon gutter, tags, undo/redo.\n";
+            let src = new Widgets.TextSource(initial, {
+                wrap: 'none',
+                line_numbers: true,
+                icon_gutter: true,
+            });
+            // Define some tags and apply them to the initial text
+            src.create_tag("comment", { foreground: "#888", italic: true });
+            src.create_tag("keyword", { foreground: "#0066cc", bold: true });
+            src.create_tag("string",  { foreground: "#a31515" });
+            let text = src.get_text();
+            let lineStart = 0;
+            text.split('\n').forEach((line) => {
+                if (line.startsWith("//")) {
+                    src.apply_tag("comment", lineStart, lineStart + line.length);
+                }
+                lineStart += line.length + 1;
+            });
+            let fn = text.indexOf("function");
+            if (fn >= 0) src.apply_tag("keyword", fn, fn + "function".length);
+            for (let s of ["'Hello, '", "'!'", "'world'"]) {
+                let i = text.indexOf(s);
+                if (i >= 0) src.apply_tag("string", i, i + s.length);
+            }
+            subwin = mdi.add_widget(src, {title: "TextSource", width: 420, height: 260});
             break;
         }
 
