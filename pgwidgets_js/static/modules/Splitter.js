@@ -124,8 +124,19 @@ class Splitter extends ContainerWidget {
         e.preventDefault();
         this.activeIndex = handleIndex;
 
-        // capture the current pixel sizes of the two adjacent panes and
-        // convert from flex to fixed flex-basis so dragging is predictable
+        // Normalize ALL panes to flex-grow values equal to their current
+        // pixel extent, so non-adjacent panes keep their sizes while we
+        // adjust only the two panes next to this handle. Read all sizes
+        // BEFORE writing any flex values, otherwise each write triggers
+        // a relayout that skews subsequent reads.
+        let sizes = this.panes.map((p) => {
+            let r = p.getBoundingClientRect();
+            return this.orientation === 'vertical' ? r.height : r.width;
+        });
+        for (let i = 0; i < this.panes.length; i++) {
+            this.panes[i].style.flex = sizes[i] + ' 1 0';
+        }
+
         let paneA = this.panes[handleIndex];
         let paneB = this.panes[handleIndex + 1];
         let rectA = paneA.getBoundingClientRect();

@@ -49,7 +49,7 @@ widget_names = [
     "Expander", "Frame", "GridBox", "Image", "Label",
     "ProgressBar", "RadioButton", "ScrollArea", "ScrollBar",
     "Slider", "SpinBox", "Splitter",
-    "TextArea", "TextEntry", "TextEntrySet",
+    "TextArea", "TextEntry", "TextEntrySet", "TextSource",
     "ToggleButton", "ToolBar", "TreeView", "VBox/HBox",
 ]
 
@@ -353,9 +353,11 @@ def make_demo(name):
                                  "width": 280, "height": 180})
 
     elif name == "Splitter":
-        content = Widgets.VBox(padding=4, spacing=4)
+        content = Widgets.VBox(padding=2, spacing=4)
         lbl = Widgets.Label("Drag the handles to resize panes.")
         hsplit = Widgets.Splitter(orientation="horizontal")
+        hsplit.set_border_width(1)
+        hsplit.set_border_color("black")
         pane1 = Widgets.Label("Left")
         pane1.set_halign("center")
         pane1.set_color("#e8f0fe", "#333")
@@ -381,6 +383,39 @@ def make_demo(name):
         subwin = mdi.add_widget(ta,
                                 {"title": "TextArea",
                                  "width": 320, "height": 200})
+
+    elif name == "TextSource":
+        initial = (
+            "// TextSource widget demo\n"
+            "function hello(name) {\n"
+            "    console.log('Hello, ' + name + '!');\n"
+            "}\n"
+            "\n"
+            "hello('world');\n"
+            "\n"
+            "// Line numbers, icon gutter, tags, undo/redo.\n"
+        )
+        src = Widgets.TextSource(initial, wrap="none",
+                                 line_numbers=True, icon_gutter=True)
+        src.create_tag("comment", {"foreground": "#888", "italic": True})
+        src.create_tag("keyword", {"foreground": "#0066cc", "bold": True})
+        src.create_tag("string",  {"foreground": "#a31515"})
+        text = src.get_text()
+        line_start = 0
+        for line in text.split("\n"):
+            if line.startswith("//"):
+                src.apply_tag("comment", line_start, line_start + len(line))
+            line_start += len(line) + 1
+        fn = text.find("function")
+        if fn >= 0:
+            src.apply_tag("keyword", fn, fn + len("function"))
+        for s in ("'Hello, '", "'!'", "'world'"):
+            i = text.find(s)
+            if i >= 0:
+                src.apply_tag("string", i, i + len(s))
+        subwin = mdi.add_widget(src,
+                                {"title": "TextSource",
+                                 "width": 420, "height": 260})
 
     elif name == "TextEntry":
         content = Widgets.VBox(spacing=6, padding=8)
