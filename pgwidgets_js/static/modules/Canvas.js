@@ -4,16 +4,10 @@ import {Widget} from "./Widget.js";
 
 /**
  * A canvas widget for custom drawing and event handling.
- * Wraps an HTML canvas element and dispatches pointer, mouse, keyboard,
- * focus, and drag-drop events through the callback system.
+ * Wraps an HTML canvas element with optional double-buffered rendering
+ * via use_animation_frame. Inherits full interactive event support
+ * (pointer, mouse, keyboard, focus, drag-drop) from Widget base class.
  * @extends Widget
- *
- * Callbacks:
- * - 'pointer-down', 'pointer-up', 'pointer-move', 'pointer-over', 'pointer-out'
- * - 'click', 'dblclick', 'wheel'
- * - 'keydown', 'keyup', 'keypress'
- * - 'focus', 'focusout'
- * - 'drop', 'dragover', 'contextmenu'
  */
 class Canvas extends Widget {
 
@@ -46,22 +40,13 @@ class Canvas extends Widget {
         }
 
         // JavaScript hack to bind "this" correctly for our methods
-        this._cb_redirect = this._cb_redirect.bind(this);
         this.draw_image = this.draw_image.bind(this);
         this.get_draw_context = this.get_draw_context.bind(this);
         this.update = this.update.bind(this);
 
         super.init_style();
-        this.initialize_events();
-
-        for (let name of ['activated', 'pointer-down', 'pointer-up',
-                          'pointer-move', 'pointer-over', 'pointer-out',
-                          'click', 'dblclick', 'wheel',
-                          'keydown', 'keyup', 'keypress',
-                          'focus', 'focusout',
-                          'drop', 'dragover', 'contextmenu']) {
-            this.enable_callback(name);
-        }
+        this._initInteractiveEvents({focusable: true, cursor: 'crosshair'});
+        this.enable_callback('activated');
 
         // Keep the canvas drawing-buffer size synced to its displayed
         // pixel size. An HTML canvas has two separate sizes — the CSS
@@ -70,12 +55,12 @@ class Canvas extends Widget {
         // which blurs drawings. Register this first so it runs before any
         // user 'resize' callback, giving user redraw code a correctly
         // sized buffer to draw into.
-        this.add_callback('resize', (widget, w, h) => {
+        this.add_callback('resize', (widget, evt) => {
             // Changing width/height attrs clears the canvas, which is
             // expected; the user's own resize handler runs after this
             // and should redraw.
-            let cw = Math.max(0, Math.round(w));
-            let ch = Math.max(0, Math.round(h));
+            let cw = Math.max(0, Math.round(evt.width));
+            let ch = Math.max(0, Math.round(evt.height));
             if (widget.element.width !== cw) widget.element.width = cw;
             if (widget.element.height !== ch) widget.element.height = ch;
             if (widget._offscreen) {
@@ -83,53 +68,6 @@ class Canvas extends Widget {
                 if (widget._offscreen.height !== ch) widget._offscreen.height = ch;
             }
         });
-    }
-
-    initialize_events() {
-        const canvas = this.element;
-
-        // make canvas focusable for keyboard events
-        canvas.setAttribute('tabindex', '0');
-
-        // pointer events
-        canvas.addEventListener('pointerdown', (e) => this._cb_redirect('pointer-down', e));
-        canvas.addEventListener('pointermove', (e) => this._cb_redirect('pointer-move', e));
-        canvas.addEventListener('pointerup', (e) => this._cb_redirect('pointer-up', e));
-        canvas.addEventListener('pointerover', (e) => this._cb_redirect('pointer-over', e));
-        canvas.addEventListener('pointerout', (e) => this._cb_redirect('pointer-out', e));
-
-        // mouse events
-        canvas.addEventListener('wheel', (e) => this._cb_redirect('wheel', e));
-        canvas.addEventListener('click', (e) => this._cb_redirect('click', e));
-        canvas.addEventListener('dblclick', (e) => this._cb_redirect('dblclick', e));
-
-        // drag-drop events
-        canvas.addEventListener('drop', (e) => this._cb_redirect('drop', e));
-        canvas.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            this._cb_redirect('dragover', e);
-        });
-
-        // disable right-click context menu
-        canvas.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-            this._cb_redirect('contextmenu', e);
-        });
-
-        // keyboard events
-        canvas.addEventListener("keydown", (e) => this._cb_redirect('keydown', e), true);
-        canvas.addEventListener("keyup", (e) => this._cb_redirect('keyup', e), true);
-        canvas.addEventListener("keypress", (e) => this._cb_redirect('keypress', e), true);
-
-        // focus events
-        canvas.addEventListener("focus", (e) => this._cb_redirect('focus', e), true);
-        canvas.addEventListener("focusout", (e) => this._cb_redirect('focusout', e), true);
-
-        canvas.style.cursor = 'crosshair';
-    }
-
-    _cb_redirect(action, event) {
-        this.make_callback(action, event);
     }
 
     /**

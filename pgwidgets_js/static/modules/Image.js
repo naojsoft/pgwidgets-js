@@ -3,7 +3,9 @@
 import {Widget} from "./Widget.js";
 
 /**
- * An image display widget.
+ * An image display widget with full interactive event support.
+ * Dispatches pointer, mouse, keyboard, focus, and drag-drop events
+ * through the callback system, just like Canvas.
  * @extends Widget
  */
 class Image extends Widget {
@@ -24,6 +26,8 @@ class Image extends Widget {
 
         // JavaScript hack to bind "this" correctly for our methods
         this.set_image = this.set_image.bind(this);
+
+        this._initInteractiveEvents();
 
         let url = this.get_option(options, 'url', null);
         if (url !== null) {

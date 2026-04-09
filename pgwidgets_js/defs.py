@@ -484,7 +484,11 @@ WIDGETS = {
         "methods": {
             "set_image": ["url"],
         },
-        "callbacks": [],
+        "callbacks": ["pointer-down", "pointer-up", "pointer-move",
+                      "enter", "leave", "click", "dblclick",
+                      "scroll", "key-down", "key-up", "key-press",
+                      "focus-in", "focus-out", "drag-drop", "drag-over",
+                      "contextmenu"],
     },
 
     "TreeView": {
@@ -592,16 +596,15 @@ WIDGETS = {
         "args": [],
         "options": ["use_animation_frame"],
         "methods": {
-            "initialize_events": [],
             "draw_image": ["imgInfo"],
             "get_draw_context": [],
             "update": [],
         },
         "callbacks": ["pointer-down", "pointer-up", "pointer-move",
-                      "pointer-over", "pointer-out", "click", "dblclick",
-                      "wheel", "keydown", "keyup", "keypress", "focus",
-                      "focusout", "drop", "dragover", "contextmenu",
-                      "activated"],
+                      "enter", "leave", "click", "dblclick",
+                      "scroll", "key-down", "key-up", "key-press",
+                      "focus-in", "focus-out", "drag-drop", "drag-over",
+                      "contextmenu", "activated"],
     },
 
     # -- Menus & Toolbars --

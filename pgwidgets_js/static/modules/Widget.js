@@ -39,9 +39,10 @@ class Widget {
 
         this.cb = {}
 
-        for (let name of ['resize']) {
+        for (let name of ['map', 'resize']) {
             this.enable_callback(name);
         }
+        this._mapped = false;
 
         // Install a ResizeObserver on this.element to emit a universal
         // 'resize' callback whenever the widget changes size. The
@@ -61,7 +62,23 @@ class Widget {
             if (w === prevW && h === prevH) return;
             prevW = w;
             prevH = h;
-            this.make_callback('resize', w, h);
+            // Fire 'map' once on first non-zero layout.
+            if (!this._mapped && (w > 0 || h > 0)) {
+                this._mapped = true;
+                let box = this.element.getBoundingClientRect();
+                let parentBox = this.element.parentElement
+                    ? this.element.parentElement.getBoundingClientRect()
+                    : {left: 0, top: 0};
+                this.make_callback('map', {
+                    x: Math.round(box.left - parentBox.left),
+                    y: Math.round(box.top - parentBox.top),
+                    viewport_x: Math.round(box.left),
+                    viewport_y: Math.round(box.top),
+                    width: w,
+                    height: h,
+                });
+            }
+            this.make_callback('resize', {width: w, height: h});
         });
         this._widgetResizeObserver.observe(this.element);
     }
@@ -245,6 +262,243 @@ class Widget {
         this.element = null;
 
         Widget._registry.delete(this.wid);
+    }
+
+    /* INTERACTIVE EVENTS */
+
+    /**
+     * Names of the interactive event callbacks registered by
+     * _initInteractiveEvents(). Exposed as a static list so subclasses
+     * (and documentation) can reference the canonical set.
+     */
+    static INTERACTIVE_EVENTS = [
+        'pointer-down', 'pointer-up', 'pointer-move', 'enter', 'leave',
+        'click', 'dblclick', 'scroll',
+        'key-down', 'key-up', 'key-press',
+        'focus-in', 'focus-out',
+        'drag-drop', 'drag-over', 'contextmenu',
+    ];
+
+    /**
+     * Wire up pointer, mouse, keyboard, focus, and drag-drop DOM event
+     * listeners on this.element. Each listener converts the raw DOM
+     * event into a serializable payload via _eventToPayload() and fires
+     * the corresponding pgwidgets callback.
+     *
+     * Call this from a subclass constructor after this.element is set.
+     * Not all widgets need interactive events — only call it for widgets
+     * that should respond to user input (Canvas, Image, etc.).
+     *
+     * @param {Object} [options]
+     * @param {boolean} [options.focusable=false] - If true, set
+     *   tabindex="0" on the element so it can receive keyboard and focus
+     *   events.
+     * @param {string|null} [options.cursor=null] - If non-null, set the
+     *   CSS cursor style on the element.
+     */
+    _initInteractiveEvents(options = {}) {
+        let focusable = options.focusable || false;
+        let cursor = options.cursor || null;
+
+        let el = this.element;
+
+        for (let name of Widget.INTERACTIVE_EVENTS) {
+            this.enable_callback(name);
+        }
+
+        if (focusable) {
+            el.setAttribute('tabindex', '0');
+        }
+        if (cursor) {
+            el.style.cursor = cursor;
+        }
+
+        // Pointer events.
+        el.addEventListener('pointerdown', (e) => this._cb_redirect('pointer-down', e));
+        el.addEventListener('pointermove', (e) => this._cb_redirect('pointer-move', e));
+        el.addEventListener('pointerup', (e) => this._cb_redirect('pointer-up', e));
+        el.addEventListener('pointerover', (e) => this._cb_redirect('enter', e));
+        el.addEventListener('pointerout', (e) => this._cb_redirect('leave', e));
+
+        // Mouse events.
+        el.addEventListener('wheel', (e) => this._cb_redirect('scroll', e));
+        el.addEventListener('click', (e) => this._cb_redirect('click', e));
+        el.addEventListener('dblclick', (e) => this._cb_redirect('dblclick', e));
+
+        // Drag-drop events.
+        el.addEventListener('drop', (e) => this._cb_redirect('drag-drop', e));
+        el.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            this._cb_redirect('drag-over', e);
+        });
+
+        // Context menu.
+        el.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            this._cb_redirect('contextmenu', e);
+        });
+
+        // Keyboard events.
+        el.addEventListener('keydown', (e) => this._cb_redirect('key-down', e), true);
+        el.addEventListener('keyup', (e) => this._cb_redirect('key-up', e), true);
+        el.addEventListener('keypress', (e) => this._cb_redirect('key-press', e), true);
+
+        // Focus events.
+        el.addEventListener('focus', (e) => this._cb_redirect('focus-in', e), true);
+        el.addEventListener('focusout', (e) => this._cb_redirect('focus-out', e), true);
+    }
+
+    /** @private */
+    _cb_redirect(action, event) {
+        this.make_callback(action, this._eventToPayload(event));
+    }
+
+    /**
+     * Convert a DOM Event into a plain, JSON-serializable object.
+     *
+     * DOM events can't cross the wire to Python as-is: their useful
+     * fields live on the prototype (so JSON.stringify produces `{}`),
+     * and they contain circular references via event.target. This
+     * method extracts the relevant fields into a flat dict / object
+     * that serializes cleanly. Local JS `add_callback` handlers also
+     * receive this payload (not the raw DOM event).
+     *
+     * ### Common fields (all event types)
+     *
+     * | Field          | Type     | Description                                  |
+     * |----------------|----------|----------------------------------------------|
+     * | `type`         | string   | DOM event type, e.g. `"pointerdown"`,        |
+     * |                |          | `"wheel"`, `"keydown"`.                      |
+     * | `time_stamp`   | number   | High-resolution timestamp (ms) from          |
+     * |                |          | `Event.timeStamp`.                           |
+     *
+     * ### Pointer / mouse fields
+     * Present on: `pointer-down`, `pointer-up`, `pointer-move`,
+     * `enter`, `leave`, `click`, `dblclick`, `scroll`,
+     * `contextmenu`, `drag-drop`, `drag-over`.
+     *
+     * | Field            | Type     | Description                                |
+     * |------------------|----------|--------------------------------------------|
+     * | `x`              | number   | Horizontal position in widget-local pixels |
+     * |                  |          | (0 = left edge of element).                |
+     * | `y`              | number   | Vertical position in widget-local pixels   |
+     * |                  |          | (0 = top edge of element).                 |
+     * | `viewport_x`     | number   | Horizontal position relative to the        |
+     * |                  |          | browser viewport.                          |
+     * | `viewport_y`     | number   | Vertical position relative to the browser  |
+     * |                  |          | viewport.                                  |
+     * | `button_trigger` | number   | Which button triggered this event.         |
+     * |                  |          | 1 = left, 2 = middle, 3 = right.           |
+     * |                  |          | Meaningful on press/release/click events;   |
+     * |                  |          | always 1 on move events.                   |
+     * | `button_mask`    | number   | Bitmask of buttons currently held down.    |
+     * |                  |          | 0x1 = left, 0x2 = middle, 0x4 = right.     |
+     * |                  |          | Useful for detecting drag state during      |
+     * |                  |          | pointer-move.                              |
+     * | `modifiers`      | string[] | Modifier keys held during the event.       |
+     * |                  |          | Possible values: `'alt'`, `'ctrl'`,        |
+     * |                  |          | `'shift'`, `'meta'`. Empty array if none.  |
+     *
+     * ### Pointer-specific fields
+     * Present on: `pointer-down`, `pointer-up`, `pointer-move`,
+     * `enter`, `leave` (not on plain mouse events like
+     * `click`, `dblclick`, `scroll`).
+     *
+     * | Field          | Type    | Description                                   |
+     * |----------------|---------|-----------------------------------------------|
+     * | `pointer_id`   | number  | Unique identifier for the pointer (useful for |
+     * |                |         | multi-touch).                                 |
+     * | `pointer_type` | string  | Input device: `"mouse"`, `"pen"`, or          |
+     * |                |         | `"touch"`.                                    |
+     * | `pressure`     | number  | Pressure of the pointer, 0.0 to 1.0. Mouse    |
+     * |                |         | buttons report 0.5 when pressed, 0 otherwise. |
+     * | `is_primary`   | boolean | True if this is the primary pointer in a       |
+     * |                |         | multi-pointer scenario.                       |
+     *
+     * ### Wheel fields
+     * Present on: `scroll`.
+     *
+     * | Field        | Type   | Description                                     |
+     * |--------------|--------|-------------------------------------------------|
+     * | `delta_x`    | number | Horizontal scroll amount.                       |
+     * | `delta_y`    | number | Vertical scroll amount (positive = scroll down).|
+     * | `delta_z`    | number | Z-axis scroll amount (rarely used).             |
+     * | `delta_mode` | number | Unit of delta values: 0 = pixels, 1 = lines,   |
+     * |              |        | 2 = pages.                                      |
+     *
+     * ### Keyboard fields
+     * Present on: `key-down`, `key-up`, `key-press`.
+     *
+     * | Field       | Type    | Description                                      |
+     * |-------------|---------|--------------------------------------------------|
+     * | `key`       | string  | The key value, e.g. `"a"`, `"Enter"`,            |
+     * |             |         | `"ArrowUp"`, `" "` (space).                      |
+     * | `keycode`   | string  | Physical key code, e.g. `"KeyA"`,                |
+     * |             |         | `"ArrowUp"`, `"Space"`. Independent of keyboard  |
+     * |             |         | layout.                                          |
+     * | `repeat`    | boolean | True if the key is being held down and this is   |
+     * |             |         | an auto-repeat event.                            |
+     * | `modifiers` | string[]| Same as pointer modifiers above.                 |
+     *
+     * @param {Event} event - The DOM event to convert.
+     * @returns {Object} A plain object with the fields described above.
+     * @private
+     */
+    _eventToPayload(event) {
+        let rect = this.element.getBoundingClientRect();
+        let out = {
+            type: event.type,
+            time_stamp: event.timeStamp,
+        };
+        // Pointer / mouse coordinates.
+        if ('clientX' in event) {
+            out.viewport_x = event.clientX;
+            out.viewport_y = event.clientY;
+            out.x = event.clientX - rect.left;
+            out.y = event.clientY - rect.top;
+            out.button_trigger = event.button + 1;
+            // DOM buttons bitmask: 1=left, 2=right, 4=middle.
+            // Remap to: 0x1=left, 0x2=middle, 0x4=right.
+            let b = event.buttons;
+            out.button_mask = (b & 1)
+                | ((b & 4) >> 1)   // DOM middle (4) -> 0x2
+                | ((b & 2) << 1);  // DOM right  (2) -> 0x4
+            let mods = [];
+            if (event.altKey) mods.push('alt');
+            if (event.ctrlKey) mods.push('ctrl');
+            if (event.shiftKey) mods.push('shift');
+            if (event.metaKey) mods.push('meta');
+            out.modifiers = mods;
+        }
+        // Pointer-specific.
+        if ('pointerId' in event) {
+            out.pointer_id = event.pointerId;
+            out.pointer_type = event.pointerType;
+            out.pressure = event.pressure;
+            out.is_primary = event.isPrimary;
+        }
+        // Wheel.
+        if ('deltaX' in event) {
+            out.delta_x = event.deltaX;
+            out.delta_y = event.deltaY;
+            out.delta_z = event.deltaZ;
+            out.delta_mode = event.deltaMode;
+        }
+        // Keyboard.
+        if ('key' in event) {
+            out.key = event.key;
+            out.keycode = event.code;
+            out.repeat = event.repeat;
+            if (!out.modifiers) {
+                let mods = [];
+                if (event.altKey) mods.push('alt');
+                if (event.ctrlKey) mods.push('ctrl');
+                if (event.shiftKey) mods.push('shift');
+                if (event.metaKey) mods.push('meta');
+                out.modifiers = mods;
+            }
+        }
+        return out;
     }
 
     /* CALLBACK HANDLING */
