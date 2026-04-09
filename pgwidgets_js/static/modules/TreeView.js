@@ -21,6 +21,8 @@ class TreeView extends Widget {
      * @param {boolean} [options.show_header=true] - Show the header row.
      * @param {string} [options.selection_mode='single'] - 'single', 'multi', or 'none'.
      * @param {boolean} [options.alternate_row_colors=false] - Shade even rows.
+     * @param {boolean} [options.show_grid=false] - Draw grid lines between
+     *   cells and rows (table-style appearance).
      * @param {HTMLElement} [options.element=null] - Optional pre-existing element.
      */
     constructor(options = {}) {
@@ -36,6 +38,11 @@ class TreeView extends Widget {
         this._showHeader = this.get_option(options, 'show_header', true);
         this._selectionMode = this.get_option(options, 'selection_mode', 'single');
         this._alternateRowColors = this.get_option(options, 'alternate_row_colors', false);
+        this._showGrid = this.get_option(options, 'show_grid', false);
+        if (this._showGrid) {
+            this.element.classList.add('treeview-grid');
+        }
+        this._showRowNumbers = this.get_option(options, 'show_row_numbers', false);
 
         // Column widths in fr units (default 1fr each)
         this._colWidths = this._columns.map(() => '1fr');
@@ -44,8 +51,13 @@ class TreeView extends Widget {
         this._sortColumn = -1;       // -1 = no active sort
         this._sortAscending = true;
 
+        // Active inline editor (if any)
+        this._editor = null;
+        this._editInfo = null;  // {node, col, oldValue}
+
         // Enable callbacks
-        for (let name of ['activated', 'selected', 'expanded', 'collapsed']) {
+        for (let name of ['activated', 'selected', 'expanded', 'collapsed',
+                          'cell_edited']) {
             this.enable_callback(name);
         }
 
@@ -141,6 +153,18 @@ class TreeView extends Widget {
         this.sort_by_column = this.sort_by_column.bind(this);
         this.scroll_to_path = this.scroll_to_path.bind(this);
         this.scroll_to_end = this.scroll_to_end.bind(this);
+        this.get_column_count = this.get_column_count.bind(this);
+        this.get_row_count = this.get_row_count.bind(this);
+        this.set_show_grid = this.set_show_grid.bind(this);
+        this.set_show_row_numbers = this.set_show_row_numbers.bind(this);
+        this.set_column_editable = this.set_column_editable.bind(this);
+        this.set_cell = this.set_cell.bind(this);
+        this.insert_column = this.insert_column.bind(this);
+        this.append_column = this.append_column.bind(this);
+        this.delete_column = this.delete_column.bind(this);
+        this.insert_row = this.insert_row.bind(this);
+        this.append_row = this.append_row.bind(this);
+        this.delete_row = this.delete_row.bind(this);
     }
 
     // -- Column parsing --
@@ -152,9 +176,13 @@ class TreeView extends Widget {
     _parseColumns(raw) {
         this._columns = raw.map(c => {
             if (typeof c === 'string') {
-                return { label: c, type: 'string' };
+                return { label: c, type: 'string', editable: false };
             }
-            let col = { label: c.label || '', type: c.type || 'string' };
+            let col = {
+                label: c.label || '',
+                type: c.type || 'string',
+                editable: !!c.editable,
+            };
             if (c.icon_size) col.icon_size = c.icon_size;
             return col;
         });
@@ -163,8 +191,10 @@ class TreeView extends Widget {
     // -- Column grid template --
 
     _gridTemplate() {
-        // indent + toggle columns, then data columns
-        let cols = '16px 18px ' + this._colWidths.join(' ');
+        // optional row-number gutter, then indent + toggle, then data columns
+        let cols = '';
+        if (this._showRowNumbers) cols += 'min-content ';
+        cols += '16px 18px ' + this._colWidths.join(' ');
         return cols;
     }
 
@@ -181,6 +211,13 @@ class TreeView extends Widget {
     _buildHeader() {
         this._header.innerHTML = '';
         this._header.style.gridTemplateColumns = this._gridTemplate();
+
+        // Optional row-number column header
+        if (this._showRowNumbers) {
+            let rn = document.createElement('div');
+            rn.className = 'treeview-header-spacer treeview-rownum-header';
+            this._header.appendChild(rn);
+        }
 
         // Spacers for indent + toggle
         let sp1 = document.createElement('div');
@@ -754,7 +791,29 @@ class TreeView extends Widget {
             node.element = row;
             visibleIndex++;
         });
+        this._syncRowNumberHeader(visibleIndex);
         this._syncScrollbars();
+    }
+
+    /**
+     * Keep the header's row-number column the same width as the body's
+     * row-number column. The two are separate CSS grids, so we plant a
+     * visibility-hidden placeholder in the header cell whose text width
+     * matches the widest visible row number.
+     * @private
+     */
+    _syncRowNumberHeader(rowCount) {
+        if (!this._showRowNumbers) return;
+        let hdr = this._header.querySelector('.treeview-rownum-header');
+        if (!hdr) return;
+        // Use the largest row number (or "1" if empty) as the placeholder.
+        let placeholder = String(Math.max(1, rowCount));
+        hdr.innerHTML = '';
+        let span = document.createElement('span');
+        span.className = 'treeview-rownum';
+        span.style.visibility = 'hidden';
+        span.textContent = placeholder;
+        hdr.appendChild(span);
     }
 
     _createRow(node, visibleIndex) {
@@ -768,6 +827,14 @@ class TreeView extends Widget {
         }
         row.style.gridTemplateColumns = this._gridTemplate();
         row._node = node;
+
+        // Optional row-number cell
+        if (this._showRowNumbers) {
+            let rn = document.createElement('span');
+            rn.className = 'treeview-rownum';
+            rn.textContent = String(visibleIndex + 1);
+            row.appendChild(rn);
+        }
 
         // Indent spacer
         let indent = document.createElement('span');
@@ -799,8 +866,11 @@ class TreeView extends Widget {
         for (let i = 0; i < numCols; i++) {
             let cell = document.createElement('span');
             cell.className = 'treeview-cell';
+            cell._colIndex = i;
             let val = i < node.values.length ? node.values[i] : '';
             let colType = i < this._columns.length ? this._columns[i].type : 'string';
+            let editable = i < this._columns.length && this._columns[i].editable
+                           && colType !== 'icon';
 
             if (colType === 'icon' && val) {
                 let img = document.createElement('img');
@@ -813,6 +883,16 @@ class TreeView extends Widget {
             } else {
                 cell.textContent = val != null ? String(val) : '';
                 cell.title = cell.textContent;
+            }
+
+            if (editable) {
+                cell.classList.add('treeview-cell-editable');
+                cell.addEventListener('dblclick', (e) => {
+                    // Editable cells: dblclick starts editing instead of
+                    // firing the row's 'activated' callback.
+                    e.stopPropagation();
+                    this._startEdit(node, i, cell);
+                });
             }
             row.appendChild(cell);
         }
@@ -1042,6 +1122,263 @@ class TreeView extends Widget {
         let nodes = [];
         this._walkVisible(this._root, (n) => nodes.push(n));
         return nodes;
+    }
+
+    // -- Public API: grid, editing, row/column ops --
+
+    /**
+     * @returns {number} The number of columns.
+     */
+    get_column_count() {
+        return this._columns.length;
+    }
+
+    /**
+     * @returns {number} The number of top-level rows.
+     */
+    get_row_count() {
+        return this._root.children.length;
+    }
+
+
+    /**
+     * Toggle grid lines between cells and rows.
+     * @param {boolean} tf
+     */
+    set_show_grid(tf) {
+        this._showGrid = !!tf;
+        this.element.classList.toggle('treeview-grid', this._showGrid);
+    }
+
+    /**
+     * Show or hide the row-number gutter on the left.
+     * @param {boolean} tf
+     */
+    set_show_row_numbers(tf) {
+        this._showRowNumbers = !!tf;
+        this._buildHeader();
+        this._renderAll();
+    }
+
+    /**
+     * Mark a column as editable (or not). Editable cells enter inline-edit
+     * mode when the user double-clicks them.
+     * @param {number} colIndex
+     * @param {boolean} tf
+     */
+    set_column_editable(colIndex, tf) {
+        if (colIndex < 0 || colIndex >= this._columns.length) return;
+        this._columns[colIndex].editable = !!tf;
+        this._renderAll();
+    }
+
+    /**
+     * Set a single cell's value. Fires no callback.
+     * @param {Object|Array} rowRef - Node, top-level row index, or index path.
+     * @param {number} colIndex
+     * @param {*} value
+     */
+    set_cell(rowRef, colIndex, value) {
+        let node;
+        if (typeof rowRef === 'number') {
+            node = this._root.children[rowRef];
+        } else {
+            node = this._resolveNode(rowRef);
+        }
+        if (!node) return;
+        while (node.values.length <= colIndex) node.values.push('');
+        node.values[colIndex] = value;
+        this._renderAll();
+    }
+
+    /**
+     * Insert a new column at the given index. Existing rows get an empty
+     * value inserted at that position.
+     * @param {number} index
+     * @param {string|Object} column - Column descriptor (string or object).
+     */
+    insert_column(index, column) {
+        if (index < 0) index = 0;
+        if (index > this._columns.length) index = this._columns.length;
+        // Parse the single column the same way _parseColumns does
+        let parsed;
+        if (typeof column === 'string') {
+            parsed = { label: column, type: 'string', editable: false };
+        } else {
+            parsed = {
+                label: column.label || '',
+                type: column.type || 'string',
+                editable: !!column.editable,
+            };
+            if (column.icon_size) parsed.icon_size = column.icon_size;
+        }
+        this._columns.splice(index, 0, parsed);
+        this._colWidths.splice(index, 0, '1fr');
+        if (this._sortColumn >= index) this._sortColumn++;
+        this._walkNodes(this._root, (node) => {
+            while (node.values.length < index) node.values.push('');
+            node.values.splice(index, 0, '');
+        });
+        this._buildHeader();
+        this._renderAll();
+    }
+
+    /**
+     * Append a column at the end. See insert_column.
+     * @param {string|Object} column
+     */
+    append_column(column) {
+        this.insert_column(this._columns.length, column);
+    }
+
+    /**
+     * Delete the column at the given index. Values at that index are
+     * removed from every row.
+     * @param {number} index
+     */
+    delete_column(index) {
+        if (index < 0 || index >= this._columns.length) return;
+        this._columns.splice(index, 1);
+        this._colWidths.splice(index, 1);
+        if (this._sortColumn === index) {
+            this._sortColumn = -1;
+        } else if (this._sortColumn > index) {
+            this._sortColumn--;
+        }
+        this._walkNodes(this._root, (node) => {
+            if (index < node.values.length) {
+                node.values.splice(index, 1);
+            }
+        });
+        this._buildHeader();
+        this._renderAll();
+    }
+
+    /**
+     * Insert a new top-level row at the given index.
+     * @param {number} index
+     * @param {Array} values
+     * @returns {Array} The index path of the new row.
+     */
+    insert_row(index, values) {
+        if (index < 0) index = 0;
+        if (index > this._root.children.length) index = this._root.children.length;
+        let node = {
+            values: Array.isArray(values) ? values.slice() : [values],
+            children: [],
+            expanded: false,
+            depth: 0,
+            element: null,
+            parent: this._root,
+        };
+        this._root.children.splice(index, 0, node);
+        this._renderAll();
+        return [index];
+    }
+
+    /**
+     * Append a new top-level row.
+     * @param {Array} values
+     * @returns {Array} The index path of the new row.
+     */
+    append_row(values) {
+        return this.insert_row(this._root.children.length, values);
+    }
+
+    /**
+     * Delete a top-level row.
+     * @param {number} index - Row index, or an index path.
+     */
+    delete_row(index) {
+        let node;
+        if (Array.isArray(index)) {
+            node = this._nodeAtPath(index);
+        } else {
+            node = this._root.children[index];
+        }
+        if (!node) return;
+        this.remove_item(node);
+    }
+
+    // -- Internal: inline cell editing --
+
+    /** @private */
+    _startEdit(node, colIndex, cell) {
+        if (this._editor) this._commitEdit();
+
+        let oldValue = colIndex < node.values.length ? node.values[colIndex] : '';
+        let colType = colIndex < this._columns.length
+            ? this._columns[colIndex].type : 'string';
+
+        let input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'treeview-cell-editor';
+        input.value = oldValue != null ? String(oldValue) : '';
+
+        // Replace cell contents with the editor
+        cell.textContent = '';
+        cell.appendChild(input);
+        input.focus();
+        input.select();
+
+        this._editor = input;
+        this._editInfo = { node, colIndex, oldValue, cell };
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this._commitEdit();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                this._cancelEdit();
+            }
+            e.stopPropagation();  // don't let row keys hijack
+        });
+        input.addEventListener('blur', () => this._commitEdit());
+    }
+
+    /** @private */
+    _commitEdit() {
+        if (!this._editor || !this._editInfo) return;
+        let { node, colIndex, oldValue, cell } = this._editInfo;
+        let raw = this._editor.value;
+        let colType = colIndex < this._columns.length
+            ? this._columns[colIndex].type : 'string';
+        let newValue = raw;
+        if (colType === 'number') {
+            let n = parseFloat(raw);
+            newValue = isNaN(n) ? oldValue : n;
+        }
+        // Clear first to avoid reentry via blur
+        this._editor = null;
+        this._editInfo = null;
+        while (node.values.length <= colIndex) node.values.push('');
+        let changed = node.values[colIndex] !== newValue;
+        node.values[colIndex] = newValue;
+        // Restore the cell in place rather than rebuilding the whole body;
+        // a full _renderAll here disturbs browser state (dblclick tracking)
+        // and discards unrelated scroll/focus context.
+        this._restoreCell(cell, newValue);
+        if (changed) {
+            this.make_callback('cell_edited',
+                this._pathOfNode(node), colIndex, oldValue, newValue);
+        }
+    }
+
+    /** @private */
+    _cancelEdit() {
+        if (!this._editor || !this._editInfo) return;
+        let { oldValue, cell } = this._editInfo;
+        this._editor = null;
+        this._editInfo = null;
+        this._restoreCell(cell, oldValue);
+    }
+
+    /** @private Replace editor with plain text content in the given cell. */
+    _restoreCell(cell, value) {
+        if (!cell) return;
+        cell.textContent = value != null ? String(value) : '';
+        cell.title = cell.textContent;
     }
 
     _sortChildren(node, colIndex, ascending) {

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { margin: 0; }
+  </style>
+  <link rel="stylesheet" href="../Widgets.css" type="text/css" />
+</head>
+<body>
+  <script type="module">
+    import { Widgets } from "../Widgets.js";
+
+    let top = new Widgets.TopLevel({title: "TableView Demo", resizable: true});
+    top.resize(620, 480);
+    top.set_position(40, 40);
+
+    let vbox = new Widgets.VBox();
+    vbox.set_spacing(8);
+    vbox.set_padding(8);
+
+    // --- The table ---
+    let table = new Widgets.TableView({
+        columns: [
+            {label: "Item",  type: "string", editable: true},
+            {label: "Qty",   type: "number", editable: true},
+            {label: "Price", type: "number", editable: true},
+            {label: "Notes", type: "string", editable: true},
+        ],
+        alternate_row_colors: true,
+        show_row_numbers: true,
+        selection_mode: "single",
+    });
+
+    table.set_rows([
+        ["Apples",  3, 1.25, "red"],
+        ["Pears",   5, 0.90, "green"],
+        ["Plums",   2, 1.50, "purple"],
+        ["Oranges", 4, 0.75, "navel"],
+        ["Bananas", 6, 0.35, ""],
+    ]);
+
+    vbox.add_widget(table, 1);
+
+    // --- Status line ---
+    let status = new Widgets.Label("Double-click a cell to edit it.");
+    vbox.add_widget(status, 0);
+
+    // --- Controls ---
+    let btnBar = new Widgets.HBox();
+    btnBar.set_spacing(6);
+
+    let btnAddRow = new Widgets.Button("Append row");
+    btnAddRow.add_callback('activated', () => {
+        let n = table.get_selected().length;  // just to vary the value
+        let path = table.append_row(["New item", 1, 0.00, "added"]);
+        status.set_text("Appended row at " + JSON.stringify(path));
+    });
+
+    let btnInsertRow = new Widgets.Button("Insert row at top");
+    btnInsertRow.add_callback('activated', () => {
+        table.insert_row(0, ["Top", 0, 0.00, "inserted"]);
+        status.set_text("Inserted row at [0]");
+    });
+
+    let btnDeleteRow = new Widgets.Button("Delete selected row");
+    btnDeleteRow.add_callback('activated', () => {
+        let sel = table.get_selected();
+        if (sel.length === 0) {
+            status.set_text("Nothing selected.");
+            return;
+        }
+        let path = sel[0].path;
+        table.delete_row(path);
+        status.set_text("Deleted row " + JSON.stringify(path));
+    });
+
+    let btnAddCol = new Widgets.Button("Append column");
+    let colCounter = 0;
+    btnAddCol.add_callback('activated', () => {
+        colCounter++;
+        table.append_column({label: "Extra " + colCounter, editable: true});
+        status.set_text("Appended column 'Extra " + colCounter + "'");
+    });
+
+    let btnDelCol = new Widgets.Button("Delete last column");
+    btnDelCol.add_callback('activated', () => {
+        let n = table.get_column_count();
+        if (n <= 1) {
+            status.set_text("Refusing to delete the last column.");
+            return;
+        }
+        table.delete_column(n - 1);
+        status.set_text("Deleted column " + (n - 1));
+    });
+
+    let btnToggleGrid = new Widgets.ToggleButton("Grid");
+    btnToggleGrid.set_state(true);
+    btnToggleGrid.add_callback('activated', (w, on) => {
+        table.set_show_grid(on);
+    });
+
+    let btnToggleNums = new Widgets.ToggleButton("Row #");
+    btnToggleNums.set_state(true);
+    btnToggleNums.add_callback('activated', (w, on) => {
+        table.set_show_row_numbers(on);
+    });
+
+    btnBar.add_widget(btnAddRow, 0);
+    btnBar.add_widget(btnInsertRow, 0);
+    btnBar.add_widget(btnDeleteRow, 0);
+    btnBar.add_widget(btnAddCol, 0);
+    btnBar.add_widget(btnDelCol, 0);
+    btnBar.add_widget(btnToggleGrid, 0);
+    btnBar.add_widget(btnToggleNums, 0);
+    vbox.add_widget(btnBar, 0);
+
+    // --- Callbacks ---
+    table.add_callback('cell_edited', (w, path, col, oldV, newV) => {
+        status.set_text(
+            "Edited row " + JSON.stringify(path) + " col " + col +
+            ": " + JSON.stringify(oldV) + " → " + JSON.stringify(newV));
+    });
+    table.add_callback('selected', (w, items) => {
+        if (items.length === 0) return;
+        status.set_text("Selected row " + JSON.stringify(items[0].path));
+    });
+    table.add_callback('activated', (w, values) => {
+        status.set_text("Activated: " + JSON.stringify(values));
+    });
+
+    top.set_widget(vbox);
+    top.show();
+
+    queueMicrotask(() => table.set_optimal_column_widths());
+  </script>
+</body>
+</html>

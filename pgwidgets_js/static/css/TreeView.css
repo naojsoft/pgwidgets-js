@@ -178,3 +178,53 @@
     display: block;
     object-fit: contain;
 }
+
+/* ── Grid-lines mode (table-style) ──────────────────── */
+
+.treeview-widget.treeview-grid .treeview-row {
+    border-bottom: 1px solid #d5d5d5;
+}
+
+.treeview-widget.treeview-grid .treeview-cell {
+    border-right: 1px solid #e0e0e0;
+}
+
+.treeview-widget.treeview-grid .treeview-cell:last-child {
+    border-right: none;
+}
+
+/* ── Row-number gutter ──────────────────────────────── */
+
+.treeview-rownum-header {
+    background: #e8e8e8;
+    border-right: 1px solid #ccc;
+}
+
+.treeview-rownum {
+    padding: 2px 4px;
+    text-align: right;
+    color: #666;
+    background: #f4f4f4;
+    border-right: 1px solid #ddd;
+    user-select: none;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+/* ── Inline cell editor ─────────────────────────────── */
+
+.treeview-cell-editable {
+    cursor: text;
+}
+
+.treeview-cell-editor {
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 1px 4px;
+    border: 1px solid #4a90e2;
+    background: #fff;
+    font: inherit;
+    outline: none;
+}
