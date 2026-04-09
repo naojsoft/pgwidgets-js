@@ -27,6 +27,8 @@ class Widget {
         this.resize = this.resize.bind(this);
         this.set_enabled = this.set_enabled.bind(this);
         this.get_enabled = this.get_enabled.bind(this);
+        this.set_tooltip = this.set_tooltip.bind(this);
+        this.get_tooltip = this.get_tooltip.bind(this);
         this.show = this.show.bind(this);
         this.hide = this.hide.bind(this);
         this.enable_callback = this.enable_callback.bind(this);
@@ -177,6 +179,27 @@ class Widget {
      */
     get_enabled() {
         return this._enabled;
+    }
+
+    /**
+     * Set a tooltip that appears when the user hovers over the widget.
+     * Pass null or an empty string to clear. Uses the native browser
+     * tooltip (the HTML `title` attribute).
+     * @param {string|null} msg - Tooltip text, or null to clear.
+     */
+    set_tooltip(msg) {
+        if (msg == null || msg === '') {
+            this.element.removeAttribute('title');
+        } else {
+            this.element.setAttribute('title', msg);
+        }
+    }
+
+    /**
+     * @returns {string} The current tooltip text, or '' if none.
+     */
+    get_tooltip() {
+        return this.element.getAttribute('title') || '';
     }
 
     /** Makes the widget visible. */

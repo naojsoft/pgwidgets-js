@@ -24,6 +24,8 @@ WIDGET_METHODS = {
     "set_font": ["font", "size", "weight", "style"],
     "set_enabled": ["tf"],
     "get_enabled": [],
+    "set_tooltip": ["msg"],
+    "get_tooltip": [],
     "show": [],
     "hide": [],
     "is_visible": [],
@@ -410,11 +412,12 @@ WIDGETS = {
     "SpinBox": {
         "base": "widget",
         "args": [],
-        "options": ["dtype", "min", "max", "step", "value"],
+        "options": ["dtype", "min", "max", "step", "value", "decimals"],
         "methods": {
             "set_value": ["val"],
             "get_value": [],
             "set_limits": ["minval", "maxval", "incrval"],
+            "set_decimals": ["num"],
         },
         "callbacks": ["activated"],
     },
@@ -564,6 +567,23 @@ WIDGETS = {
             "delete_row": ["index"],
         },
         "callbacks": ["activated", "selected", "cell_edited"],
+    },
+
+    "Timer": {
+        "base": "widget",
+        "args": [],
+        "options": ["duration"],
+        "methods": {
+            "start": ["duration"],
+            "stop": [],
+            "cancel": [],
+            "is_set": [],
+            "elapsed_time": [],
+            "time_left": [],
+            "set_duration": ["duration"],
+            "get_duration": [],
+        },
+        "callbacks": ["expired", "cancelled"],
     },
 
     "Canvas": {

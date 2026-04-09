@@ -33,6 +33,8 @@ class SpinBox extends Widget {
         this.maxval = this.get_option(options, 'max', 99);
         this.incrval = this.get_option(options, 'step', 1);
         this.value = this.get_option(options, 'value', this.minval);
+        // Explicit decimal places for float display; null = derive from step.
+        this._decimals = this.get_option(options, 'decimals', null);
 
         // inner container holds the input + buttons, right-aligned
         let inner = document.createElement('div');
@@ -65,6 +67,7 @@ class SpinBox extends Widget {
         this.set_value = this.set_value.bind(this);
         this.get_value = this.get_value.bind(this);
         this.set_limits = this.set_limits.bind(this);
+        this.set_decimals = this.set_decimals.bind(this);
         this._step = this._step.bind(this);
         this._on_input = this._on_input.bind(this);
 
@@ -105,11 +108,16 @@ class SpinBox extends Widget {
 
     _display() {
         if (this.dtype === 'float') {
-            // show enough decimals to match the step precision
-            let decimals = 0;
-            let s = String(this.incrval);
-            if (s.indexOf('.') !== -1) {
-                decimals = s.split('.')[1].length;
+            let decimals;
+            if (this._decimals != null) {
+                decimals = this._decimals;
+            } else {
+                // infer from step precision
+                decimals = 0;
+                let s = String(this.incrval);
+                if (s.indexOf('.') !== -1) {
+                    decimals = s.split('.')[1].length;
+                }
             }
             this.input.value = this.value.toFixed(decimals);
         } else {
@@ -179,6 +187,17 @@ class SpinBox extends Widget {
             this.incrval = incrval;
         }
         this.value = this._clamp(this.value);
+        this._display();
+    }
+
+    /**
+     * Set the number of decimal places shown when dtype is 'float'.
+     * Pass null to revert to deriving it from the step value.
+     * Has no effect when dtype is 'int'.
+     * @param {number|null} num - Decimal places, or null for auto.
+     */
+    set_decimals(num) {
+        this._decimals = (num == null) ? null : Math.max(0, num|0);
         this._display();
     }
 }

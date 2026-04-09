@@ -45,6 +45,7 @@ import {ScrollBar} from "./modules/ScrollBar.js";
 import {RemoteInterface} from "./modules/RemoteInterface.js";
 import {TreeView} from "./modules/TreeView.js";
 import {TableView} from "./modules/TableView.js";
+import {Timer} from "./modules/Timer.js";
 
 
 const Widgets = {Widget, ContainerWidget, Box, VBox, HBox, ButtonBox,
@@ -55,6 +56,6 @@ const Widgets = {Widget, ContainerWidget, Box, VBox, HBox, ButtonBox,
                  Slider, Canvas, SpinBox, ProgressBar, Image, Dial,
                  MenuBar, Menu, MenuAction, ToolBar, ToolBarAction,
                  TextEntrySet, Dialog, ColorDialog, ScrollBar,
-                 TreeView, TableView, RemoteInterface};
+                 TreeView, TableView, Timer, RemoteInterface};
 
 export { Widgets };
