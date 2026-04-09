@@ -29,6 +29,7 @@ WIDGET_METHODS = {
     "show": [],
     "hide": [],
     "is_visible": [],
+    "destroy": [],
 }
 
 # Common methods from ContainerWidget
@@ -194,14 +195,14 @@ WIDGETS = {
     "TopLevel": {
         "base": "widget",
         "args": [],
-        "options": ["resizable", "title", "moveable"],
+        "options": ["resizable", "title", "moveable", "closeable"],
         "methods": {
             "set_position": ["x", "y"],
             "set_widget": ["child"],
             "set_title": ["title"],
             "set_moveable": ["tf"],
         },
-        "callbacks": ["move"],
+        "callbacks": ["move", "close"],
     },
 
     "Page": {

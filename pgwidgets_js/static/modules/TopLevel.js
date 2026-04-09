@@ -17,6 +17,10 @@ class TopLevel extends ContainerWidget {
      * @param {string|null} [options.title=null] - If provided, displays a draggable title bar.
      * @param {boolean} [options.moveable] - Whether the widget can be dragged by the title bar.
      *   Defaults to true if title is set, false otherwise.
+     * @param {boolean} [options.closeable=true] - Whether a close button is shown in
+     *   the title bar. Only takes effect if a title bar exists. Clicking the
+     *   button fires the 'close' callback; it does not automatically hide the
+     *   widget — the callback handler is responsible for that.
      */
     constructor(options={}) {
         super();
@@ -40,10 +44,13 @@ class TopLevel extends ContainerWidget {
         this.hide = this.hide.bind(this);
 
         this.enable_callback('move');
+        this.enable_callback('close');
 
         this._titleBar = null;
         this._titleText = null;
+        this._closeButton = null;
         this._moveable = false;
+        this._closeable = this.get_option(options, 'closeable', true);
         let title = this.get_option(options, 'title', null);
         if (title !== null) {
             this._makeTitleBar(title);
@@ -85,9 +92,44 @@ class TopLevel extends ContainerWidget {
         this._titleText.textContent = title;
 
         this._titleBar.appendChild(this._titleText);
+
+        if (this._closeable) {
+            this._makeCloseButton();
+        }
+
         this.element.appendChild(this._titleBar);
 
         this._makeDraggable();
+    }
+
+    /**
+     * Creates the title-bar close button. Reuses the MDI button styling for
+     * visual consistency. Clicking fires the 'close' callback.
+     * @private
+     */
+    _makeCloseButton() {
+        // Spacer pushes the close button to the right edge of the title bar.
+        let spacer = document.createElement('div');
+        spacer.style.flex = '1';
+        this._titleBar.appendChild(spacer);
+
+        this._closeButton = document.createElement('div');
+        this._closeButton.className = 'mdi-button mdi-close toplevel-close';
+        this._closeButton.style.marginRight = '16px';
+        this._closeButton.innerHTML =
+            '<svg viewBox="0 0 10 10">' +
+            '<line x1="1" y1="1" x2="9" y2="9" />' +
+            '<line x1="9" y1="1" x2="1" y2="9" />' +
+            '</svg>';
+        this._closeButton.addEventListener('mousedown', (e) => {
+            // Don't let the title-bar drag handler see this.
+            e.stopPropagation();
+        });
+        this._closeButton.onclick = (e) => {
+            e.stopPropagation();
+            this.make_callback('close');
+        };
+        this._titleBar.appendChild(this._closeButton);
     }
 
     /**

@@ -220,6 +220,33 @@ class Widget {
         return this.element.style.display !== 'none';
     }
 
+    /**
+     * Tear down this widget: disconnect observers, clear callbacks, remove
+     * the DOM element from its parent, and drop it from the widget
+     * registry so it can be garbage collected. Safe to call more than
+     * once; subsequent calls are no-ops. Subclasses that allocate extra
+     * resources (timers, offscreen buffers, pending rAF, external
+     * listeners) should override and call super.destroy() last.
+     */
+    destroy() {
+        if (this._destroyed) return;
+        this._destroyed = true;
+
+        if (this._widgetResizeObserver) {
+            this._widgetResizeObserver.disconnect();
+            this._widgetResizeObserver = null;
+        }
+
+        this.cb = {};
+
+        if (this.element && this.element.parentNode) {
+            this.element.parentNode.removeChild(this.element);
+        }
+        this.element = null;
+
+        Widget._registry.delete(this.wid);
+    }
+
     /* CALLBACK HANDLING */
 
     /**
@@ -403,6 +430,19 @@ class ContainerWidget extends Widget {
         if (idx > -1) {
             this.element.removeChild(child.get_element());
         }
+    }
+
+    /**
+     * Destroy this container and all of its child widgets recursively.
+     */
+    destroy() {
+        if (this._destroyed) return;
+        // Iterate over a copy — children may mutate this.children.
+        for (let child of this.children.slice()) {
+            child.destroy();
+        }
+        this.children = [];
+        super.destroy();
     }
 }
 

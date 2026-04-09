@@ -136,6 +136,20 @@ class Timer extends Widget {
     get_duration() {
         return this.duration;
     }
+
+    /**
+     * Cancel any pending timeout and tear down. No 'cancelled' callback
+     * is fired.
+     */
+    destroy() {
+        if (this._destroyed) return;
+        if (this._timeoutId !== null) {
+            clearTimeout(this._timeoutId);
+            this._timeoutId = null;
+        }
+        this._running = false;
+        super.destroy();
+    }
 }
 
 export { Timer };

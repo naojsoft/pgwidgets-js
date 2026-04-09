@@ -178,6 +178,20 @@ class Canvas extends Widget {
      * @param {number} [imgInfo.wd] - Optional destination width.
      * @param {number} [imgInfo.ht] - Optional destination height.
      */
+    /**
+     * Cancel any pending animation-frame flip and drop the offscreen
+     * buffer before the base class tears down the visible element.
+     */
+    destroy() {
+        if (this._destroyed) return;
+        if (this._rafId !== null) {
+            cancelAnimationFrame(this._rafId);
+            this._rafId = null;
+        }
+        this._offscreen = null;
+        super.destroy();
+    }
+
     draw_image(imgInfo) {
         let img = new Image();
         img.src = imgInfo.src;
