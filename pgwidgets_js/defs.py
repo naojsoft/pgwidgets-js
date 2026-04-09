@@ -589,10 +589,12 @@ WIDGETS = {
     "Canvas": {
         "base": "widget",
         "args": [],
-        "options": [],
+        "options": ["use_animation_frame"],
         "methods": {
             "initialize_events": [],
             "draw_image": ["imgInfo"],
+            "get_draw_context": [],
+            "update": [],
         },
         "callbacks": ["pointer-down", "pointer-up", "pointer-move",
                       "pointer-over", "pointer-out", "click", "dblclick",

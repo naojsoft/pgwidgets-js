@@ -36,32 +36,12 @@ class Box extends ContainerWidget {
         super.init_style();
 
         let style = this.element.style;
-        // assigned in super classes
-        //style.position = 'relative';
-        //style.display = 'flex';
         if (this.orientation === 'vertical') {
             this.element.classList.add('vertical');
-            //style.height = '100vh';
-            //style.height = '100%';
-            //style.width = '100vw';
-            //style['flex-direction'] = 'column';
         }
         else {
             this.element.classList.add('horizontal');
-            //style.width = '100vw';
-            //style.width = '100%';
-            //style.height = '100vh';
-            //style['flex-direction'] = 'row';
         };
-        //style['flex-grow'] = 1;
-        //style['flex-shrink'] = 1;
-        //style['flex-basis'] = 'auto';
-        //style['flex-basis'] = 0;
-        //style['flex'] = '1 1 auto';
-        //style['flex-wrap'] = 'nowrap';
-        //style['align-items'] = 'flex-start';
-        //style.overflow = 'hidden';
-        //style.margin = 0;
     }
     
     /**
@@ -148,10 +128,7 @@ class ButtonBox extends Box {
 
         let style = this.element.style;
         style['flex-grow'] = 1;
-        //style['flex-shrink'] = 1;
         style['flex-basis'] = 0;
-        //style['justify-content'] = 'space-evenly';
-        //style['width'] = '200px';
     }
     
 }
