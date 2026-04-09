@@ -38,6 +38,8 @@ class Widget {
         this.make_callback = this.make_callback.bind(this);
 
         this.cb = {}
+        this._cursors = {};        // name -> CSS cursor value
+        this._currentCursor = null; // name of active custom cursor, or null
 
         for (let name of ['map', 'resize']) {
             this.enable_callback(name);
@@ -235,6 +237,82 @@ class Widget {
      */
     is_visible() {
         return this.element.style.display !== 'none';
+    }
+
+    /**
+     * Give keyboard focus to this widget. The element must be focusable
+     * (e.g. a form element, or have tabindex set via
+     * _initInteractiveEvents({focusable: true})).
+     */
+    set_focus() {
+        this.element.focus();
+    }
+
+    /* CURSOR MANAGEMENT */
+
+    /**
+     * Register a named custom cursor. The cursor image is loaded from
+     * the given URL (can be an SVG, PNG, etc.). If `size` is provided
+     * the image is rasterized to that size via an offscreen canvas;
+     * otherwise the image's natural dimensions are used.
+     *
+     * Custom cursors are applied only to this.element, so sub-parts
+     * of compound widgets (scrollbar thumbs, resize grips, etc.) that
+     * set their own cursor are unaffected.
+     *
+     * @param {string} name - A name to reference this cursor later.
+     * @param {string} url - URL or data URI of the cursor image.
+     * @param {number} hotspot_x - Hotspot x in pixels (must be within
+     *   the cursor bounds).
+     * @param {number} hotspot_y - Hotspot y in pixels.
+     * @param {number[]|null} [size=null] - Optional [width, height] in
+     *   pixels to resize the cursor image.
+     */
+    add_cursor(name, url, hotspot_x, hotspot_y, size = null) {
+        if (size) {
+            // Rasterize at the requested size via an offscreen canvas.
+            let img = new window.Image();
+            img.onload = () => {
+                let canvas = document.createElement('canvas');
+                canvas.width = size[0];
+                canvas.height = size[1];
+                let ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, size[0], size[1]);
+                let dataUrl = canvas.toDataURL('image/png');
+                this._cursors[name] =
+                    `url('${dataUrl}') ${hotspot_x} ${hotspot_y}, auto`;
+                // If this cursor is already active, apply the now-ready value.
+                if (this._currentCursor === name) {
+                    this.element.style.cursor = this._cursors[name];
+                }
+            };
+            img.src = url;
+        } else {
+            this._cursors[name] =
+                `url('${url}') ${hotspot_x} ${hotspot_y}, auto`;
+        }
+    }
+
+    /**
+     * Set the cursor for this widget's main element.
+     *
+     * @param {string} name - Either a name previously registered with
+     *   add_cursor(), or a standard CSS cursor keyword (e.g.
+     *   'crosshair', 'pointer', 'default').  Pass null or 'default' to
+     *   revert to the browser default.
+     */
+    set_cursor(name) {
+        if (name == null || name === 'default') {
+            this._currentCursor = null;
+            this.element.style.cursor = '';
+        } else if (name in this._cursors) {
+            this._currentCursor = name;
+            this.element.style.cursor = this._cursors[name];
+        } else {
+            // Assume it's a standard CSS cursor keyword.
+            this._currentCursor = null;
+            this.element.style.cursor = name;
+        }
     }
 
     /**
@@ -514,6 +592,15 @@ class Widget {
     }
 
     /**
+     * Returns whether the given callback action has been enabled.
+     * @param {string} action - The callback action name.
+     * @returns {boolean} True if the action is enabled, false otherwise.
+     */
+    has_callback(action) {
+        return action in this.cb;
+    }
+
+    /**
      * Adds a callback function for the given action.
      * The callback receives (widget, ...args) when triggered.
      * @param {string} action - The callback action name.
@@ -521,8 +608,9 @@ class Widget {
      */
     add_callback(action, cb_fn) {
         if (!(action in this.cb)) {
-            // TODO: raise an error
-            this.cb[action] = [];
+            throw new Error(
+                `Unknown callback action '${action}' on ${this.constructor.name} (wid=${this.wid}). ` +
+                `Available: ${Object.keys(this.cb).join(', ')}`);
         }
         let cb_list = this.cb[action];
         let idx = cb_list.indexOf(cb_fn);
@@ -567,6 +655,7 @@ class Widget {
      */
     make_callback(action, ...args) {
         let cb_list = this.cb[action];
+        if (!cb_list) return;  // action not enabled — nothing to fire
         let params = [...args];  // shallow copy
         for (let cb_fn of cb_list) {
             // catch exceptions and log them but continue to invoke callbacks

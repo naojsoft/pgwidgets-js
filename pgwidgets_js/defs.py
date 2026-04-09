@@ -29,6 +29,9 @@ WIDGET_METHODS = {
     "show": [],
     "hide": [],
     "is_visible": [],
+    "set_focus": [],
+    "add_cursor": ["name", "url", "hotspot_x", "hotspot_y", "size"],
+    "set_cursor": ["name"],
     "destroy": [],
 }
 
