@@ -16,8 +16,9 @@
 
     // Connect to the remote server.
     // The server builds the UI by sending JSON messages over the WebSocket.
+    let wsScheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     let remote = new Widgets.RemoteInterface(Widgets, {
-        url: 'ws://localhost:9500'
+        url: `${wsScheme}//localhost:9500`
     });
   </script>
 </body>

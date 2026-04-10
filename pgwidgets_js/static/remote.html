@@ -16,9 +16,10 @@
   <script type="module">
     import { Widgets } from "/Widgets.js";
 
-    // Read WebSocket URL from query string, or use default
+    // Read WebSocket URL from query string, or derive from page protocol
     let params = new URLSearchParams(window.location.search);
-    let wsUrl = params.get('ws') || 'ws://localhost:9500';
+    let wsScheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    let wsUrl = params.get('ws') || `${wsScheme}//localhost:9500`;
 
     let remote = new Widgets.RemoteInterface(Widgets, {
         url: wsUrl

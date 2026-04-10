@@ -155,6 +155,21 @@ class Widget {
     }
 
     /**
+     * Sets the margin of the widget.
+     * @param {number|number[]} margin - A single number for all sides, or
+     *   an array of [left, top, right, bottom] values in pixels.
+     */
+    set_margins(margin) {
+        if (Array.isArray(margin)) {
+            this.element.style.margin =
+                margin[1] + 'px ' + margin[2] + 'px ' +
+                margin[3] + 'px ' + margin[0] + 'px';
+        } else {
+            this.element.style.margin = margin + 'px';
+        }
+    }
+
+    /**
      * Sets the font properties of the widget.
      * @param {string} font - CSS font family name.
      * @param {number|null} [size=null] - Font size in points, or null to leave unchanged.
