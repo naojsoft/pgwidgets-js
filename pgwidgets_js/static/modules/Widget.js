@@ -354,7 +354,7 @@ class Widget {
         'click', 'dblclick', 'scroll',
         'key-down', 'key-up', 'key-press',
         'focus-in', 'focus-out',
-        'drag-drop', 'drag-over', 'contextmenu',
+        'drag-drop', 'drag-over', 'drag-progress', 'contextmenu',
     ];
 
     /**
@@ -403,12 +403,8 @@ class Widget {
         el.addEventListener('click', (e) => this._cb_redirect('click', e));
         el.addEventListener('dblclick', (e) => this._cb_redirect('dblclick', e));
 
-        // Drag-drop events.
-        el.addEventListener('drop', (e) => this._cb_redirect('drag-drop', e));
-        el.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            this._cb_redirect('drag-over', e);
-        });
+        // Drag-drop events (also callable standalone via enable_callback).
+        this._initDragEvents();
 
         // Context menu.
         el.addEventListener('contextmenu', (e) => {
@@ -518,6 +514,39 @@ class Widget {
      * |             |         | an auto-repeat event.                            |
      * | `modifiers` | string[]| Same as pointer modifiers above.                 |
      *
+     * ### Drag-over fields
+     * Present on: `drag-over`. Includes pointer fields above, plus:
+     *
+     * | Field    | Type     | Description                                       |
+     * |----------|----------|---------------------------------------------------|
+     * | `types`  | string[] | MIME types offered by the drag source (e.g.       |
+     * |          |          | `["Files"]`, `["text/plain", "text/html"]`).      |
+     *
+     * ### Drag-drop fields
+     * Present on: `drag-drop`. Includes pointer fields above, plus:
+     *
+     * | Field    | Type     | Description                                       |
+     * |----------|----------|---------------------------------------------------|
+     * | `types`  | string[] | MIME types offered by the drag source.             |
+     * | `text`   | string?  | Plain text data, or null.                         |
+     * | `url`    | string?  | URI list data, or null.                           |
+     * | `html`   | string?  | HTML data, or null.                               |
+     * | `files`  | array    | Dropped files. Each entry:                        |
+     * |          |          | `{name, size, type, data}` where `data` is a     |
+     * |          |          | data URI (base64). `data` is null on read error   |
+     * |          |          | (with an `error` field instead).                  |
+     *
+     * ### Drag-progress fields
+     * Present on: `drag-progress`. Fired during file reading.
+     *
+     * | Field        | Type   | Description                                     |
+     * |--------------|--------|-------------------------------------------------|
+     * | `loaded`     | number | Bytes read so far for the current file.         |
+     * | `total`      | number | Total bytes of the current file.                |
+     * | `file_name`  | string | Name of the file being read.                    |
+     * | `file_index` | number | Zero-based index of the file in the drop.       |
+     * | `file_count` | number | Total number of files in the drop.              |
+     *
      * @param {Event} event - The DOM event to convert.
      * @returns {Object} A plain object with the fields described above.
      * @private
@@ -579,6 +608,148 @@ class Widget {
         return out;
     }
 
+    /**
+     * Wire up drag-drop DOM listeners on this.element. Called
+     * automatically by _initInteractiveEvents, or on-demand when
+     * enable_callback is called with a drag action on a widget that
+     * hasn't opted into full interactive events. Idempotent.
+     * @private
+     */
+    _initDragEvents() {
+        if (this._dragEventsWired) return;
+        this._dragEventsWired = true;
+
+        let el = this.element;
+        // dragenter + dragover must both preventDefault() and
+        // stopPropagation() to claim the drop target — otherwise a
+        // parent container can reset the drop state and the browser
+        // clears dataTransfer before the drop handler runs.
+        el.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+        el.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this._handleDragOver(e);
+        });
+        el.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this._handleDrop(e);
+        });
+    }
+
+    /**
+     * Handle a dragover event. Fires the 'drag-over' callback with
+     * pointer position and the list of data types being offered.
+     * @private
+     */
+    _handleDragOver(event) {
+        // Show a "copy" cursor while hovering over the drop target.
+        event.dataTransfer.dropEffect = 'copy';
+        let payload = this._eventToPayload(event);
+        payload.types = [...event.dataTransfer.types];
+        this.make_callback('drag-over', payload);
+    }
+
+    /**
+     * Handle a drop event. Reads all dropped files asynchronously via
+     * FileReader, then fires the 'drag-drop' callback with the full
+     * payload including file contents as data URIs.
+     *
+     * Fires 'drag-progress' callbacks during file reading:
+     *   {loaded, total, file_name, file_index, file_count}
+     *
+     * The 'drag-drop' payload includes:
+     * - Standard pointer/mouse fields from _eventToPayload().
+     * - `types`   string[]  — MIME types offered by the drag source.
+     * - `text`    string|null — plain text, if available.
+     * - `url`     string|null — URI list, if available.
+     * - `html`    string|null — HTML content, if available.
+     * - `files`   array of {name, size, type, data} — dropped files.
+     *   `data` is a data URI (base64-encoded).
+     * @private
+     */
+    _handleDrop(event) {
+        let payload = this._eventToPayload(event);
+        let dt = event.dataTransfer;
+
+        payload.types = [...dt.types];
+        payload.text = dt.getData('text/plain') || null;
+        payload.url = dt.getData('text/uri-list') || null;
+        payload.html = dt.getData('text/html') || null;
+
+        let files = dt.files;
+        if (files.length === 0) {
+            // No files — fire immediately with empty file list.
+            payload.files = [];
+            this.make_callback('drag-drop', payload);
+            return;
+        }
+
+        // Read all files as data URIs, firing progress along the way.
+        let fileCount = files.length;
+        let results = new Array(fileCount);
+        let completed = 0;
+
+        for (let i = 0; i < fileCount; i++) {
+            let file = files[i];
+            let reader = new FileReader();
+
+            reader.onprogress = (pe) => {
+                if (pe.lengthComputable) {
+                    this.make_callback('drag-progress', {
+                        loaded: pe.loaded,
+                        total: pe.total,
+                        file_name: file.name,
+                        file_index: i,
+                        file_count: fileCount,
+                    });
+                }
+            };
+
+            reader.onload = () => {
+                results[i] = {
+                    name: file.name,
+                    size: file.size,
+                    type: file.type || 'application/octet-stream',
+                    data: reader.result,   // data URI
+                };
+                completed++;
+                // Fire progress for file completion.
+                this.make_callback('drag-progress', {
+                    loaded: file.size,
+                    total: file.size,
+                    file_name: file.name,
+                    file_index: i,
+                    file_count: fileCount,
+                });
+                if (completed === fileCount) {
+                    payload.files = results;
+                    this.make_callback('drag-drop', payload);
+                }
+            };
+
+            reader.onerror = () => {
+                results[i] = {
+                    name: file.name,
+                    size: file.size,
+                    type: file.type || 'application/octet-stream',
+                    data: null,
+                    error: reader.error?.message || 'read error',
+                };
+                completed++;
+                if (completed === fileCount) {
+                    payload.files = results;
+                    this.make_callback('drag-drop', payload);
+                }
+            };
+
+            reader.readAsDataURL(file);
+        }
+    }
+
     /* CALLBACK HANDLING */
 
     /**
@@ -588,6 +759,13 @@ class Widget {
     enable_callback(action) {
         if (!(action in this.cb)) {
             this.cb[action] = [];
+        }
+        // Auto-wire drag DOM listeners the first time any drag callback
+        // is enabled on a widget that hasn't called _initInteractiveEvents.
+        if (!this._dragEventsWired
+                && (action === 'drag-drop' || action === 'drag-over'
+                    || action === 'drag-progress')) {
+            this._initDragEvents();
         }
     }
 

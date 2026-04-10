@@ -400,8 +400,46 @@
         }
 
         case "TextArea": {
+            content = new Widgets.VBox();
+            content.set_spacing(6);
+            content.set_padding(8);
+
             let ta = new Widgets.TextArea("This is a multi-line text area.\n\nYou can type freely here.\nResize the window to see it adapt.");
-            subwin = mdi.add_widget(ta, {title: "TextArea", width: 320, height: 200});
+            content.add_widget(ta, 1);
+
+            // --- Drag-drop demo ---
+            let dropLabel = new Widgets.Label("Drag text or a file onto the drop zone to load it into the text area:");
+            dropLabel.set_font(null, 11);
+            content.add_widget(dropLabel, 0);
+
+            let dropZone = new Widgets.Label("Drop here");
+            dropZone.set_halign("center");
+            dropZone.set_color("#e8f0fe", "#4a86c8");
+            dropZone.set_font(null, 14);
+            dropZone.element.style.border = "2px dashed #4a86c8";
+            dropZone.element.style.borderRadius = "8px";
+            dropZone.element.style.padding = "16px";
+            dropZone.enable_callback('drag-over');
+            dropZone.enable_callback('drag-drop');
+            dropZone.add_callback('drag-drop', (w, evt) => {
+                // Try file contents first (read as data URI, decode text).
+                if (evt.files && evt.files.length > 0) {
+                    let file = evt.files[0];
+                    if (file.data) {
+                        // data URI -> extract base64 payload -> decode
+                        let base64 = file.data.split(',')[1];
+                        let text = atob(base64);
+                        ta.set_text(text);
+                        status.set_text("Loaded file: " + file.name);
+                    }
+                } else if (evt.text) {
+                    ta.set_text(evt.text);
+                    status.set_text("Loaded dropped text");
+                }
+            });
+            content.add_widget(dropZone, 0);
+
+            subwin = mdi.add_widget(content, {title: "TextArea", width: 360, height: 300});
             break;
         }
 

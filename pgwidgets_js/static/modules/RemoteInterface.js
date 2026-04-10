@@ -122,6 +122,8 @@ class RemoteInterface {
     _dispatch(msg) {
         try {
             switch (msg.type) {
+            case "init":
+                return this._handleInit(msg);
             case "create":
                 return this._handleCreate(msg);
             case "call":
@@ -137,6 +139,31 @@ class RemoteInterface {
         } catch (e) {
             return {type: "error", id: msg.id, error: e.message};
         }
+    }
+
+    /**
+     * Handle an init message: destroy all existing widgets, clear
+     * listeners, and reset the document body. This allows a fresh
+     * Python application to start with a clean slate without requiring
+     * a browser reload.
+     * @private
+     */
+    _handleInit(msg) {
+        // Destroy all registered widgets. Iterate over a copy since
+        // destroy() mutates the registry.
+        for (let [wid, widget] of [...Widget._registry]) {
+            widget.destroy();
+        }
+        Widget._registry.clear();
+        Widget._nextId = 1;
+
+        // Clear our listener map.
+        this._listeners.clear();
+
+        // Clear the document body of any leftover DOM.
+        document.body.innerHTML = '';
+
+        return {type: "result", id: msg.id};
     }
 
     /** @private */
@@ -198,6 +225,7 @@ class RemoteInterface {
             });
         };
         this._listeners.set(key, cb);
+        widget.enable_callback(msg.action);
         widget.add_callback(msg.action, cb);
         return {type: "result", id: msg.id};
     }

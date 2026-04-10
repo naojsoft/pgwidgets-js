@@ -23,6 +23,9 @@ class Image extends Widget {
             this.element = document.createElement('img');
         }
         this.element.className = 'image-widget';
+        // Disable the browser's native image drag so the element can
+        // act as a drop target instead of a drag source.
+        this.element.draggable = false;
 
         // JavaScript hack to bind "this" correctly for our methods
         this.set_image = this.set_image.bind(this);

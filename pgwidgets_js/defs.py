@@ -491,7 +491,7 @@ WIDGETS = {
                       "enter", "leave", "click", "dblclick",
                       "scroll", "key-down", "key-up", "key-press",
                       "focus-in", "focus-out", "drag-drop", "drag-over",
-                      "contextmenu"],
+                      "drag-progress", "contextmenu"],
     },
 
     "TreeView": {
