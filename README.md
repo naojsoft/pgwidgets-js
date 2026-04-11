@@ -220,6 +220,25 @@ creates a `BrowserWindow` that loads an HTML file -- no
 Electron-specific changes are needed in pgwidgets itself. To use your
 own UI, edit `main.js` to point at a different HTML file.
 
+## Embedding Third-Party Libraries
+
+The `ExternalWidget` class lets you embed content from third-party
+JavaScript libraries -- Plotly charts, Bokeh plots, Leaflet maps, D3
+visualizations, and more -- into pgwidgets layout containers. The
+widget participates in pgwidgets layout (stretch factors, splitters,
+tabs) while its content area is managed by the external library.
+
+```javascript
+let chart = new Widgets.ExternalWidget();
+vbox.add_widget(chart, 1);  // stretch=1 fills available space
+
+Plotly.newPlot(chart.get_content_element(), data, layout,
+               {responsive: true});
+```
+
+See the [documentation](docs/external-widgets.rst) for full examples
+with Plotly, Bokeh, and other libraries.
+
 ## Running the Examples
 
 Start a local web server from the repository root:

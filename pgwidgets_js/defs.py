@@ -628,6 +628,18 @@ WIDGETS = {
                       "contextmenu", "activated"],
     },
 
+    "ExternalWidget": {
+        "base": "widget",
+        "args": [],
+        "options": [],
+        "methods": {
+            "get_content_element": [],
+            "set_content": ["html"],
+            "clear": [],
+        },
+        "callbacks": [],
+    },
+
     "FileDialog": {
         "base": "callback",
         "args": [],

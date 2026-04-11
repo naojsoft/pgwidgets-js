@@ -49,6 +49,7 @@ import {TreeView} from "./modules/TreeView.js";
 import {TableView} from "./modules/TableView.js";
 import {Timer} from "./modules/Timer.js";
 import {FileDialog} from "./modules/FileDialog.js";
+import {ExternalWidget} from "./modules/ExternalWidget.js";
 
 
 const Widgets = {Callback, Widget, ContainerWidget, Box, VBox, HBox, ButtonBox,
@@ -59,7 +60,7 @@ const Widgets = {Callback, Widget, ContainerWidget, Box, VBox, HBox, ButtonBox,
                  Slider, Canvas, SpinBox, ProgressBar, Image, Dial,
                  MenuBar, Menu, MenuAction, ToolBar, ToolBarAction,
                  TextEntrySet, Dialog, ColorWidget, ColorDialog, ScrollBar,
-                 TreeView, TableView, Timer, FileDialog,
+                 TreeView, TableView, Timer, FileDialog, ExternalWidget,
                  RemoteInterface};
 
 export { Widgets };
