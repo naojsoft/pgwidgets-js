@@ -360,7 +360,7 @@ class Widget extends Callback {
         'click', 'dblclick', 'scroll',
         'key-down', 'key-up', 'key-press',
         'focus-in', 'focus-out',
-        'drag-drop', 'drag-over', 'drop-progress', 'contextmenu',
+        'drop-start', 'drop-end', 'drag-over', 'drop-progress', 'contextmenu',
     ];
 
     /**
@@ -455,7 +455,7 @@ class Widget extends Callback {
      * ### Pointer / mouse fields
      * Present on: `pointer-down`, `pointer-up`, `pointer-move`,
      * `enter`, `leave`, `click`, `dblclick`, `scroll`,
-     * `contextmenu`, `drag-drop`, `drag-over`.
+     * `contextmenu`, `drop-start`, `drop-end`, `drag-over`.
      *
      * | Field            | Type     | Description                                |
      * |------------------|----------|--------------------------------------------|
@@ -529,7 +529,7 @@ class Widget extends Callback {
      * |          |          | `["Files"]`, `["text/plain", "text/html"]`).      |
      *
      * ### Drag-drop fields
-     * Present on: `drag-drop`. Includes pointer fields above, plus:
+     * Present on: `drop-start`, `drop-end`. Includes pointer fields above, plus:
      *
      * | Field    | Type     | Description                                       |
      * |----------|----------|---------------------------------------------------|
@@ -660,21 +660,23 @@ class Widget extends Callback {
     }
 
     /**
-     * Handle a drop event. Reads all dropped files asynchronously via
-     * FileReader, then fires the 'drag-drop' callback with the full
-     * payload including file contents as data URIs.
+     * Handle a drop event. Fires 'drop-start' immediately with
+     * file metadata (name, size, type — no data yet), then reads all
+     * dropped files asynchronously via FileReader and fires
+     * 'drop-end' with the full payload including file contents
+     * as data URIs.
      *
      * Fires 'drop-progress' callbacks during file reading:
      *   {transferred_bytes, total_bytes, file_name, file_index, file_count}
      *
-     * The 'drag-drop' payload includes:
+     * The payload includes:
      * - Standard pointer/mouse fields from _eventToPayload().
      * - `types`   string[]  — MIME types offered by the drag source.
      * - `text`    string|null — plain text, if available.
      * - `url`     string|null — URI list, if available.
      * - `html`    string|null — HTML content, if available.
      * - `files`   array of {name, size, type, data} — dropped files.
-     *   `data` is a data URI (base64-encoded).
+     *   `data` is null in drop-start, a data URI in drop-end.
      * @private
      */
     _handleDrop(event) {
@@ -688,11 +690,26 @@ class Widget extends Callback {
 
         let files = dt.files;
         if (files.length === 0) {
-            // No files — fire immediately with empty file list.
+            // No files — fire both start and end immediately.
             payload.files = [];
-            this.make_callback('drag-drop', payload);
+            this.make_callback('drop-start', payload);
+            this.make_callback('drop-end', payload);
             return;
         }
+
+        // Build file metadata (no data yet) for drop-start.
+        let fileMeta = [];
+        for (let i = 0; i < files.length; i++) {
+            let file = files[i];
+            fileMeta.push({
+                name: file.name,
+                size: file.size,
+                type: file.type || 'application/octet-stream',
+                data: null,
+            });
+        }
+        payload.files = fileMeta;
+        this.make_callback('drop-start', payload);
 
         // Read all files as data URIs, firing progress along the way.
         let fileCount = files.length;
@@ -733,7 +750,7 @@ class Widget extends Callback {
                 });
                 if (completed === fileCount) {
                     payload.files = results;
-                    this.make_callback('drag-drop', payload);
+                    this.make_callback('drop-end', payload);
                 }
             };
 
@@ -748,7 +765,7 @@ class Widget extends Callback {
                 completed++;
                 if (completed === fileCount) {
                     payload.files = results;
-                    this.make_callback('drag-drop', payload);
+                    this.make_callback('drop-end', payload);
                 }
             };
 
@@ -768,8 +785,8 @@ class Widget extends Callback {
         // Auto-wire drag DOM listeners the first time any drag callback
         // is enabled on a widget that hasn't called _initInteractiveEvents.
         if (!this._dragEventsWired
-                && (action === 'drag-drop' || action === 'drag-over'
-                    || action === 'drop-progress')) {
+                && (action === 'drop-start' || action === 'drop-end'
+                    || action === 'drag-over' || action === 'drop-progress')) {
             this._initDragEvents();
         }
     }

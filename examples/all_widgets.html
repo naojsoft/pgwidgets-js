@@ -416,8 +416,8 @@
             dropZone.element.style.borderRadius = "8px";
             dropZone.element.style.padding = "16px";
             dropZone.enable_callback('drag-over');
-            dropZone.enable_callback('drag-drop');
-            dropZone.add_callback('drag-drop', (w, evt) => {
+            dropZone.enable_callback('drop-end');
+            dropZone.add_callback('drop-end', (w, evt) => {
                 // Try file contents first (read as data URI, decode text).
                 if (evt.files && evt.files.length > 0) {
                     let file = evt.files[0];

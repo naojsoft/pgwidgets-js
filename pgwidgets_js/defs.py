@@ -508,7 +508,7 @@ WIDGETS = {
         "callbacks": ["pointer-down", "pointer-up", "pointer-move",
                       "enter", "leave", "click", "dblclick",
                       "scroll", "key-down", "key-up", "key-press",
-                      "focus-in", "focus-out", "drag-drop", "drag-over",
+                      "focus-in", "focus-out", "drop-start", "drop-end", "drag-over",
                       "drop-progress", "contextmenu"],
     },
 
@@ -624,7 +624,7 @@ WIDGETS = {
         "callbacks": ["pointer-down", "pointer-up", "pointer-move",
                       "enter", "leave", "click", "dblclick",
                       "scroll", "key-down", "key-up", "key-press",
-                      "focus-in", "focus-out", "drag-drop", "drag-over",
+                      "focus-in", "focus-out", "drop-start", "drop-end", "drag-over",
                       "contextmenu", "activated"],
     },
 

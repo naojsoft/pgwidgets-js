@@ -220,7 +220,7 @@ class RemoteInterface {
         }
         let cb = (w, ...args) => {
             // If the payload contains files with data, use chunked
-            // transfer (works for drag-drop, FileDialog, etc.).
+            // transfer (works for drop-end, FileDialog, etc.).
             let payload = args[0];
             if (payload && typeof payload === 'object'
                     && payload.files && payload.files.length > 0
