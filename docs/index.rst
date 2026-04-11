@@ -35,6 +35,8 @@ into layout containers, and wire up callbacks.
    widgets/index
    callbacks
    external-widgets
+   frameworks
+   styling
    remote
    pyodide
    electron
