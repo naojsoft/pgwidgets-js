@@ -167,6 +167,47 @@ Multi-line text editor.
    log.set_limit(1000);
    log.append_text("Application started.\n");
 
+.. _widget-htmlview:
+
+HtmlView
+--------
+
+Read-only rich HTML content display with pgwidgets-style scrollbars.
+
+**Constructor:** ``new Widgets.HtmlView(html)``
+
+**Methods:**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 60
+
+   * - Method
+     - Description
+   * - ``set_html(html)``
+     - Set HTML content, replacing existing content.
+   * - ``get_html()``
+     - Return current HTML content.
+   * - ``append_html(html)``
+     - Append HTML to existing content.
+   * - ``clear()``
+     - Remove all content.
+   * - ``scroll_to_top()``
+     - Scroll to the top.
+   * - ``scroll_to_bottom()``
+     - Scroll to the bottom.
+
+**Callbacks:** None.
+
+.. code-block:: javascript
+
+   let view = new Widgets.HtmlView("<h1>Hello</h1><p>Rich content here.</p>");
+   vbox.add_widget(view, 1);
+
+   // Update content dynamically
+   view.set_html("<h2>Updated</h2><p>New content.</p>");
+   view.append_html("<p>Another paragraph.</p>");
+
 .. _widget-textsource:
 
 TextSource

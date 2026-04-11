@@ -1,6 +1,63 @@
 Layout Widgets
 ==============
 
+.. _widget-toplevel:
+
+TopLevel
+--------
+
+The root-level container widget. Uses absolute positioning and attaches
+to the document body. Typically the outermost widget in a pgwidgets
+application.
+
+**Constructor:** ``new Widgets.TopLevel({title, resizable, moveable, closeable})``
+
+**Options:**
+
+- ``title`` -- title bar text (enables the title bar when set)
+- ``resizable`` -- enable corner resize grips
+- ``moveable`` -- allow dragging by the title bar (defaults to ``true`` if title is set)
+- ``closeable`` -- show close button in title bar (defaults to ``true``)
+
+**Methods:**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 60
+
+   * - Method
+     - Description
+   * - ``set_widget(child)``
+     - Set the single child widget (fills the entire area).
+   * - ``set_position(x, y)``
+     - Set position in pixels.
+   * - ``set_title(title)``
+     - Set or create the title bar text.
+   * - ``set_moveable(tf)``
+     - Enable or disable title bar dragging.
+   * - ``raise_()``
+     - Bring to the front (highest z-order).
+   * - ``lower()``
+     - Send to the back (lowest z-order).
+
+**Callbacks:**
+
+- ``move`` -- fired when the widget is dragged to a new position.
+- ``close`` -- fired when the close button is clicked.
+
+.. code-block:: javascript
+
+   let top = new Widgets.TopLevel({title: "My App", resizable: true});
+   top.resize(800, 600);
+
+   let vbox = new Widgets.VBox({spacing: 8});
+   // ... add widgets to vbox ...
+   top.set_widget(vbox);
+   top.show();
+
+   // Close button handler
+   top.add_callback('close', () => top.hide());
+
 .. _widget-vbox:
 
 VBox

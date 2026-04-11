@@ -137,6 +137,47 @@ Inline color swatch with optional picker.
        console.log("Color:", w.get_color());
    });
 
+.. _widget-externalwidget:
+
+ExternalWidget
+--------------
+
+A container for embedding third-party library content (Plotly charts,
+Bokeh plots, Leaflet maps, etc.) into pgwidgets layouts. See
+:doc:`../external-widgets` for full examples.
+
+**Constructor:** ``new Widgets.ExternalWidget()``
+
+**Methods:**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 60
+
+   * - Method
+     - Description
+   * - ``get_content_element()``
+     - Return the inner DOM element for third-party libraries to render into.
+   * - ``set_content(html)``
+     - Set inner HTML content directly.
+   * - ``clear()``
+     - Remove all content.
+
+**Callbacks:** None (inherits ``resize`` from Widget).
+
+.. code-block:: javascript
+
+   let chart = new Widgets.ExternalWidget();
+   vbox.add_widget(chart, 1);
+
+   Plotly.newPlot(chart.get_content_element(), data, layout,
+                  {responsive: true});
+
+   // If the library needs explicit resize notification:
+   chart.add_callback('resize', () => {
+       Plotly.Plots.resize(chart.get_content_element());
+   });
+
 .. _widget-treeview:
 
 TreeView
