@@ -40,6 +40,8 @@ class RemoteInterface {
         this._reconnectInterval = options.reconnect_interval || 500;
         this._ws = null;
         this._listeners = new Map();  // "wid:action" -> callback fn
+        this._nextTransferId = 1;
+        this._chunkSize = options.chunk_size || 512 * 1024;  // bytes of base64 per chunk
 
         this.connect = this.connect.bind(this);
         this.disconnect = this.disconnect.bind(this);
@@ -217,6 +219,21 @@ class RemoteInterface {
             return {type: "result", id: msg.id};
         }
         let cb = (w, ...args) => {
+            // For drag-drop with files, use chunked transfer.
+            if (msg.action === 'drag-drop') {
+                let payload = args[0];
+                if (payload && payload.files && payload.files.length > 0
+                        && payload.files.some(f => f.data)) {
+                    this._sendChunkedDrop(msg.wid, payload);
+                    return;
+                }
+            }
+            // Suppress local drop-progress from FileReader — the
+            // chunked transfer generates its own progress on the
+            // Python side.
+            if (msg.action === 'drop-progress') {
+                return;
+            }
             this._send({
                 type: "callback",
                 wid: msg.wid,
@@ -298,6 +315,69 @@ class RemoteInterface {
             return out;
         }
         return val;
+    }
+
+    /**
+     * Send a drag-drop with file data using chunked transfer.
+     * Sends the drag-drop callback first with metadata only (no file
+     * data), then sends file data as file-chunk messages, yielding
+     * between chunks via setTimeout(0) to keep the WebSocket responsive
+     * for other traffic.
+     * @private
+     */
+    _sendChunkedDrop(wid, payload) {
+        let transferId = this._nextTransferId++;
+        let chunkSize = this._chunkSize;
+
+        // Build metadata-only payload (strip file data).
+        let metaFiles = payload.files.map(f => ({
+            name: f.name,
+            size: f.size,
+            type: f.type,
+        }));
+        let metaPayload = Object.assign({}, payload, {
+            transfer_id: transferId,
+            files: metaFiles,
+        });
+        this._send({
+            type: "callback",
+            wid: wid,
+            action: "drag-drop",
+            args: [this._serializeValue(metaPayload)],
+        });
+
+        // Build a flat list of all chunks to send.
+        let chunks = [];
+        for (let fi = 0; fi < payload.files.length; fi++) {
+            let data = payload.files[fi].data || '';
+            let numChunks = Math.max(1, Math.ceil(data.length / chunkSize));
+            for (let ci = 0; ci < numChunks; ci++) {
+                let slice = data.slice(ci * chunkSize,
+                                       (ci + 1) * chunkSize);
+                chunks.push({
+                    type: "file-chunk",
+                    wid: wid,
+                    transfer_id: transferId,
+                    file_index: fi,
+                    file_count: payload.files.length,
+                    chunk_index: ci,
+                    num_chunks: numChunks,
+                    data: slice,
+                });
+            }
+        }
+
+        // Send chunks one at a time, yielding between each to allow
+        // other WebSocket messages to interleave.
+        let i = 0;
+        let sendNext = () => {
+            if (i < chunks.length) {
+                this._send(chunks[i]);
+                i++;
+                setTimeout(sendNext, 0);
+            }
+        };
+        setTimeout(sendNext, 0);
     }
 
     /** @private */

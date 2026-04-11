@@ -674,7 +674,7 @@ class Widget {
      * payload including file contents as data URIs.
      *
      * Fires 'drop-progress' callbacks during file reading:
-     *   {loaded, total, file_name, file_index, file_count}
+     *   {transferred_bytes, total_bytes, file_name, file_index, file_count}
      *
      * The 'drag-drop' payload includes:
      * - Standard pointer/mouse fields from _eventToPayload().
@@ -715,8 +715,8 @@ class Widget {
             reader.onprogress = (pe) => {
                 if (pe.lengthComputable) {
                     this.make_callback('drop-progress', {
-                        loaded: pe.loaded,
-                        total: pe.total,
+                        transferred_bytes: pe.loaded,
+                        total_bytes: pe.total,
                         file_name: file.name,
                         file_index: i,
                         file_count: fileCount,
@@ -734,8 +734,8 @@ class Widget {
                 completed++;
                 // Fire progress for file completion.
                 this.make_callback('drop-progress', {
-                    loaded: file.size,
-                    total: file.size,
+                    transferred_bytes: file.size,
+                    total_bytes: file.size,
                     file_name: file.name,
                     file_index: i,
                     file_count: fileCount,
