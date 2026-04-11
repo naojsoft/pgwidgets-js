@@ -1,6 +1,6 @@
 # Configuration file for the Sphinx documentation builder.
 
-project = "pgwidgets"
+project = "pgwidgets-js"
 copyright = "2024, PGWidgets Developers"
 author = "PGWidgets Developers"
 
@@ -13,4 +13,4 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 html_theme = "furo"
 html_static_path = []
-html_title = "pgwidgets"
+html_title = "pgwidgets-js"

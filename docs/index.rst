@@ -1,5 +1,5 @@
-pgwidgets
-=========
+pgwidgets-js
+============
 
 A native JavaScript widget toolkit with Qt/GTK-style layout and controls.
 No frameworks. No build step. No dependencies.
