@@ -612,6 +612,21 @@ WIDGETS = {
                       "contextmenu", "activated"],
     },
 
+    "FileDialog": {
+        "base": "widget",
+        "args": [],
+        "options": ["mode", "accept"],
+        "methods": {
+            "open": [],
+            "save": ["filename", "data", "mime_type"],
+            "set_mode": ["mode"],
+            "get_mode": [],
+            "set_accept": ["accept"],
+            "get_accept": [],
+        },
+        "callbacks": ["activated", "progress"],
+    },
+
     # -- Menus & Toolbars --
 
     "MenuBar": {

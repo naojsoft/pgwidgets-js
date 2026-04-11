@@ -19,7 +19,7 @@
     // Read WebSocket URL from query string, or derive from page protocol
     let params = new URLSearchParams(window.location.search);
     let wsScheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    let wsUrl = params.get('ws') || `${wsScheme}//localhost:9500`;
+    let wsUrl = params.get('ws') || window.PGWIDGETS_WS_URL || `${wsScheme}//localhost:9500`;
 
     let remote = new Widgets.RemoteInterface(Widgets, {
         url: wsUrl

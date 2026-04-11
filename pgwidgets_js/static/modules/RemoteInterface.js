@@ -219,19 +219,20 @@ class RemoteInterface {
             return {type: "result", id: msg.id};
         }
         let cb = (w, ...args) => {
-            // For drag-drop with files, use chunked transfer.
-            if (msg.action === 'drag-drop') {
-                let payload = args[0];
-                if (payload && payload.files && payload.files.length > 0
-                        && payload.files.some(f => f.data)) {
-                    this._sendChunkedDrop(msg.wid, payload);
-                    return;
-                }
+            // If the payload contains files with data, use chunked
+            // transfer (works for drag-drop, FileDialog, etc.).
+            let payload = args[0];
+            if (payload && typeof payload === 'object'
+                    && payload.files && payload.files.length > 0
+                    && payload.files.some(f => f.data)) {
+                this._sendChunkedFiles(msg.wid, msg.action, payload);
+                return;
             }
-            // Suppress local drop-progress from FileReader — the
+            // Suppress local file-read progress callbacks — the
             // chunked transfer generates its own progress on the
             // Python side.
-            if (msg.action === 'drop-progress') {
+            if (msg.action === 'drop-progress'
+                    || msg.action === 'progress') {
                 return;
             }
             this._send({
@@ -318,14 +319,17 @@ class RemoteInterface {
     }
 
     /**
-     * Send a drag-drop with file data using chunked transfer.
-     * Sends the drag-drop callback first with metadata only (no file
-     * data), then sends file data as file-chunk messages, yielding
-     * between chunks via setTimeout(0) to keep the WebSocket responsive
-     * for other traffic.
+     * Send a callback with file data using chunked transfer.
+     * Sends the callback first with metadata only (no file data),
+     * then sends file data as file-chunk messages, yielding between
+     * chunks via setTimeout(0) to keep the WebSocket responsive for
+     * other traffic.
+     * @param {number} wid - Widget ID.
+     * @param {string} action - Callback action name.
+     * @param {Object} payload - Payload with a `files` array.
      * @private
      */
-    _sendChunkedDrop(wid, payload) {
+    _sendChunkedFiles(wid, action, payload) {
         let transferId = this._nextTransferId++;
         let chunkSize = this._chunkSize;
 
@@ -342,7 +346,7 @@ class RemoteInterface {
         this._send({
             type: "callback",
             wid: wid,
-            action: "drag-drop",
+            action: action,
             args: [this._serializeValue(metaPayload)],
         });
 
