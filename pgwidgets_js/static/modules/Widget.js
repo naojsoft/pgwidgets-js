@@ -369,7 +369,7 @@ class Widget {
         'click', 'dblclick', 'scroll',
         'key-down', 'key-up', 'key-press',
         'focus-in', 'focus-out',
-        'drag-drop', 'drag-over', 'drag-progress', 'contextmenu',
+        'drag-drop', 'drag-over', 'drop-progress', 'contextmenu',
     ];
 
     /**
@@ -552,7 +552,7 @@ class Widget {
      * |          |          | (with an `error` field instead).                  |
      *
      * ### Drag-progress fields
-     * Present on: `drag-progress`. Fired during file reading.
+     * Present on: `drop-progress`. Fired during file reading.
      *
      * | Field        | Type   | Description                                     |
      * |--------------|--------|-------------------------------------------------|
@@ -673,7 +673,7 @@ class Widget {
      * FileReader, then fires the 'drag-drop' callback with the full
      * payload including file contents as data URIs.
      *
-     * Fires 'drag-progress' callbacks during file reading:
+     * Fires 'drop-progress' callbacks during file reading:
      *   {loaded, total, file_name, file_index, file_count}
      *
      * The 'drag-drop' payload includes:
@@ -714,7 +714,7 @@ class Widget {
 
             reader.onprogress = (pe) => {
                 if (pe.lengthComputable) {
-                    this.make_callback('drag-progress', {
+                    this.make_callback('drop-progress', {
                         loaded: pe.loaded,
                         total: pe.total,
                         file_name: file.name,
@@ -733,7 +733,7 @@ class Widget {
                 };
                 completed++;
                 // Fire progress for file completion.
-                this.make_callback('drag-progress', {
+                this.make_callback('drop-progress', {
                     loaded: file.size,
                     total: file.size,
                     file_name: file.name,
@@ -779,7 +779,7 @@ class Widget {
         // is enabled on a widget that hasn't called _initInteractiveEvents.
         if (!this._dragEventsWired
                 && (action === 'drag-drop' || action === 'drag-over'
-                    || action === 'drag-progress')) {
+                    || action === 'drop-progress')) {
             this._initDragEvents();
         }
     }

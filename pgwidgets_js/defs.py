@@ -483,15 +483,17 @@ WIDGETS = {
     "Image": {
         "base": "widget",
         "args": [],
-        "options": ["url"],
+        "options": ["url", "interactive", "use_animation_frame"],
         "methods": {
             "set_image": ["url"],
+            "get_draw_context": [],
+            "update": [],
         },
         "callbacks": ["pointer-down", "pointer-up", "pointer-move",
                       "enter", "leave", "click", "dblclick",
                       "scroll", "key-down", "key-up", "key-press",
                       "focus-in", "focus-out", "drag-drop", "drag-over",
-                      "drag-progress", "contextmenu"],
+                      "drop-progress", "contextmenu"],
     },
 
     "TreeView": {
@@ -597,7 +599,7 @@ WIDGETS = {
     "Canvas": {
         "base": "widget",
         "args": [],
-        "options": ["use_animation_frame"],
+        "options": ["use_animation_frame", "interactive"],
         "methods": {
             "draw_image": ["imgInfo"],
             "get_draw_context": [],

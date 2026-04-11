@@ -15,6 +15,8 @@ class Canvas extends Widget {
      * Creates a new Canvas widget.
      * @param {Object} [options] - Configuration options.
      * @param {HTMLElement} [options.element=null] - Optional pre-existing canvas element to use.
+     * @param {boolean} [options.interactive=false] - If true, wire up
+     *   pointer, mouse, keyboard, focus, and drag-drop events.
      * @param {boolean} [options.use_animation_frame=false] - If true,
      *   allocate a hidden offscreen canvas the same size as the visible
      *   canvas. Drawing code obtained via get_draw_context() writes to
@@ -45,7 +47,9 @@ class Canvas extends Widget {
         this.update = this.update.bind(this);
 
         super.init_style();
-        this._initInteractiveEvents({focusable: true, cursor: 'crosshair'});
+        if (this.get_option(options, 'interactive', false)) {
+            this._initInteractiveEvents({focusable: true, cursor: 'crosshair'});
+        }
         this.enable_callback('activated');
 
         // Keep the canvas drawing-buffer size synced to its displayed
