@@ -24,6 +24,9 @@ classifiers = [
     "Topic :: Software Development :: User Interfaces",
 ]
 
+[project.optional-dependencies]
+dev = ["sphinx", "furo"]
+
 [project.urls]
 Homepage = "https://github.com/naojsoft/pgwidgets"
 Repository = "https://github.com/naojsoft/pgwidgets"
