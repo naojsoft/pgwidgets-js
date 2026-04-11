@@ -1,6 +1,6 @@
 "use strict";
 
-import {Widget} from "./Widget.js";
+import {Callback} from "./Callback.js";
 
 /**
  * Remote interface for controlling pgwidgets over a WebSocket connection.
@@ -153,11 +153,11 @@ class RemoteInterface {
     _handleInit(msg) {
         // Destroy all registered widgets. Iterate over a copy since
         // destroy() mutates the registry.
-        for (let [wid, widget] of [...Widget._registry]) {
+        for (let [wid, widget] of [...Callback._registry]) {
             widget.destroy();
         }
-        Widget._registry.clear();
-        Widget._nextId = 1;
+        Callback._registry.clear();
+        Callback._nextId = 1;
 
         // Clear our listener map.
         this._listeners.clear();
@@ -179,16 +179,16 @@ class RemoteInterface {
         let widget = new cls(...args);
         // if the client assigned a wid, re-register under that id
         if (msg.wid !== undefined) {
-            Widget._registry.delete(widget.wid);
+            Callback._registry.delete(widget.wid);
             widget.wid = msg.wid;
-            Widget._registry.set(widget.wid, widget);
+            Callback._registry.set(widget.wid, widget);
         }
         return {type: "result", id: msg.id, wid: widget.wid};
     }
 
     /** @private */
     _handleCall(msg) {
-        let widget = Widget._registry.get(msg.wid);
+        let widget = Callback._registry.get(msg.wid);
         if (!widget) {
             return {type: "error", id: msg.id,
                     error: "Unknown widget id: " + msg.wid};
@@ -209,7 +209,7 @@ class RemoteInterface {
 
     /** @private */
     _handleListen(msg) {
-        let widget = Widget._registry.get(msg.wid);
+        let widget = Callback._registry.get(msg.wid);
         if (!widget) {
             return {type: "error", id: msg.id,
                     error: "Unknown widget id: " + msg.wid};
@@ -250,7 +250,7 @@ class RemoteInterface {
 
     /** @private */
     _handleUnlisten(msg) {
-        let widget = Widget._registry.get(msg.wid);
+        let widget = Callback._registry.get(msg.wid);
         if (!widget) {
             return {type: "error", id: msg.id,
                     error: "Unknown widget id: " + msg.wid};
@@ -276,7 +276,7 @@ class RemoteInterface {
                 return arg;
             }
             if (typeof arg === 'object' && '__wid__' in arg) {
-                let widget = Widget._registry.get(arg.__wid__);
+                let widget = Callback._registry.get(arg.__wid__);
                 if (!widget) {
                     throw new Error("Unknown widget id: " + arg.__wid__);
                 }
@@ -302,7 +302,7 @@ class RemoteInterface {
      * @private
      */
     _serializeValue(val) {
-        if (val instanceof Widget) {
+        if (val instanceof Callback) {
             return {__wid__: val.wid};
         }
         if (Array.isArray(val)) {

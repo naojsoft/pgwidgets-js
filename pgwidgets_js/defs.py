@@ -13,6 +13,11 @@ This is the canonical source for widget definitions. Language-specific
 wrappers (pgwidgets-python, pyodide, etc.) import from here.
 """
 
+# Common methods inherited from Callback base class (non-visual objects)
+CALLBACK_METHODS = {
+    "destroy": [],
+}
+
 # Common methods inherited from Widget base class
 WIDGET_METHODS = {
     "get_element": [],
@@ -591,7 +596,7 @@ WIDGETS = {
     },
 
     "Timer": {
-        "base": "widget",
+        "base": "callback",
         "args": [],
         "options": ["duration"],
         "methods": {
@@ -624,7 +629,7 @@ WIDGETS = {
     },
 
     "FileDialog": {
-        "base": "widget",
+        "base": "callback",
         "args": [],
         "options": ["mode", "accept"],
         "methods": {

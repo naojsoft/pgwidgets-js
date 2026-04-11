@@ -1,21 +1,21 @@
 "use strict";
 
-/**
- * Base class for all widgets. Provides DOM element management, callback system,
- * and common utility methods.
- */
-class Widget {
+import {Callback} from "./Callback.js";
 
-    static _nextId = 1;
-    static _registry = new Map();
+/**
+ * Base class for all visual widgets. Provides DOM element management,
+ * interactive event handling, and common styling methods.
+ * Inherits the callback system and identity from Callback.
+ * @extends Callback
+ */
+class Widget extends Callback {
 
     /**
      * Creates a new Widget instance.
      * Initializes the callback system and enables the 'resize' callback.
      */
     constructor () {
-        this.wid = Widget._nextId++;
-        Widget._registry.set(this.wid, this);
+        super();
         this.element = null;
         this._enabled = true;
 
@@ -31,13 +31,7 @@ class Widget {
         this.get_tooltip = this.get_tooltip.bind(this);
         this.show = this.show.bind(this);
         this.hide = this.hide.bind(this);
-        this.enable_callback = this.enable_callback.bind(this);
-        this.add_callback = this.add_callback.bind(this);
-        this.clear_callback = this.clear_callback.bind(this);
-        this.remove_callback = this.remove_callback.bind(this);
-        this.make_callback = this.make_callback.bind(this);
 
-        this.cb = {}
         this._cursors = {};        // name -> CSS cursor value
         this._currentCursor = null; // name of active custom cursor, or null
 
@@ -332,7 +326,7 @@ class Widget {
 
     /**
      * Tear down this widget: disconnect observers, clear callbacks, remove
-     * the DOM element from its parent, and drop it from the widget
+     * the DOM element from its parent, and drop it from the global
      * registry so it can be garbage collected. Safe to call more than
      * once; subsequent calls are no-ops. Subclasses that allocate extra
      * resources (timers, offscreen buffers, pending rAF, external
@@ -340,21 +334,18 @@ class Widget {
      */
     destroy() {
         if (this._destroyed) return;
-        this._destroyed = true;
 
         if (this._widgetResizeObserver) {
             this._widgetResizeObserver.disconnect();
             this._widgetResizeObserver = null;
         }
 
-        this.cb = {};
-
         if (this.element && this.element.parentNode) {
             this.element.parentNode.removeChild(this.element);
         }
         this.element = null;
 
-        Widget._registry.delete(this.wid);
+        super.destroy();
     }
 
     /* INTERACTIVE EVENTS */
@@ -765,16 +756,15 @@ class Widget {
         }
     }
 
-    /* CALLBACK HANDLING */
+    /* CALLBACK HANDLING (override) */
 
     /**
-     * Registers a new callback action type.
+     * Registers a new callback action type. Overrides Callback to
+     * auto-wire drag DOM listeners when a drag callback is first enabled.
      * @param {string} action - The name of the callback action to enable.
      */
     enable_callback(action) {
-        if (!(action in this.cb)) {
-            this.cb[action] = [];
-        }
+        super.enable_callback(action);
         // Auto-wire drag DOM listeners the first time any drag callback
         // is enabled on a widget that hasn't called _initInteractiveEvents.
         if (!this._dragEventsWired
@@ -782,99 +772,6 @@ class Widget {
                     || action === 'drop-progress')) {
             this._initDragEvents();
         }
-    }
-
-    /**
-     * Returns whether the given callback action has been enabled.
-     * @param {string} action - The callback action name.
-     * @returns {boolean} True if the action is enabled, false otherwise.
-     */
-    has_callback(action) {
-        return action in this.cb;
-    }
-
-    /**
-     * Adds a callback function for the given action.
-     * The callback receives (widget, ...args) when triggered.
-     * @param {string} action - The callback action name.
-     * @param {Function} cb_fn - The callback function to add.
-     */
-    add_callback(action, cb_fn) {
-        if (!(action in this.cb)) {
-            throw new Error(
-                `Unknown callback action '${action}' on ${this.constructor.name} (wid=${this.wid}). ` +
-                `Available: ${Object.keys(this.cb).join(', ')}`);
-        }
-        let cb_list = this.cb[action];
-        let idx = cb_list.indexOf(cb_fn);
-        if (idx == -1) {
-            // only add if cb_fn is not already present
-            cb_list.push(cb_fn);
-        }
-    }
-
-    /**
-     * Removes a specific callback function for the given action.
-     * @param {string} action - The callback action name.
-     * @param {Function} cb_fn - The callback function to remove.
-     */
-    remove_callback(action, cb_fn) {
-        if (!(action in this.cb)) {
-            return
-        }
-        let cb_list = this.cb[action];
-        let idx = cb_list.indexOf(cb_fn);
-        if (idx > -1) {
-            cb_list.splice(idx, 1);
-        }
-    }
-
-    /**
-     * Removes all callback functions for the given action.
-     * @param {string} action - The callback action name.
-     */
-    clear_callback(action) {
-        if (!(action in this.cb)) {
-            return
-        }
-        this.cb[action] = [];
-    }
-
-    /**
-     * Invokes all registered callbacks for the given action.
-     * Each callback receives (this, ...args). Exceptions are caught and logged.
-     * @param {string} action - The callback action name.
-     * @param {...*} args - Additional arguments passed to each callback.
-     */
-    make_callback(action, ...args) {
-        let cb_list = this.cb[action];
-        if (!cb_list) return;  // action not enabled — nothing to fire
-        let params = [...args];  // shallow copy
-        for (let cb_fn of cb_list) {
-            // catch exceptions and log them but continue to invoke callbacks
-            try {
-                //console.log("making callback '"+action+"' cb_fn="+cb_fn);
-                (cb_fn)(this, ...params);
-            } catch (error) {
-                console.error(error);
-            }
-        }
-    }
-
-    /* UTILITY FUNCTIONS */
-
-    /**
-     * Retrieves an option value from an object, returning a default if not present.
-     * @param {Object} obj - The options object.
-     * @param {string} key - The key to look up.
-     * @param {*} default_value - Value to return if key is not found.
-     * @returns {*} The option value or the default.
-     */
-    get_option(obj, key, default_value) {
-        if (key in obj) {
-            return obj[key];
-        }
-        return default_value;
     }
 
 }
@@ -982,5 +879,5 @@ class ContainerWidget extends Widget {
     }
 }
 
-export { Widget, ContainerWidget };
+export { Callback, Widget, ContainerWidget };
 

@@ -27,8 +27,8 @@ def _from_js_val(val):
     JS Widget instances are wrapped in a Python Widget shell."""
     if val is None or val is Widgets:
         return val
-    # Detect JS Widget objects (they have an 'element' property and 'add_callback')
-    if hasattr(val, 'add_callback') and hasattr(val, 'element'):
+    # Detect JS Callback/Widget objects (they have 'add_callback' and 'wid')
+    if hasattr(val, 'add_callback') and hasattr(val, 'wid'):
         wrapper = object.__new__(Widget)
         wrapper._js = val
         try:

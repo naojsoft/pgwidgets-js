@@ -1,6 +1,6 @@
 "use strict";
 
-import {Widget} from "./Widget.js";
+import {Callback} from "./Callback.js";
 
 /**
  * A one-shot countdown timer. Not a visual widget — it has no rendered
@@ -14,9 +14,9 @@ import {Widget} from "./Widget.js";
  *   'cancelled' — fired when cancel() is called, as
  *                 (timer, elapsed_seconds)
  *
- * @extends Widget
+ * @extends Callback
  */
-class Timer extends Widget {
+class Timer extends Callback {
 
     /**
      * @param {Object} [options]
@@ -25,9 +25,6 @@ class Timer extends Widget {
      */
     constructor(options = {}) {
         super();
-        // Timer has no DOM presence. Leaving this.element null is fine:
-        // the base-class ResizeObserver install is a no-op when element
-        // is null, and the Widget wid/registry still work.
 
         this.duration = this.get_option(options, 'duration', 0);
         this._startTime = 0;      // performance.now() when start() was called

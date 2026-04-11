@@ -5,6 +5,7 @@
  * @description Main entry point for the pgwidgets library.
  * Imports and re-exports all widget classes as a single Widgets namespace.
  */
+import {Callback} from "./modules/Callback.js";
 import {Widget, ContainerWidget} from "./modules/Widget.js";
 import {Box, VBox, HBox, ButtonBox} from "./modules/Box.js";
 import {TopLevel} from "./modules/TopLevel.js";
@@ -50,7 +51,7 @@ import {Timer} from "./modules/Timer.js";
 import {FileDialog} from "./modules/FileDialog.js";
 
 
-const Widgets = {Widget, ContainerWidget, Box, VBox, HBox, ButtonBox,
+const Widgets = {Callback, Widget, ContainerWidget, Box, VBox, HBox, ButtonBox,
                  TopLevel, ScrollArea, MDIWidget, Splitter, TabWidget,
                  StackWidget, Expander, Page, Text, Label, TextArea, TextSource,
                  Frame, GridBox, Button, ToggleButton, CheckBox,

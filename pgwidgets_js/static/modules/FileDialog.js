@@ -1,6 +1,6 @@
 "use strict";
 
-import {Widget} from "./Widget.js";
+import {Callback} from "./Callback.js";
 
 /**
  * A non-visual widget that wraps the browser's native file picker.
@@ -18,9 +18,9 @@ import {Widget} from "./Widget.js";
  * For save mode, call `save(filename, data, mime_type)` to trigger
  * a browser download.
  *
- * @extends Widget
+ * @extends Callback
  */
-class FileDialog extends Widget {
+class FileDialog extends Callback {
 
     /**
      * @param {Object} [options]
@@ -30,8 +30,6 @@ class FileDialog extends Widget {
      */
     constructor(options = {}) {
         super();
-        // Non-visual widget — no DOM element in the layout.
-        this.element = null;
 
         this._mode = this.get_option(options, 'mode', 'file');
         this._accept = this.get_option(options, 'accept', '');
