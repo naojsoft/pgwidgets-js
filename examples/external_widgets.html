@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ExternalWidget Demo — Plotly + Bokeh</title>
+  <style>
+    body {
+      margin: 0;
+    }
+  </style>
+  <link rel="stylesheet" href="../Widgets.css" type="text/css" />
+
+  <!-- Plotly from CDN -->
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+  <!-- BokehJS from CDN -->
+  <script src="https://cdn.bokeh.org/bokeh/release/bokeh-3.7.3.min.js"></script>
+  <script src="https://cdn.bokeh.org/bokeh/release/bokeh-api-3.7.3.min.js"></script>
+</head>
+<body>
+  <script type="module">
+    import { Widgets } from "../Widgets.js";
+
+    let top = new Widgets.TopLevel({title: "ExternalWidget Demo", resizable: true});
+    top.resize(800, 600);
+
+    // Vertical splitter: Plotly on top, Bokeh on bottom
+    let splitter = new Widgets.Splitter({orientation: 'vertical'});
+
+    let plotly_widget = new Widgets.ExternalWidget();
+    let bokeh_widget = new Widgets.ExternalWidget();
+
+    splitter.add_widget(plotly_widget, 1);
+    splitter.add_widget(bokeh_widget, 1);
+
+    top.set_widget(splitter);
+    top.show();
+
+    // --- Plotly chart ---
+    let x = [];
+    let y_sin = [];
+    let y_cos = [];
+    for (let i = 0; i <= 100; i++) {
+        let xi = i * 0.1;
+        x.push(xi);
+        y_sin.push(Math.sin(xi));
+        y_cos.push(Math.cos(xi));
+    }
+
+    Plotly.newPlot(plotly_widget.get_content_element(), [
+        {x: x, y: y_sin, name: 'sin(x)', mode: 'lines'},
+        {x: x, y: y_cos, name: 'cos(x)', mode: 'lines'},
+    ], {
+        title: 'Plotly — Trigonometric Functions',
+        margin: {l: 50, r: 20, t: 40, b: 40},
+    }, {responsive: true});
+
+    // Plotly's responsive mode doesn't always detect container resizes
+    // in flexbox layouts, so use the widget's resize callback explicitly.
+    plotly_widget.add_callback('resize', () => {
+        Plotly.Plots.resize(plotly_widget.get_content_element());
+    });
+
+    // --- Bokeh chart ---
+    let p = Bokeh.Plotting.figure({
+        title: "Bokeh — Quadratic vs Cubic",
+        sizing_mode: "stretch_both",
+        x_axis_label: "x",
+        y_axis_label: "y",
+    });
+
+    let bx = [];
+    let by_quad = [];
+    let by_cubic = [];
+    for (let i = -20; i <= 20; i++) {
+        bx.push(i);
+        by_quad.push(i * i);
+        by_cubic.push(i * i * i * 0.01);
+    }
+
+    p.line(bx, by_quad, {legend_label: "x²", line_width: 2, line_color: "steelblue"});
+    p.line(bx, by_cubic, {legend_label: "x³/100", line_width: 2, line_color: "coral"});
+
+    Bokeh.Plotting.show(p, bokeh_widget.get_content_element());
+
+  </script>
+</body>
+</html>

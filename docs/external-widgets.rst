@@ -1,5 +1,5 @@
-Embedding Third-Party Libraries
-================================
+Using External Widgets
+======================
 
 pgwidgets provides an ``ExternalWidget`` class for embedding content from
 third-party JavaScript libraries -- such as Plotly charts, Bokeh plots, or

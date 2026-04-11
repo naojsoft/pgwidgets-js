@@ -34,7 +34,7 @@ into layout containers, and wire up callbacks.
    getting-started
    widgets/index
    callbacks
+   external-widgets
    remote
    pyodide
-   external-widgets
    electron
