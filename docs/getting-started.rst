@@ -109,15 +109,6 @@ Then open any example in your browser:
 Building Desktop Apps with Electron
 ------------------------------------
 
-pgwidgets runs unchanged inside an `Electron <https://electronjs.org>`_
-renderer process, letting you ship native desktop apps:
-
-.. code-block:: bash
-
-   cd examples/electron
-   npm install     # one-time
-   npm start       # launches demo in an Electron window
-
-The Electron entry point (``main.js``) simply creates a ``BrowserWindow``
-that loads an HTML file -- no Electron-specific changes are needed in
-pgwidgets itself.
+pgwidgets runs unchanged inside an Electron renderer process, letting you
+ship native desktop apps.  See :doc:`electron` for a full guide including
+packaging for distribution.
