@@ -46,7 +46,7 @@
 
     let widgetNames = [
         "Button", "CheckBox", "ColorWidget", "ComboBox", "Dial",
-        "Expander", "Frame", "GridBox", "Image", "Label",
+        "Expander", "Frame", "GridBox", "HtmlView", "Image", "Label",
         "ProgressBar", "RadioButton", "ScrollArea", "ScrollBar",
         "Slider", "SpinBox", "Splitter",
         "TextArea", "TextEntry", "TextEntrySet", "TextSource",
@@ -226,6 +226,58 @@
             content.add_widget(grid, 1);
             content.add_widget(lbl, 0);
             subwin = mdi.add_widget(content, {title: "GridBox", width: 280, height: 200});
+            break;
+        }
+
+        case "HtmlView": {
+            content = new Widgets.VBox();
+            content.set_spacing(4);
+            content.set_padding(4);
+            let hbox = new Widgets.HBox();
+            hbox.set_spacing(4);
+            let btnRich = new Widgets.Button("Rich HTML");
+            let btnTable = new Widgets.Button("Table");
+            let btnAppend = new Widgets.Button("Append");
+            let btnClear = new Widgets.Button("Clear");
+            hbox.add_widget(btnRich, 0);
+            hbox.add_widget(btnTable, 0);
+            hbox.add_widget(btnAppend, 0);
+            hbox.add_widget(btnClear, 0);
+            content.add_widget(hbox, 0);
+            let hv = new Widgets.HtmlView();
+            content.add_widget(hv, 1);
+            let sampleHtml = '<h3 style="color:#336">HtmlView</h3>' +
+                '<p>Displays <b>rich HTML</b> with pgwidgets scrollbars.</p>' +
+                '<ul><li>Headings, lists, tables</li><li>Inline styles</li>' +
+                '<li>Any valid HTML</li></ul>' +
+                '<p style="background:#e8f0fe;padding:6px;border-radius:4px;">' +
+                'Styled block.</p>';
+            hv.set_html(sampleHtml);
+            btnRich.add_callback('activated', () => hv.set_html(sampleHtml));
+            btnTable.add_callback('activated', () => {
+                let rows = '';
+                for (let i = 1; i <= 20; i++) {
+                    let bg = i % 2 === 0 ? '#f8f8f8' : '#fff';
+                    rows += '<tr style="background:' + bg + '">' +
+                        '<td style="padding:3px 6px">' + i + '</td>' +
+                        '<td style="padding:3px 6px">Item ' + i + '</td>' +
+                        '<td style="padding:3px 6px">' + (Math.random() * 100).toFixed(1) + '</td></tr>';
+                }
+                hv.set_html('<table style="border-collapse:collapse;width:100%">' +
+                    '<thead><tr style="background:#336;color:#fff">' +
+                    '<th style="padding:4px 6px;text-align:left">#</th>' +
+                    '<th style="padding:4px 6px;text-align:left">Name</th>' +
+                    '<th style="padding:4px 6px;text-align:left">Value</th>' +
+                    '</tr></thead><tbody>' + rows + '</tbody></table>');
+            });
+            let n = 0;
+            btnAppend.add_callback('activated', () => {
+                n++;
+                hv.append_html('<p style="margin:3px 0;padding:3px;background:#fef7e0;' +
+                    'border-radius:3px;">Paragraph #' + n + '</p>');
+            });
+            btnClear.add_callback('activated', () => { hv.clear(); n = 0; });
+            subwin = mdi.add_widget(content, {title: "HtmlView", width: 380, height: 300});
             break;
         }
 

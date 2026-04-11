@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HtmlView Demo</title>
+  <style>
+    body {
+      margin: 0;
+    }
+  </style>
+  <link rel="stylesheet" href="../Widgets.css" type="text/css" />
+</head>
+<body>
+  <script type="module">
+    import { Widgets } from "../Widgets.js";
+
+    let top = new Widgets.TopLevel({title: "HtmlView Demo", resizable: true});
+    top.resize(700, 500);
+
+    let splitter = new Widgets.Splitter({orientation: 'horizontal'});
+
+    // Left pane: controls
+    let controls = new Widgets.VBox({spacing: 6, padding: 8});
+
+    let btnRich = new Widgets.Button("Load Rich HTML");
+    let btnTable = new Widgets.Button("Load Table");
+    let btnAppend = new Widgets.Button("Append Paragraph");
+    let btnClear = new Widgets.Button("Clear");
+    let btnTop = new Widgets.Button("Scroll to Top");
+    let btnBottom = new Widgets.Button("Scroll to Bottom");
+
+    controls.add_widget(btnRich, 0);
+    controls.add_widget(btnTable, 0);
+    controls.add_widget(btnAppend, 0);
+    controls.add_widget(btnClear, 0);
+    controls.add_widget(btnTop, 0);
+    controls.add_widget(btnBottom, 0);
+    controls.add_widget(new Widgets.Label(""), 1);
+
+    // Right pane: HtmlView
+    let htmlView = new Widgets.HtmlView();
+
+    splitter.add_widget(controls, 0);
+    splitter.add_widget(htmlView, 1);
+
+    top.set_widget(splitter);
+    top.show();
+
+    // --- Sample content ---
+
+    let richHtml = `
+      <h2 style="color: #336;">HtmlView Widget</h2>
+      <p>This widget displays <strong>rich HTML content</strong> with
+         pgwidgets-style scrollbars.</p>
+      <ul>
+        <li>Supports any valid HTML</li>
+        <li>Headings, lists, images, links</li>
+        <li>Inline styles and embedded CSS</li>
+      </ul>
+      <p style="background: #e8f0fe; padding: 8px; border-radius: 4px;">
+        Styled block with a background color.
+      </p>
+      <blockquote style="border-left: 3px solid #ccc; margin: 10px 0; padding: 4px 12px; color: #555;">
+        "Any sufficiently advanced technology is indistinguishable from magic."
+        &mdash; Arthur C. Clarke
+      </blockquote>
+      <h3>Code Example</h3>
+      <pre style="background: #f4f4f4; padding: 8px; border-radius: 4px; overflow-x: auto;"><code>let view = new Widgets.HtmlView();
+view.set_html("&lt;h1&gt;Hello!&lt;/h1&gt;");
+vbox.add_widget(view, 1);</code></pre>
+      <p>Scroll down for more content...</p>
+      <hr>
+      <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
+         eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
+         ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
+         aliquip ex ea commodo consequat.</p>
+      <p>Duis aute irure dolor in reprehenderit in voluptate velit esse
+         cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat
+         cupidatat non proident, sunt in culpa qui officia deserunt mollit
+         anim id est laborum.</p>
+    `;
+
+    function makeTable() {
+        let rows = '';
+        for (let i = 1; i <= 30; i++) {
+            let bg = i % 2 === 0 ? '#f8f8f8' : '#fff';
+            rows += `<tr style="background:${bg}">
+                <td style="padding:4px 8px">${i}</td>
+                <td style="padding:4px 8px">Item ${i}</td>
+                <td style="padding:4px 8px">${(Math.random() * 100).toFixed(2)}</td>
+                <td style="padding:4px 8px">${Math.random() > 0.5 ? 'Active' : 'Inactive'}</td>
+            </tr>`;
+        }
+        return `
+            <table style="border-collapse:collapse; width:100%">
+            <thead>
+                <tr style="background:#336; color:#fff">
+                    <th style="padding:6px 8px; text-align:left">#</th>
+                    <th style="padding:6px 8px; text-align:left">Name</th>
+                    <th style="padding:6px 8px; text-align:left">Value</th>
+                    <th style="padding:6px 8px; text-align:left">Status</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+            </table>`;
+    }
+
+    let appendCount = 0;
+
+    btnRich.add_callback('activated', () => htmlView.set_html(richHtml));
+    btnTable.add_callback('activated', () => htmlView.set_html(makeTable()));
+    btnAppend.add_callback('activated', () => {
+        appendCount++;
+        htmlView.append_html(
+            `<p style="margin:4px 0; padding:4px; background:#fef7e0; border-radius:3px;">` +
+            `Appended paragraph #${appendCount}</p>`
+        );
+    });
+    btnClear.add_callback('activated', () => { htmlView.clear(); appendCount = 0; });
+    btnTop.add_callback('activated', () => htmlView.scroll_to_top());
+    btnBottom.add_callback('activated', () => htmlView.scroll_to_bottom());
+
+    // Load initial content
+    htmlView.set_html(richHtml);
+
+  </script>
+</body>
+</html>

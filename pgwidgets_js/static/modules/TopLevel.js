@@ -40,6 +40,8 @@ class TopLevel extends ContainerWidget {
         this.set_position = this.set_position.bind(this);
         this.set_title = this.set_title.bind(this);
         this.set_moveable = this.set_moveable.bind(this);
+        this.raise_ = this.raise_.bind(this);
+        this.lower = this.lower.bind(this);
         this.show = this.show.bind(this);
         this.hide = this.hide.bind(this);
 
@@ -280,6 +282,32 @@ class TopLevel extends ContainerWidget {
             document.addEventListener('mousemove', onMouseMove);
             document.addEventListener('mouseup', onMouseUp);
         });
+    }
+
+    /**
+     * Raises this TopLevel to the front (highest z-order).
+     */
+    raise_() {
+        // Find the highest zIndex among sibling TopLevel elements
+        let max = 0;
+        for (let el of document.body.children) {
+            let z = parseInt(el.style.zIndex) || 0;
+            if (z > max) max = z;
+        }
+        this.element.style.zIndex = max + 1;
+    }
+
+    /**
+     * Lowers this TopLevel to the back (lowest z-order).
+     */
+    lower() {
+        // Find the lowest zIndex among sibling TopLevel elements
+        let min = Infinity;
+        for (let el of document.body.children) {
+            let z = parseInt(el.style.zIndex) || 0;
+            if (z < min) min = z;
+        }
+        this.element.style.zIndex = min - 1;
     }
 
     /**

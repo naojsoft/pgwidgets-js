@@ -209,6 +209,8 @@ WIDGETS = {
             "set_widget": ["child"],
             "set_title": ["title"],
             "set_moveable": ["tf"],
+            "raise_": [],
+            "lower": [],
         },
         "callbacks": ["move", "close"],
     },
@@ -626,6 +628,21 @@ WIDGETS = {
                       "scroll", "key-down", "key-up", "key-press",
                       "focus-in", "focus-out", "drop-start", "drop-end", "drag-over",
                       "contextmenu", "activated"],
+    },
+
+    "HtmlView": {
+        "base": "widget",
+        "args": ["html"],
+        "options": [],
+        "methods": {
+            "set_html": ["html"],
+            "get_html": [],
+            "append_html": ["html"],
+            "clear": [],
+            "scroll_to_top": [],
+            "scroll_to_bottom": [],
+        },
+        "callbacks": [],
     },
 
     "ExternalWidget": {
