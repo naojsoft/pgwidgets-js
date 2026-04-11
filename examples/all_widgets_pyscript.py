@@ -45,7 +45,7 @@ picker_label = Widgets.TextEntry(text="Pick a widget:", editable=False)
 picker_content.add_widget(picker_label, 0)
 
 widget_names = [
-    "Button", "CheckBox", "ComboBox", "ColorDialog", "Dial",
+    "Button", "CheckBox", "ColorWidget", "ComboBox", "Dial",
     "Expander", "Frame", "GridBox", "Image", "Label",
     "ProgressBar", "RadioButton", "ScrollArea", "ScrollBar",
     "Slider", "SpinBox", "Splitter",
@@ -156,15 +156,13 @@ def make_demo(name):
                                 {"title": "ComboBox",
                                  "width": 280, "height": 200})
 
-    elif name == "ColorDialog":
-        dlg = Widgets.ColorDialog(color="#3366cc", modal=False)
-        dlg._call("set_position", pos[0], pos[1])
-        dlg.on("activated",
-               lambda color: status.set_text(f"Color chosen: {color}"))
-        dlg.on("pick",
-               lambda color: status.set_text(f"Picking: {color}"))
-        dlg.show()
-        return
+    elif name == "ColorWidget":
+        cw = Widgets.ColorWidget(color="#3366cc")
+        cw.on("pick",
+              lambda color: status.set_text(f"Picking: {color}"))
+        subwin = mdi.add_widget(cw,
+                                {"title": "ColorWidget",
+                                 "width": 420, "height": 240})
 
     elif name == "Dial":
         content = Widgets.HBox(spacing=8, padding=8)

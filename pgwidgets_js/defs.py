@@ -228,6 +228,17 @@ WIDGETS = {
         "callbacks": ["activated"],
     },
 
+    "ColorWidget": {
+        "base": "widget",
+        "args": [],
+        "options": ["color"],
+        "methods": {
+            "get_color": [],
+            "set_color": ["hex_string"],
+        },
+        "callbacks": ["pick"],
+    },
+
     "ColorDialog": {
         "base": "widget",
         "args": [],

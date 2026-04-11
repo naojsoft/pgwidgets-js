@@ -45,7 +45,7 @@
     pickerContent.add_widget(pickerLabel, 0);
 
     let widgetNames = [
-        "Button", "CheckBox", "ComboBox", "ColorDialog", "Dial",
+        "Button", "CheckBox", "ColorWidget", "ComboBox", "Dial",
         "Expander", "Frame", "GridBox", "Image", "Label",
         "ProgressBar", "RadioButton", "ScrollArea", "ScrollBar",
         "Slider", "SpinBox", "Splitter",
@@ -152,17 +152,13 @@
             break;
         }
 
-        case "ColorDialog": {
-            let dlg = new Widgets.ColorDialog({color: '#3366cc', modal: false});
-            dlg.set_position(pos.x, pos.y);
-            dlg.add_callback('activated', (w, color) => {
-                status.set_text("Color chosen: " + color);
-            });
-            dlg.add_callback('pick', (w, color) => {
+        case "ColorWidget": {
+            let cw = new Widgets.ColorWidget({color: '#3366cc'});
+            cw.add_callback('pick', (w, color) => {
                 status.set_text("Picking: " + color);
             });
-            dlg.show();
-            return;  // ColorDialog is its own TopLevel, not an MDI subwindow
+            subwin = mdi.add_widget(cw, {title: "ColorWidget", width: 420, height: 240});
+            break;
         }
 
         case "Dial": {
