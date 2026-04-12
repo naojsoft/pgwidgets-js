@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VideoWidget Demo</title>
+  <style>
+    body {
+      margin: 0;
+    }
+  </style>
+  <link rel="stylesheet" href="../Widgets.css" type="text/css" />
+</head>
+<body>
+  <script type="module">
+    import { Widgets } from "../Widgets.js";
+
+    let top = new Widgets.TopLevel({title: "VideoWidget Demo", resizable: true});
+    top.resize(700, 500);
+
+    let vbox = new Widgets.VBox({spacing: 6, padding: 8});
+
+    // URL entry
+    let entry = new Widgets.TextEntrySet({
+        text: "Load",
+        value: "https://www.w3schools.com/html/mov_bbb.mp4",
+        linehistory: 5
+    });
+
+    // Video widget
+    let video = new Widgets.VideoWidget({controls: true});
+
+    // Controls
+    let controls = new Widgets.HBox({spacing: 6});
+    let playBtn = new Widgets.Button("Play");
+    let pauseBtn = new Widgets.Button("Pause");
+    let stopBtn = new Widgets.Button("Stop");
+    let muteBtn = new Widgets.ToggleButton("Mute");
+    let fsBtn = new Widgets.Button("Fullscreen");
+    let volSlider = new Widgets.Slider({min: 0, max: 100, value: 100, track: true});
+    let volLabel = new Widgets.Label("Vol:");
+    controls.add_widget(playBtn, 0);
+    controls.add_widget(pauseBtn, 0);
+    controls.add_widget(stopBtn, 0);
+    controls.add_widget(muteBtn, 0);
+    controls.add_widget(fsBtn, 0);
+    controls.add_widget(volLabel, 0);
+    controls.add_widget(volSlider, 1);
+
+    // Status
+    let note = new Widgets.Label("Supports MP4, WebM, and Ogg natively. HLS streaming requires Safari or hls.js.");
+    note.set_font(null, 11);
+    note.set_color(null, "#888");
+
+    let status = new Widgets.Label("Enter a video URL and click Load.");
+
+    vbox.add_widget(entry, 0);
+    vbox.add_widget(video, 1);
+    vbox.add_widget(controls, 0);
+    vbox.add_widget(note, 0);
+    vbox.add_widget(status, 0);
+
+    top.set_widget(vbox);
+    top.show();
+
+    // Wire up
+    entry.add_callback('activated', (w, url) => {
+        url = url.trim();
+        if (url) {
+            video.set_url(url);
+            video.play();
+            status.set_text("Loading: " + url);
+        }
+    });
+
+    playBtn.add_callback('activated', () => video.play());
+    pauseBtn.add_callback('activated', () => video.pause());
+    stopBtn.add_callback('activated', () => video.stop());
+    fsBtn.add_callback('activated', () => video.fullscreen());
+
+    muteBtn.add_callback('activated', (w, state) => {
+        video.set_muted(state);
+    });
+
+    volSlider.add_callback('activated', (w, val) => {
+        video.set_volume(val / 100);
+    });
+
+    video.add_callback('play', () => status.set_text("Playing"));
+    video.add_callback('pause', () => status.set_text("Paused"));
+    video.add_callback('ended', () => status.set_text("Ended"));
+    video.add_callback('error', (w, msg) => status.set_text("Error: " + msg));
+    video.add_callback('timeupdate', (w, time, duration) => {
+        if (!isNaN(duration)) {
+            let t = time.toFixed(1);
+            let d = duration.toFixed(1);
+            status.set_text("Playing: " + t + "s / " + d + "s");
+        }
+    });
+
+  </script>
+</body>
+</html>

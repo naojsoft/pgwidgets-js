@@ -260,6 +260,9 @@ Then open any example in your browser:
 - [combobox.html](http://localhost:8000/examples/combobox.html) -- ComboBox variants
 - [splitter.html](http://localhost:8000/examples/splitter.html) -- Resizable split panes
 - [tab_widget.html](http://localhost:8000/examples/tab_widget.html) -- Tabbed interface
+- [htmlview.html](http://localhost:8000/examples/htmlview.html) -- Rich HTML content display
+- [videowidget.html](http://localhost:8000/examples/videowidget.html) -- Video playback with controls
+- [external_widgets.html](http://localhost:8000/examples/external_widgets.html) -- Plotly and Bokeh in a splitter
 
 And many more in the `examples/` directory.
 

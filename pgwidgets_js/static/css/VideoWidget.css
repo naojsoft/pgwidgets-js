@@ -1,0 +1,19 @@
+/*
+ * Styling the VideoWidget
+ */
+.video-widget {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #000;
+    min-width: 60px;
+    min-height: 40px;
+}
+
+.video-widget-element {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}

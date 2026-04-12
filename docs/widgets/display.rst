@@ -137,6 +137,77 @@ Inline color swatch with optional picker.
        console.log("Color:", w.get_color());
    });
 
+.. _widget-videowidget:
+
+VideoWidget
+-----------
+
+Video display widget with playback controls. Supports video files via URL
+and live streams via WebRTC or ``getUserMedia``.
+
+**Constructor:** ``new Widgets.VideoWidget({url, autoplay, controls, muted, loop})``
+
+**Options:**
+
+- ``url`` -- initial video URL
+- ``autoplay`` -- start playback automatically
+- ``controls`` -- show native browser playback controls
+- ``muted`` -- start muted
+- ``loop`` -- loop playback
+
+**Methods:**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 45 55
+
+   * - Method
+     - Description
+   * - ``set_url(url)``
+     - Set video source from a URL (mp4, webm, etc.).
+   * - ``set_stream(stream)``
+     - Set a MediaStream as the source (WebRTC, getUserMedia).
+   * - ``get_video_element()``
+     - Return the underlying ``<video>`` DOM element.
+   * - ``play()`` / ``pause()`` / ``stop()``
+     - Playback controls. Stop resets to the beginning.
+   * - ``set_muted(tf)`` / ``get_muted()``
+     - Mute state.
+   * - ``set_volume(vol)`` / ``get_volume()``
+     - Volume (0.0 to 1.0).
+   * - ``set_loop(tf)`` / ``get_loop()``
+     - Loop state.
+   * - ``set_controls(tf)`` / ``get_controls()``
+     - Show/hide native browser controls.
+   * - ``set_current_time(seconds)`` / ``get_current_time()``
+     - Seek position.
+   * - ``get_duration()``
+     - Total duration in seconds.
+   * - ``get_paused()``
+     - Whether playback is paused.
+   * - ``fullscreen()``
+     - Request fullscreen display.
+
+**Callbacks:**
+
+- ``play`` -- playback started.
+- ``pause`` -- playback paused.
+- ``ended`` -- playback reached the end.
+- ``error`` -- a playback error occurred.
+- ``timeupdate`` -- playback position changed (receives current time, duration).
+- ``volumechange`` -- volume or mute state changed.
+
+.. code-block:: javascript
+
+   // Video file
+   let video = new Widgets.VideoWidget({url: "demo.mp4", controls: true});
+   vbox.add_widget(video, 1);
+
+   // WebRTC stream
+   let cam = new Widgets.VideoWidget({autoplay: true, muted: true});
+   navigator.mediaDevices.getUserMedia({video: true})
+       .then(stream => cam.set_stream(stream));
+
 .. _widget-externalwidget:
 
 ExternalWidget

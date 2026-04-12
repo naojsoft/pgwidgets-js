@@ -105,6 +105,9 @@ Then open any example in your browser:
 - ``http://localhost:8000/examples/combobox.html`` -- ComboBox variants
 - ``http://localhost:8000/examples/splitter.html`` -- Resizable split panes
 - ``http://localhost:8000/examples/tab_widget.html`` -- Tabbed interface
+- ``http://localhost:8000/examples/htmlview.html`` -- Rich HTML content display
+- ``http://localhost:8000/examples/videowidget.html`` -- Video playback with controls
+- ``http://localhost:8000/examples/external_widgets.html`` -- Plotly and Bokeh in a splitter
 
 Building Desktop Apps with Electron
 ------------------------------------
