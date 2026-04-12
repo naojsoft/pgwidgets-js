@@ -22,7 +22,7 @@ Usage:
     top.show()
 """
 
-from pgwidgets_js.pyodide.widget import build_all_widget_classes, Widget
+from pgwidgets_js.pyodide.widget import build_all_widget_classes, Widget  # noqa: F401
 
 # Build and export all widget classes at module level
 _classes = build_all_widget_classes()
