@@ -24,7 +24,7 @@ npm
 
    npm install pgwidgets
    # or install directly from GitHub:
-   npm install github:naojsoft/pgwidgets
+   npm install github:naojsoft/pgwidgets-js
 
 Then in your bundled app:
 

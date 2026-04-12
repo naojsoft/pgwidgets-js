@@ -29,8 +29,8 @@ dev = ["sphinx", "furo"]
 test = ["pytest"]
 
 [project.urls]
-Homepage = "https://github.com/naojsoft/pgwidgets"
-Repository = "https://github.com/naojsoft/pgwidgets"
+Homepage = "https://github.com/naojsoft/pgwidgets-js"
+Repository = "https://github.com/naojsoft/pgwidgets-js"
 
 [tool.setuptools_scm]
 version_scheme = "guess-next-dev"
