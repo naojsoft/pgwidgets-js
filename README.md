@@ -181,23 +181,26 @@ messages to create widgets, call methods, and receive callbacks.
 from pgwidgets.sync import Application
 
 app = Application()
-app.start()
-W = app.get_widgets()
-app.wait_for_connection()
 
-top = W.TopLevel(title="Remote App", resizable=True)
-top.resize(400, 300)
+@app.on_connect
+def setup(session):
+    W = session.get_widgets()
 
-vbox = W.VBox(spacing=8)
-btn = W.Button("Click me")
-status = W.Label("Ready")
+    top = W.TopLevel(title="Remote App", resizable=True)
+    top.resize(400, 300)
 
-btn.on("activated", lambda: status.set_text("Clicked!"))
+    vbox = W.VBox(spacing=8)
+    btn = W.Button("Click me")
+    status = W.Label("Ready")
 
-vbox.add_widget(btn, 0)
-vbox.add_widget(status, 1)
-top.set_widget(vbox)
-top.show()
+    btn.on("activated", lambda: status.set_text("Clicked!"))
+
+    vbox.add_widget(btn, 0)
+    vbox.add_widget(status, 1)
+    top.set_widget(vbox)
+    top.show()
+
+app.run()
 
 app.run()
 ```

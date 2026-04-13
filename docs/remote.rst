@@ -23,23 +23,24 @@ Synchronous Example
    from pgwidgets.sync import Application
 
    app = Application()
-   app.start()
-   W = app.get_widgets()
-   app.wait_for_connection()
 
-   top = W.TopLevel(title="Remote App", resizable=True)
-   top.resize(400, 300)
+   @app.on_connect
+   def setup(session):
+       W = session.get_widgets()
 
-   vbox = W.VBox(spacing=8)
-   btn = W.Button("Click me")
-   status = W.Label("Ready")
+       top = W.TopLevel(title="Remote App", resizable=True)
+       top.resize(400, 300)
 
-   btn.on("activated", lambda: status.set_text("Clicked!"))
+       vbox = W.VBox(spacing=8)
+       btn = W.Button("Click me")
+       status = W.Label("Ready")
 
-   vbox.add_widget(btn, 0)
-   vbox.add_widget(status, 1)
-   top.set_widget(vbox)
-   top.show()
+       btn.on("activated", lambda: status.set_text("Clicked!"))
+
+       vbox.add_widget(btn, 0)
+       vbox.add_widget(status, 1)
+       top.set_widget(vbox)
+       top.show()
 
    app.run()
 
@@ -49,31 +50,29 @@ Async Example
 .. code-block:: python
 
    import asyncio
-   from pgwidgets.asynchronous import Application
+   from pgwidgets.async_ import Application
 
-   async def main():
-       app = Application()
-       await app.start()
-       W = app.get_widgets()
-       await app.wait_for_connection()
+   app = Application()
 
-       top = W.TopLevel(title="Async App", resizable=True)
-       top.resize(400, 300)
+   @app.on_connect
+   async def setup(session):
+       W = session.get_widgets()
 
-       vbox = W.VBox(spacing=8)
-       btn = W.Button("Press me")
-       label = W.Label("Waiting...")
+       top = await W.TopLevel(title="Async App", resizable=True)
+       await top.resize(400, 300)
+
+       vbox = await W.VBox(spacing=8)
+       btn = await W.Button("Press me")
+       label = await W.Label("Waiting...")
 
        btn.on("activated", lambda: label.set_text("Pressed!"))
 
-       vbox.add_widget(btn, 0)
-       vbox.add_widget(label, 1)
-       top.set_widget(vbox)
-       top.show()
+       await vbox.add_widget(btn, 0)
+       await vbox.add_widget(label, 1)
+       await top.set_widget(vbox)
+       await top.show()
 
-       await app.run()
-
-   asyncio.run(main())
+   asyncio.run(app.run())
 
 How It Works
 ------------
