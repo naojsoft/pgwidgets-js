@@ -104,6 +104,11 @@ top.show();
 | **Dialog** | Modal or non-modal dialog with configurable buttons |
 | **ColorDialog** | Color picker with SV plane, hue strip, and RGB/HSV/hex inputs |
 
+## Documentation
+
+Full documentation is available at
+[pgwidgets-js.readthedocs.io](https://pgwidgets-js.readthedocs.io/en/latest/).
+
 ## Installation
 
 ### Standalone (no tooling)
