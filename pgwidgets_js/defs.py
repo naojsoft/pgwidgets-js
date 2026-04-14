@@ -192,6 +192,7 @@ WIDGETS = {
             "cascade_windows": [],
             "tile_windows": [],
             "get_subwin": ["child"],
+            "get_configuration": ["child"],
             "close_child": ["child"],
             "set_resistance": ["value"],
         },

@@ -40,6 +40,7 @@ class MDISubWindow extends ContainerWidget {
         this.lower_ = this.lower.bind(this);
         this.signal_close = this.signal_close.bind(this);
         this.close = this.close.bind(this);
+        this.set_title = this.set_title.bind(this);
 
         this.enable_callback('move');
 
@@ -147,6 +148,14 @@ class MDISubWindow extends ContainerWidget {
     set_position(x, y) {
         this.element.style.left = x + 'px';
         this.element.style.top = y + 'px';
+    }
+
+    /**
+     * Sets the title text of the sub-window.
+     * @param {string} title - The new title text.
+     */
+    set_title(title) {
+        this.titleText.innerHTML = title;
     }
 
     /**
@@ -506,6 +515,7 @@ class MDIWidget extends ContainerWidget {
         this.cascade_windows = this.cascade_windows.bind(this);
         this.tile_windows = this.tile_windows.bind(this);
         this.get_subwin = this.get_subwin.bind(this);
+        this.get_configuration = this.get_configuration.bind(this);
         this.close_child = this.close_child.bind(this);
         this.set_resistance = this.set_resistance.bind(this);
         this._updateWorkspaceSize = this._updateWorkspaceSize.bind(this);
@@ -539,6 +549,8 @@ class MDIWidget extends ContainerWidget {
      * @param {number} [options.width=300] - Initial width in pixels.
      * @param {number} [options.height=300] - Initial height in pixels.
      * @param {string|null} [options.icon_url=null] - Title bar icon URL.
+     * @param {number|null} [options.x=null] - Initial left position in pixels.
+     * @param {number|null} [options.y=null] - Initial top position in pixels.
      * @returns {MDISubWindow} The created sub-window.
      */
     add_widget(child, options = { title: "", width: 300, height: 300, icon_url: null }) {
@@ -546,10 +558,16 @@ class MDIWidget extends ContainerWidget {
         const width = this.get_option(options, 'width', 300);
         const height = this.get_option(options, 'height', 300);
         const icon_url = this.get_option(options, 'icon_url', default_icon_url);
+        const x = this.get_option(options, 'x', null);
+        const y = this.get_option(options, 'y', null);
 
         const subwin = new MDISubWindow(this, child, title, width, height, icon_url);
         this.children.push(subwin);
         this.workspace.appendChild(subwin.get_element());
+
+        if (x !== null && y !== null) {
+            subwin.set_position(x, y);
+        }
 
         subwin.raise_();
         this._updateWorkspaceSize();
@@ -731,6 +749,27 @@ class MDIWidget extends ContainerWidget {
             }
         }
         return null;
+    }
+
+    /**
+     * Returns the configuration of the sub-window containing the given child.
+     * @param {Widget} child - The child widget to look up.
+     * @returns {Object|null} Configuration object with x, y, width, height,
+     *   and title, or null if the child is not found.
+     */
+    get_configuration(child) {
+        let subwin = this.get_subwin(child);
+        if (subwin === null) {
+            return null;
+        }
+        let style = subwin.get_element().style;
+        return {
+            x: parseInt(style.left, 10) || 0,
+            y: parseInt(style.top, 10) || 0,
+            width: parseInt(style.width, 10) || 0,
+            height: parseInt(style.height, 10) || 0,
+            title: subwin.titleText.innerHTML,
+        };
     }
 
     /**

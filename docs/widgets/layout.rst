@@ -412,17 +412,32 @@ Multiple Document Interface workspace with draggable, resizable sub-windows.
    * - Method
      - Description
    * - ``add_widget(child, options)``
-     - Add a sub-window. *options* can include ``{title: "..."}``
+     - Add a sub-window. *options*: ``{title, width, height, icon_url, x, y}``
    * - ``cascade_windows()``
      - Arrange sub-windows in a cascade.
    * - ``tile_windows()``
      - Tile sub-windows to fill the workspace.
    * - ``get_subwin(child)``
      - Return the sub-window object for a child.
+   * - ``get_configuration(child)``
+     - Return ``{x, y, width, height, title}`` for a child's sub-window.
    * - ``close_child(child)``
      - Close a sub-window.
    * - ``set_resistance(value)``
      - Set edge resistance for sub-window dragging.
+
+**Sub-window methods** (via ``get_subwin(child)``):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 45 55
+
+   * - Method
+     - Description
+   * - ``set_title(title)``
+     - Change the sub-window title text.
+   * - ``set_position(x, y)``
+     - Move the sub-window to the given position.
 
 **Callbacks:**
 
@@ -432,6 +447,14 @@ Multiple Document Interface workspace with draggable, resizable sub-windows.
 .. code-block:: javascript
 
    let mdi = new Widgets.MDIWidget();
-   mdi.add_widget(editor1, {title: "Document 1"});
-   mdi.add_widget(editor2, {title: "Document 2"});
+   mdi.add_widget(editor1, {title: "Document 1", x: 10, y: 10});
+   mdi.add_widget(editor2, {title: "Document 2", x: 50, y: 50});
    mdi.tile_windows();
+
+   // Change a sub-window title later
+   let subwin = mdi.get_subwin(editor1);
+   subwin.set_title("Document 1 (modified)");
+
+   // Query sub-window configuration
+   let config = mdi.get_configuration(editor1);
+   // config = {x: ..., y: ..., width: ..., height: ..., title: "..."}
