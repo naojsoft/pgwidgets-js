@@ -695,6 +695,7 @@ WIDGETS = {
         "options": ["mode", "accept"],
         "methods": {
             "open": [],
+            "show": [],
             "save": ["filename", "data", "mime_type"],
             "set_mode": ["mode"],
             "get_mode": [],
