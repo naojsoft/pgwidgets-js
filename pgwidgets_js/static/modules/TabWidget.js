@@ -161,7 +161,8 @@ class TabWidget extends ContainerWidget {
             }
             this.tabContentContainer.appendChild(tab_rec.content);
 
-            this.make_callback('page-switch', this.get_child(tab_id));
+            const tab_index = this.tabs.indexOf(tab_id);
+            this.make_callback('page-switch', tab_rec.child, tab_index);
         }
     }
 
@@ -223,7 +224,10 @@ class TabWidget extends ContainerWidget {
      * @param {string} tab_id - The tab to signal close for.
      */
     signal_close(tab_id) {
-        this.make_callback('page-close', this.get_child(tab_id));
+        const close_rec = this.tab_info.get(tab_id);
+        if (close_rec) {
+            this.make_callback('page-close', close_rec.child);
+        }
     }
 
     /**
