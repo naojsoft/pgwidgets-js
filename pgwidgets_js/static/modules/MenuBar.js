@@ -36,6 +36,7 @@ class MenuBar extends Widget {
 
         // close any open menu when clicking outside
         document.addEventListener('mousedown', (e) => {
+            if (!this.element) return;
             if (!this.element.contains(e.target)) {
                 this._closeAll();
             }

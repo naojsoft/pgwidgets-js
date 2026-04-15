@@ -48,7 +48,8 @@
         "Button", "CheckBox", "ColorWidget", "ComboBox", "Dial",
         "Expander", "Frame", "GridBox", "HtmlView", "Image", "Label",
         "ProgressBar", "RadioButton", "ScrollArea", "ScrollBar",
-        "Slider", "SpinBox", "Splitter",
+        "Slider", "SpinBox", "Splitter", "StackWidget",
+        "TabWidget", "TableView",
         "TextArea", "TextEntry", "TextEntrySet", "TextSource",
         "ToggleButton", "ToolBar", "TreeView", "VBox/HBox"
     ];
@@ -444,6 +445,125 @@
             content.add_widget(hsplit, 1);
             content.add_widget(lbl, 0);
             subwin = mdi.add_widget(content, {title: "Splitter", width: 360, height: 180});
+            break;
+        }
+
+        case "StackWidget": {
+            content = new Widgets.VBox();
+            content.set_spacing(6);
+            content.set_padding(8);
+            let lbl = new Widgets.Label("Page 1 visible");
+            let stack = new Widgets.StackWidget();
+            let pages = [];
+            let colors = ["#e8f0fe", "#fef7e0", "#e8fee8"];
+            for (let n = 1; n <= 3; n++) {
+                let pg = new Widgets.VBox();
+                pg.set_padding(8);
+                let pgLbl = new Widgets.Label("Stack page " + n);
+                pgLbl.set_halign("center");
+                pgLbl.set_color(colors[n - 1], "#333");
+                pg.add_widget(pgLbl, 1);
+                stack.add_widget(pg, {title: "Page " + n});
+                pages.push({widget: pg, name: "Page " + n});
+            }
+            let btnRow = new Widgets.HBox();
+            btnRow.set_spacing(4);
+            for (let p of pages) {
+                let btn = new Widgets.Button(p.name);
+                btn.add_callback('activated', () => {
+                    stack.show_widget(p.widget);
+                    lbl.set_text(p.name + " visible");
+                });
+                btnRow.add_widget(btn, 0);
+            }
+            content.add_widget(btnRow, 0);
+            content.add_widget(stack, 1);
+            content.add_widget(lbl, 0);
+            subwin = mdi.add_widget(content, {title: "StackWidget", width: 300, height: 200});
+            break;
+        }
+
+        case "TabWidget": {
+            content = new Widgets.VBox();
+            content.set_spacing(6);
+            content.set_padding(8);
+            let lbl = new Widgets.Label("");
+            let tabs = new Widgets.TabWidget({closable: true, reorderable: true});
+            let colors = ["#e8f0fe", "#fef7e0", "#e8fee8"];
+            for (let n = 1; n <= 3; n++) {
+                let pg = new Widgets.VBox();
+                pg.set_padding(8);
+                let pgLbl = new Widgets.Label("Content of tab " + n);
+                pgLbl.set_halign("center");
+                pgLbl.set_color(colors[n - 1], "#333");
+                pg.add_widget(pgLbl, 1);
+                tabs.add_widget(pg, {title: "Tab " + n});
+            }
+            tabs.add_callback('page-switch', (w, child, idx) => {
+                lbl.set_text("Switched to tab " + idx);
+            });
+            let tabCounter = 3;
+            let addBtn = new Widgets.Button("Add Tab");
+            addBtn.add_callback('activated', () => {
+                tabCounter++;
+                let pg = new Widgets.VBox();
+                pg.set_padding(8);
+                let pgLbl = new Widgets.Label("Content of tab " + tabCounter);
+                pgLbl.set_halign("center");
+                pg.add_widget(pgLbl, 1);
+                tabs.add_widget(pg, {title: "Tab " + tabCounter});
+                lbl.set_text("Added tab " + tabCounter);
+            });
+            content.add_widget(tabs, 1);
+            let btnRow = new Widgets.HBox();
+            btnRow.set_spacing(6);
+            btnRow.add_widget(addBtn, 0);
+            btnRow.add_widget(lbl, 1);
+            content.add_widget(btnRow, 0);
+            subwin = mdi.add_widget(content, {title: "TabWidget", width: 350, height: 220});
+            break;
+        }
+
+        case "TableView": {
+            content = new Widgets.VBox();
+            content.set_spacing(4);
+            let lbl = new Widgets.Label("");
+            let table = new Widgets.TableView({
+                columns: ["Name", "Department", {label: "Salary", type: "number"}],
+                selection_mode: "multi",
+                alternate_row_colors: true,
+            });
+            table.set_rows([
+                ["Alice", "Engineering", 95000],
+                ["Bob", "Marketing", 72000],
+                ["Carol", "Engineering", 102000],
+                ["Dave", "Sales", 68000],
+                ["Eve", "Engineering", 98000],
+                ["Frank", "Marketing", 75000],
+                ["Grace", "Sales", 71000],
+                ["Heidi", "Engineering", 110000],
+            ]);
+            table.add_callback('selected', (w, items) => {
+                if (items.length === 1) lbl.set_text("Selected: " + items[0].values[0]);
+                else lbl.set_text("Selected: " + items.length + " rows");
+            });
+            table.add_callback('activated', (w, vals) => lbl.set_text("Activated: " + vals[0]));
+            let hbox = new Widgets.HBox();
+            hbox.set_spacing(4);
+            let rowNum = 8;
+            let addBtn = new Widgets.Button("Add Row");
+            addBtn.add_callback('activated', () => {
+                rowNum++;
+                table.append_row(["Person " + rowNum, "New", 60000]);
+            });
+            let sortBtn = new Widgets.Button("Sort by Name");
+            sortBtn.add_callback('activated', () => table.sort_by_column(0));
+            hbox.add_widget(addBtn, 0);
+            hbox.add_widget(sortBtn, 0);
+            hbox.add_widget(lbl, 1);
+            content.add_widget(hbox, 0);
+            content.add_widget(table, 1);
+            subwin = mdi.add_widget(content, {title: "TableView", width: 420, height: 280});
             break;
         }
 

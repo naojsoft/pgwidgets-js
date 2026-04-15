@@ -698,6 +698,8 @@ class MDIWidget extends ContainerWidget {
      * @private
      */
     _syncScrollbars() {
+        if (!this._viewport || !this._hScrollBar
+            || !this._hScrollBar.get_element()) return;
         let vw = this._viewport.clientWidth;
         let vh = this._viewport.clientHeight;
         let ww = this.workspace.scrollWidth;

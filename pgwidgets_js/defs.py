@@ -136,9 +136,11 @@ WIDGETS = {
         "options": ["title", "collapsible", "shadow"],
         "methods": {
             "set_widget": ["child"],
+            "set_collapsed": ["collapsed"],
+            "get_collapsed": [],
             "toggleContent": [],
         },
-        "callbacks": [],
+        "callbacks": ["toggled"],
     },
 
     "ScrollArea": {
@@ -559,7 +561,7 @@ WIDGETS = {
             "delete_row": ["index"],
         },
         "callbacks": ["activated", "selected", "expanded", "collapsed",
-                      "cell_edited"],
+                      "sorted", "cell_edited"],
     },
 
     "TableView": {
@@ -595,7 +597,7 @@ WIDGETS = {
             "append_row": ["values"],
             "delete_row": ["index"],
         },
-        "callbacks": ["activated", "selected", "cell_edited"],
+        "callbacks": ["activated", "selected", "sorted", "cell_edited"],
     },
 
     "Timer": {

@@ -57,7 +57,7 @@ class TreeView extends Widget {
 
         // Enable callbacks
         for (let name of ['activated', 'selected', 'expanded', 'collapsed',
-                          'cell_edited']) {
+                          'sorted', 'cell_edited']) {
             this.enable_callback(name);
         }
 
@@ -306,6 +306,7 @@ class TreeView extends Widget {
         this._applySort();
         this._updateSortIndicators();
         this._renderAll();
+        this.make_callback('sorted', this._sortColumn, this._sortAscending);
     }
 
     _updateSortIndicators() {
@@ -554,7 +555,7 @@ class TreeView extends Widget {
         if (node && node.children.length > 0) {
             node.expanded = true;
             this._renderAll();
-            this.make_callback('expanded', node.values);
+            this.make_callback('expanded', node.values, this._pathOfNode(node));
         }
     }
 
@@ -567,7 +568,7 @@ class TreeView extends Widget {
         if (node && node.children.length > 0) {
             node.expanded = false;
             this._renderAll();
-            this.make_callback('collapsed', node.values);
+            this.make_callback('collapsed', node.values, this._pathOfNode(node));
         }
     }
 
@@ -853,9 +854,9 @@ class TreeView extends Widget {
                 node.expanded = !node.expanded;
                 this._renderAll();
                 if (node.expanded) {
-                    this.make_callback('expanded', node.values);
+                    this.make_callback('expanded', node.values, this._pathOfNode(node));
                 } else {
-                    this.make_callback('collapsed', node.values);
+                    this.make_callback('collapsed', node.values, this._pathOfNode(node));
                 }
             });
         }
@@ -985,7 +986,7 @@ class TreeView extends Widget {
             if (node.children.length > 0 && !node.expanded) {
                 node.expanded = true;
                 this._renderAll();
-                this.make_callback('expanded', node.values);
+                this.make_callback('expanded', node.values, this._pathOfNode(node));
             }
             break;
         case 'ArrowLeft':
@@ -993,7 +994,7 @@ class TreeView extends Widget {
             if (node.children.length > 0 && node.expanded) {
                 node.expanded = false;
                 this._renderAll();
-                this.make_callback('collapsed', node.values);
+                this.make_callback('collapsed', node.values, this._pathOfNode(node));
             } else if (node.parent && node.parent !== this._root) {
                 // Navigate to parent
                 this._selection = [node.parent];
@@ -1034,6 +1035,7 @@ class TreeView extends Widget {
         let showH = cw > vw + 1;
         let showV = ch > vh + 1;
 
+        if (!this._hScrollBar || !this._hScrollBar.get_element()) return;
         this._hScrollBar.get_element().style.display = showH ? '' : 'none';
         this._vScrollBar.get_element().style.display = showV ? '' : 'none';
         this._corner.style.display = (showH && showV) ? '' : 'none';

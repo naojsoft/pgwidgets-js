@@ -87,3 +87,30 @@ How It Works
 
 The protocol is language-agnostic -- any WebSocket client that speaks the
 JSON protocol can drive the UI.
+
+Session Persistence and Reconnection
+-------------------------------------
+
+Sessions on the Python side persist independently of browser connections.
+The Python process is the source of truth for all widget state. When a
+browser disconnects (page refresh, network drop) and reconnects, the
+server replays the entire widget tree so the UI reappears in its current
+state.
+
+The browser stores the session ID and security token (received via a
+``session-info`` message after the handshake). On reconnection, the
+browser sends these back in the ``ack`` message so the server can match
+it to the existing session. The ``RemoteInterface`` on the JS side
+handles ``reconstruct-start`` / ``reconstruct-end`` brackets to suppress
+callback echo during reconstruction.
+
+Multi-Browser Synchronization
+-----------------------------
+
+Multiple browsers can connect to the same session by navigating to the
+session URL. When one browser triggers a state change (slider move, tab
+switch, text edit, etc.), the Python server pushes the update to all
+other connected browsers using ``silent`` calls. When a call includes
+``"silent": true``, the ``RemoteInterface`` sets a ``_syncing`` flag so
+the JS side executes the method but suppresses callback dispatch,
+preventing infinite feedback loops.

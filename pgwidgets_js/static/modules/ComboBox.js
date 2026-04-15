@@ -114,6 +114,7 @@ class ComboBox extends Widget {
 
         // close dropdown when clicking outside
         document.addEventListener('mousedown', (e) => {
+            if (!this.element) return;
             if (!this.element.contains(e.target) &&
                 !this._dropdown.contains(e.target)) {
                 this._hideDropdown();

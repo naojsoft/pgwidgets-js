@@ -201,9 +201,13 @@ def setup(session):
     top.show()
 
 app.run()
-
-app.run()
 ```
+
+Sessions persist independently of browser connections. Refresh the page
+and the UI is automatically reconstructed. Open the same session URL in
+multiple browser tabs and they stay synchronized in real time -- slider
+moves, tab switches, tree expand/collapse, and more are pushed to all
+connected browsers.
 
 See `examples/remote_demo.py` and `examples/remote_demo_async.py`
 for complete working examples.

@@ -77,6 +77,18 @@ class Expander extends ContainerWidget {
         }
     }
 
+    /** Sets the collapsed state explicitly. */
+    set_collapsed(collapsed) {
+        if (collapsed !== this.collapsed) {
+            this.toggleContent();
+        }
+    }
+
+    /** Returns the current collapsed state. */
+    get_collapsed() {
+        return this.collapsed;
+    }
+
     /** Toggles the content container between visible and hidden states. */
     toggleContent() {
         const toggleButton = this.element.querySelector('.expander-toggle');

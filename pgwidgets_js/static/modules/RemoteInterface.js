@@ -9,17 +9,28 @@ import {Callback} from "./Callback.js";
  *
  * Message protocol:
  *
- * Client -> Browser:
- *   {type: "create", id, class, args}     Create a widget, returns wid
- *   {type: "call", id, wid, method, args} Call a method, returns result
- *   {type: "listen", id, wid, action}     Register for a callback
- *   {type: "unlisten", id, wid, action}   Remove a callback listener
- *   [ msg, msg, ... ]                     Batch of messages
+ * Server -> Browser:
+ *   {type: "init", id}                        Init handshake
+ *   {type: "session-info", session_id, token} Session credentials
+ *   {type: "reconstruct-start", id}           Begin UI reconstruction
+ *   {type: "reconstruct-end", id}             End UI reconstruction
+ *   {type: "create", id, class, args}         Create a widget, returns wid
+ *   {type: "call", id, wid, method, args}     Call a method, returns result
+ *   {type: "listen", id, wid, action}         Register for a callback
+ *   {type: "unlisten", id, wid, action}       Remove a callback listener
+ *   [ msg, msg, ... ]                         Batch of messages
  *
- * Browser -> Client:
- *   {type: "result", id, wid?, value?}    Response to create/call/listen
- *   {type: "error", id, error}            Error response
- *   {type: "callback", wid, action, args} Callback event
+ * Browser -> Server:
+ *   {type: "result", id, wid?, value?,        Response (may include
+ *    session_id?, token?}                      reconnect credentials)
+ *   {type: "error", id, error}                Error response
+ *   {type: "callback", wid, action, args}     Callback event
+ *
+ * Reconnection:
+ *   Session credentials are stored in the URL (?session=ID&token=TOKEN)
+ *   and in sessionStorage. On reconnect the init ack includes these so
+ *   the server can reattach to the existing session and reconstruct the
+ *   UI. The URL is preferred over sessionStorage so links can be shared.
  */
 class RemoteInterface {
 
@@ -42,6 +53,10 @@ class RemoteInterface {
         this._listeners = new Map();  // "wid:action" -> callback fn
         this._nextTransferId = 1;
         this._chunkSize = options.chunk_size || 512 * 1024;  // bytes of base64 per chunk
+        this._reconstructing = false;  // true during UI reconstruction
+        this._syncing = false;         // true during cross-browser sync calls
+        this._sessionId = null;
+        this._sessionToken = null;
 
         this.connect = this.connect.bind(this);
         this.disconnect = this.disconnect.bind(this);
@@ -54,6 +69,9 @@ class RemoteInterface {
         this._resolveArgs = this._resolveArgs.bind(this);
         this._serializeValue = this._serializeValue.bind(this);
         this._send = this._send.bind(this);
+
+        // Restore session credentials from sessionStorage if available.
+        this._loadSessionCredentials();
 
         if (options.auto_connect !== false) {
             this.connect();
@@ -126,6 +144,12 @@ class RemoteInterface {
             switch (msg.type) {
             case "init":
                 return this._handleInit(msg);
+            case "session-info":
+                return this._handleSessionInfo(msg);
+            case "reconstruct-start":
+                return this._handleReconstructStart(msg);
+            case "reconstruct-end":
+                return this._handleReconstructEnd(msg);
             case "create":
                 return this._handleCreate(msg);
             case "call":
@@ -148,6 +172,9 @@ class RemoteInterface {
      * listeners, and reset the document body. This allows a fresh
      * Python application to start with a clean slate without requiring
      * a browser reload.
+     *
+     * The ack includes session_id and token from sessionStorage so the
+     * server can reconnect us to an existing session.
      * @private
      */
     _handleInit(msg) {
@@ -165,7 +192,133 @@ class RemoteInterface {
         // Clear the document body of any leftover DOM.
         document.body.innerHTML = '';
 
+        // Include stored session credentials so the server can
+        // reconnect us to an existing session if valid.
+        let result = {type: "result", id: msg.id};
+        if (this._sessionId !== null && this._sessionToken !== null) {
+            result.session_id = this._sessionId;
+            result.token = this._sessionToken;
+        }
+        return result;
+    }
+
+    /**
+     * Handle a session-info message: store the session ID and token
+     * so we can reconnect to this session later.
+     * @private
+     */
+    _handleSessionInfo(msg) {
+        this._sessionId = msg.session_id;
+        this._sessionToken = msg.token;
+        this._saveSessionCredentials();
+        this._updateUrl();
+        console.log("RemoteInterface: session " + msg.session_id);
+    }
+
+    /**
+     * Handle reconstruct-start: the server is about to replay the
+     * widget tree. Clear the DOM and suppress callback dispatch.
+     * @private
+     */
+    _handleReconstructStart(msg) {
+        this._reconstructing = true;
+        // Destroy all existing widgets and clear the registry so
+        // reconstruction starts with a clean slate (same as init).
+        for (let [wid, widget] of [...Callback._registry]) {
+            widget.destroy();
+        }
+        Callback._registry.clear();
+        // Set _nextId above all Python-allocated wids so auto-assigned
+        // wids (from widgets created inside method calls, e.g.
+        // MDISubWindow) never collide with Python wids.
+        if (msg.next_wid !== undefined) {
+            Callback._nextId = msg.next_wid;
+        }
+        this._listeners.clear();
+        document.body.innerHTML = '';
+        console.log("RemoteInterface: reconstruction started");
         return {type: "result", id: msg.id};
+    }
+
+    /**
+     * Handle reconstruct-end: reconstruction is complete, re-enable
+     * callback dispatch.
+     * @private
+     */
+    _handleReconstructEnd(msg) {
+        this._reconstructing = false;
+        console.log("RemoteInterface: reconstruction complete");
+        return {type: "result", id: msg.id};
+    }
+
+    /**
+     * Load session credentials from the URL query string (preferred)
+     * or sessionStorage (fallback).  The URL is authoritative because
+     * it lets the user open a specific session by pasting a link,
+     * while sessionStorage is per-origin and may reference a
+     * different session.
+     * @private
+     */
+    _loadSessionCredentials() {
+        // Try URL first: ?session=<id>&token=<token>
+        try {
+            let params = new URLSearchParams(window.location.search);
+            let urlSid = params.get('session');
+            let urlToken = params.get('token');
+            if (urlSid !== null) {
+                this._sessionId = /^\d+$/.test(urlSid)
+                    ? parseInt(urlSid, 10) : urlSid;
+                this._sessionToken = urlToken;
+                return;
+            }
+        } catch (e) {
+            // URLSearchParams may not be available in very old browsers.
+        }
+
+        // Fallback: sessionStorage
+        try {
+            this._sessionId = sessionStorage.getItem('pgwidgets_session_id');
+            this._sessionToken = sessionStorage.getItem('pgwidgets_session_token');
+            if (this._sessionId !== null && /^\d+$/.test(this._sessionId)) {
+                this._sessionId = parseInt(this._sessionId, 10);
+            }
+        } catch (e) {
+            // sessionStorage may be unavailable (e.g. sandboxed iframe).
+        }
+    }
+
+    /**
+     * Save session credentials to sessionStorage.
+     * @private
+     */
+    _saveSessionCredentials() {
+        try {
+            sessionStorage.setItem('pgwidgets_session_id',
+                                   String(this._sessionId));
+            sessionStorage.setItem('pgwidgets_session_token',
+                                   this._sessionToken);
+        } catch (e) {
+            // sessionStorage may be unavailable.
+        }
+    }
+
+    /**
+     * Update the browser URL to include the session ID and token
+     * so the link can be shared or bookmarked for reconnection.
+     * Uses replaceState to avoid polluting the back-button history.
+     * @private
+     */
+    _updateUrl() {
+        try {
+            let url = new URL(window.location);
+            url.searchParams.set('session', String(this._sessionId));
+            if (this._sessionToken) {
+                url.searchParams.set('token', this._sessionToken);
+            }
+            window.history.replaceState(null, '', url);
+        } catch (e) {
+            // history API may be unavailable.
+        }
     }
 
     /** @private */
@@ -176,12 +329,25 @@ class RemoteInterface {
                     error: "Unknown widget class: " + msg.class};
         }
         let args = this._resolveArgs(msg.args || []);
-        let widget = new cls(...args);
-        // if the client assigned a wid, re-register under that id
+        // When the server specifies a wid, the auto-assigned wid from
+        // the constructor may collide with an already-registered widget
+        // (e.g. during reconstruction after _nextId was reset).
+        // Save the occupant so we can restore it after the constructor.
+        let savedWid = null, savedWidget = null;
         if (msg.wid !== undefined) {
-            Callback._registry.delete(widget.wid);
+            savedWid = Callback._nextId;
+            savedWidget = Callback._registry.get(savedWid);
+        }
+        let widget = new cls(...args);
+        if (msg.wid !== undefined) {
+            let autoWid = widget.wid;
+            Callback._registry.delete(autoWid);
+            // Restore the widget that was clobbered by the constructor
+            if (savedWidget && savedWidget !== widget) {
+                Callback._registry.set(savedWid, savedWidget);
+            }
             widget.wid = msg.wid;
-            Callback._registry.set(widget.wid, widget);
+            Callback._registry.set(msg.wid, widget);
         }
         return {type: "result", id: msg.id, wid: widget.wid};
     }
@@ -199,7 +365,10 @@ class RemoteInterface {
                     widget.constructor.name};
         }
         let args = this._resolveArgs(msg.args || []);
+        // Silent calls suppress callbacks (used for cross-browser sync)
+        if (msg.silent) this._syncing = true;
         let result = widget[msg.method](...args);
+        if (msg.silent) this._syncing = false;
         let response = {type: "result", id: msg.id};
         if (result !== undefined) {
             response.value = this._serializeValue(result);
@@ -215,10 +384,22 @@ class RemoteInterface {
                     error: "Unknown widget id: " + msg.wid};
         }
         let key = msg.wid + ":" + msg.action;
-        if (this._listeners.has(key)) {
+        if (this._listeners.has(key) && !this._reconstructing) {
             return {type: "result", id: msg.id};
         }
+        // During reconstruction, remove the old listener before
+        // re-registering so callbacks route to the new wrapper.
+        let oldCb = this._listeners.get(key);
+        if (oldCb) {
+            widget.remove_callback(msg.action, oldCb);
+            this._listeners.delete(key);
+        }
         let cb = (w, ...args) => {
+            // Suppress callbacks during reconstruction or cross-browser
+            // sync — these are side effects, not user actions.
+            if (this._reconstructing || this._syncing) {
+                return;
+            }
             // If the payload contains files with data, use chunked
             // transfer (works for drop-end, FileDialog, etc.).
             let payload = args[0];
@@ -245,7 +426,58 @@ class RemoteInterface {
         this._listeners.set(key, cb);
         widget.enable_callback(msg.action);
         widget.add_callback(msg.action, cb);
+
+        // For "modified" actions, attach a debounced DOM input listener
+        // so text changes are pushed to the server without the user
+        // having to press Enter.
+        if (msg.action === "modified") {
+            this._attachModifiedListener(widget);
+        }
+
+        // For "toggled" on Expander, wrap toggleContent to fire the
+        // callback with the new collapsed state.
+        if (msg.action === "toggled" && typeof widget.toggleContent === "function") {
+            this._wrapToggleContent(widget);
+        }
+
         return {type: "result", id: msg.id};
+    }
+
+    /**
+     * Attach a debounced DOM 'input' listener that fires the widget's
+     * "modified" callback with the current value.  Works for any widget
+     * that has an _input (TextEntry) or _textarea (TextArea) element.
+     * @private
+     */
+    _attachModifiedListener(widget) {
+        let el = widget._input || widget._textarea;
+        if (!el) return;
+        let timer = null;
+        let listener = () => {
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(() => {
+                widget.make_callback("modified", el.value);
+            }, 300);
+        };
+        el.addEventListener("input", listener);
+        // Store so we can clean up on destroy/reconstruction
+        widget._modifiedListener = listener;
+        widget._modifiedElement = el;
+    }
+
+    /**
+     * Wrap an Expander's toggleContent so it fires a "toggled"
+     * callback with the new collapsed state after each toggle.
+     * @private
+     */
+    _wrapToggleContent(widget) {
+        if (widget._toggleWrapped) return;
+        let orig = widget.toggleContent.bind(widget);
+        widget.toggleContent = function() {
+            orig();
+            widget.make_callback("toggled", widget.collapsed);
+        };
+        widget._toggleWrapped = true;
     }
 
     /** @private */
@@ -303,7 +535,8 @@ class RemoteInterface {
      */
     _serializeValue(val) {
         if (val instanceof Callback) {
-            return {__wid__: val.wid};
+            return {__wid__: val.wid,
+                    __class__: val.constructor.name};
         }
         if (Array.isArray(val)) {
             return val.map(v => this._serializeValue(v));
