@@ -51,7 +51,19 @@ class Frame extends ContainerWidget {
             this.remove_child(this.children[0]);
         }
         super.add_child(child);
-        this.contentContainer.appendChild(child.get_element());
+        let elt = child.get_element();
+        this.contentContainer.appendChild(elt);
+
+        // The content container owns the child's size via flex:1 and
+        // align-items: stretch.  Wrap resize() so a caller-supplied
+        // pixel size doesn't override the stretch once the container
+        // is shrunk and re-expanded.
+        let origResize = child.resize.bind(child);
+        child.resize = function(w, h) {
+            origResize(w, h);
+            elt.style.width = '';
+            elt.style.height = '';
+        };
     }
 
     /**

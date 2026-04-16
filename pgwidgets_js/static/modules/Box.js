@@ -65,13 +65,29 @@ class Box extends ContainerWidget {
         }
 
         // cross axis: always fill (like Qt)
-        if (this.orientation === 'vertical') {
+        let orient = this.orientation;
+        if (orient === 'vertical') {
             elt.style.width = '100%';
         } else {
             elt.style.height = '100%';
         }
         elt.style.minWidth = '0';
         elt.style.minHeight = '0';
+
+        // Wrap resize() so that a caller-supplied pixel size doesn't
+        // override the cross-axis stretch applied above.  Without this,
+        // a subsequent resize(w, h) sets style.width/height to pixels
+        // and the child no longer grows past that value when the
+        // container is re-expanded.
+        let origResize = child.resize.bind(child);
+        child.resize = function(w, h) {
+            origResize(w, h);
+            if (orient === 'vertical') {
+                elt.style.width = '100%';
+            } else {
+                elt.style.height = '100%';
+            }
+        };
     }
 
     /**

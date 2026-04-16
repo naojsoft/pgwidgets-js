@@ -71,11 +71,24 @@ class Splitter extends ContainerWidget {
         } else {
             pane.style.minWidth = defaultMin + 'px';
         }
-        pane.appendChild(child.get_element());
+        let elt = child.get_element();
+        pane.appendChild(elt);
         this.element.appendChild(pane);
         this.panes.push(pane);
         this.paneMins.push(defaultMin);
         this.children.push(child);
+
+        // The pane owns the child's size on both axes via flex and
+        // align-items: stretch.  Wrap resize() so a caller-supplied
+        // pixel size doesn't override the stretch once the container
+        // is shrunk and re-expanded.  Subclass side effects still run
+        // via the original resize.
+        let origResize = child.resize.bind(child);
+        child.resize = function(w, h) {
+            origResize(w, h);
+            elt.style.width = '';
+            elt.style.height = '';
+        };
     }
 
     /**

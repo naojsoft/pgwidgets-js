@@ -81,6 +81,17 @@ class GridBox extends ContainerWidget {
         this.cellMap.set(child, {row: row, col: col});
         super.add_child(child);
         this.element.appendChild(elt);
+
+        // The grid cell owns the child's size on both axes via the
+        // default justify-self: stretch / align-self: stretch.  Wrap
+        // resize() so a caller-supplied pixel size doesn't override
+        // the stretch once the container is shrunk and re-expanded.
+        let origResize = child.resize.bind(child);
+        child.resize = function(w, h) {
+            origResize(w, h);
+            elt.style.width = '';
+            elt.style.height = '';
+        };
     }
 
     /**
