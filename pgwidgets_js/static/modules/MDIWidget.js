@@ -148,6 +148,16 @@ class MDISubWindow extends ContainerWidget {
     set_position(x, y) {
         this.element.style.left = x + 'px';
         this.element.style.top = y + 'px';
+        if (this.mdi_widget) {
+            this.mdi_widget._updateWorkspaceSize();
+        }
+    }
+
+    resize(width, height) {
+        super.resize(width, height);
+        if (this.mdi_widget) {
+            this.mdi_widget._updateWorkspaceSize();
+        }
     }
 
     /**
@@ -493,15 +503,23 @@ class MDIWidget extends ContainerWidget {
         this.element.appendChild(this._vScrollBar.get_element());
         this.element.appendChild(this._corner);
 
+        this._scrollTimer = null;
+        this._scrollReady = false;
+
         // scrollbar callbacks
         this._hScrollBar.add_callback('activated', (w, pct) => {
             let maxScroll = this.workspace.scrollWidth - this._viewport.clientWidth;
             this._viewport.scrollLeft = pct * maxScroll;
+            this._syncFromScroll();
         });
         this._vScrollBar.add_callback('activated', (w, pct) => {
             let maxScroll = this.workspace.scrollHeight - this._viewport.clientHeight;
             this._viewport.scrollTop = pct * maxScroll;
+            this._syncFromScroll();
         });
+
+        // native scroll (e.g. touch, programmatic)
+        this._viewport.addEventListener('scroll', () => this._syncFromScroll());
 
         // prevent mouse wheel from scrolling the viewport
         this._viewport.addEventListener('wheel', (e) => {
@@ -518,6 +536,7 @@ class MDIWidget extends ContainerWidget {
         this.get_configuration = this.get_configuration.bind(this);
         this.close_child = this.close_child.bind(this);
         this.set_resistance = this.set_resistance.bind(this);
+        this.set_scroll_position = this.set_scroll_position.bind(this);
         this._updateWorkspaceSize = this._updateWorkspaceSize.bind(this);
         this._syncScrollbars = this._syncScrollbars.bind(this);
         this._syncFromScroll = this._syncFromScroll.bind(this);
@@ -526,9 +545,11 @@ class MDIWidget extends ContainerWidget {
         this._resizeObserver = new ResizeObserver(() => this._syncScrollbars());
         this._resizeObserver.observe(this._viewport);
 
-        for (let name of ['page-switch', 'page-close']) {
+        for (let name of ['page-switch', 'page-close', 'scrolled']) {
             this.enable_callback(name);
         }
+
+        requestAnimationFrame(() => { this._scrollReady = true; });
     }
 
     /**
@@ -723,6 +744,34 @@ class MDIWidget extends ContainerWidget {
     }
 
     /**
+     * Sets the scroll position using percentages (0–1).
+     * @param {number} h_pct - Horizontal scroll percentage.
+     * @param {number} v_pct - Vertical scroll percentage.
+     */
+    set_scroll_position(h_pct, v_pct) {
+        let maxX = this.workspace.scrollWidth - this._viewport.clientWidth;
+        let maxY = this.workspace.scrollHeight - this._viewport.clientHeight;
+        if (maxX > 0) this._viewport.scrollLeft = h_pct * maxX;
+        if (maxY > 0) this._viewport.scrollTop = v_pct * maxY;
+        this._scrollSilent = true;
+        this._syncFromScroll();
+        this._scrollSilent = false;
+    }
+
+    /**
+     * Returns the current scroll position as [h_pct, v_pct] (0–1).
+     * @returns {number[]}
+     */
+    get_scroll_position() {
+        let maxX = this.workspace.scrollWidth - this._viewport.clientWidth;
+        let maxY = this.workspace.scrollHeight - this._viewport.clientHeight;
+        return [
+            maxX > 0 ? this._viewport.scrollLeft / maxX : 0,
+            maxY > 0 ? this._viewport.scrollTop / maxY : 0,
+        ];
+    }
+
+    /**
      * Syncs scrollbar positions from the viewport's current scroll offset.
      * @private
      */
@@ -730,11 +779,20 @@ class MDIWidget extends ContainerWidget {
         let maxScrollX = this.workspace.scrollWidth - this._viewport.clientWidth;
         let maxScrollY = this.workspace.scrollHeight - this._viewport.clientHeight;
 
-        if (maxScrollX > 0) {
-            this._hScrollBar.set_scroll_percent(this._viewport.scrollLeft / maxScrollX);
-        }
-        if (maxScrollY > 0) {
-            this._vScrollBar.set_scroll_percent(this._viewport.scrollTop / maxScrollY);
+        let hPct = maxScrollX > 0 ? this._viewport.scrollLeft / maxScrollX : 0;
+        let vPct = maxScrollY > 0 ? this._viewport.scrollTop / maxScrollY : 0;
+
+        if (maxScrollX > 0) this._hScrollBar.set_scroll_percent(hPct);
+        if (maxScrollY > 0) this._vScrollBar.set_scroll_percent(vPct);
+
+        // Debounced scroll-end callback (suppressed for programmatic scrolls
+        // and during initial construction before layout settles)
+        if (this._scrollTimer) clearTimeout(this._scrollTimer);
+        if (this._scrollReady && !this._scrollSilent) {
+            this._scrollTimer = setTimeout(() => {
+                this._scrollTimer = null;
+                this.make_callback('scrolled', hPct, vPct);
+            }, 150);
         }
     }
 

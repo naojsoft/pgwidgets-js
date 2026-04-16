@@ -149,8 +149,10 @@ WIDGETS = {
         "options": ["hscrollbar", "vscrollbar"],
         "methods": {
             "set_widget": ["child"],
+            "set_scroll_position": ["h_pct", "v_pct"],
+            "get_scroll_position": [],
         },
-        "callbacks": [],
+        "callbacks": ["scrolled"],
     },
 
     "TabWidget": {
@@ -197,8 +199,10 @@ WIDGETS = {
             "get_configuration": ["child"],
             "close_child": ["child"],
             "set_resistance": ["value"],
+            "set_scroll_position": ["h_pct", "v_pct"],
+            "get_scroll_position": [],
         },
-        "callbacks": ["page-switch", "page-close"],
+        "callbacks": ["page-switch", "page-close", "scrolled"],
     },
 
     # -- Top-level windows --
@@ -363,8 +367,10 @@ WIDGETS = {
             "set_editable": ["tf"],
             "set_wrap": ["tf"],
             "set_limit": ["numlines"],
+            "set_scroll_position": ["h_pct", "v_pct"],
+            "get_scroll_position": [],
         },
-        "callbacks": [],
+        "callbacks": ["scrolled"],
     },
 
     "TextSource": {
@@ -409,8 +415,11 @@ WIDGETS = {
             # Scrolling
             "scroll_to": ["ref_or_offset"],
             "scroll_to_cursor": [],
+            "set_scroll_position": ["h_pct", "v_pct"],
+            "get_scroll_position": [],
         },
-        "callbacks": ["changed", "cursor_moved", "line_clicked", "icon_clicked"],
+        "callbacks": ["changed", "cursor_moved", "line_clicked",
+                      "icon_clicked", "scrolled"],
     },
 
     # -- Value widgets --
@@ -559,9 +568,11 @@ WIDGETS = {
             "insert_row": ["index", "values"],
             "append_row": ["values"],
             "delete_row": ["index"],
+            "set_scroll_position": ["h_pct", "v_pct"],
+            "get_scroll_position": [],
         },
         "callbacks": ["activated", "selected", "expanded", "collapsed",
-                      "sorted", "cell_edited"],
+                      "sorted", "cell_edited", "scrolled"],
     },
 
     "TableView": {
@@ -596,8 +607,11 @@ WIDGETS = {
             "insert_row": ["index", "values"],
             "append_row": ["values"],
             "delete_row": ["index"],
+            "set_scroll_position": ["h_pct", "v_pct"],
+            "get_scroll_position": [],
         },
-        "callbacks": ["activated", "selected", "sorted", "cell_edited"],
+        "callbacks": ["activated", "selected", "sorted", "cell_edited",
+                      "scrolled"],
     },
 
     "Timer": {
@@ -644,8 +658,10 @@ WIDGETS = {
             "clear": [],
             "scroll_to_top": [],
             "scroll_to_bottom": [],
+            "set_scroll_position": ["h_pct", "v_pct"],
+            "get_scroll_position": [],
         },
-        "callbacks": [],
+        "callbacks": ["scrolled"],
     },
 
     "VideoWidget": {

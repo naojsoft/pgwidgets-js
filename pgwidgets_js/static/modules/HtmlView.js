@@ -32,8 +32,12 @@ class HtmlView extends Widget {
         this.clear = this.clear.bind(this);
         this.scroll_to_top = this.scroll_to_top.bind(this);
         this.scroll_to_bottom = this.scroll_to_bottom.bind(this);
+        this.set_scroll_position = this.set_scroll_position.bind(this);
         this._syncScrollbars = this._syncScrollbars.bind(this);
         this._syncFromScroll = this._syncFromScroll.bind(this);
+
+        this._scrollTimer = null;
+        this._scrollReady = false;
 
         super.init_style();
 
@@ -59,10 +63,12 @@ class HtmlView extends Widget {
         this._vScrollBar.add_callback('activated', (w, pct) => {
             let maxScroll = this._content.scrollHeight - this._content.clientHeight;
             this._content.scrollTop = Math.max(0, pct * maxScroll);
+            this._syncFromScroll();
         });
         this._hScrollBar.add_callback('activated', (w, pct) => {
             let maxScroll = this._content.scrollWidth - this._content.clientWidth;
             this._content.scrollLeft = Math.max(0, pct * maxScroll);
+            this._syncFromScroll();
         });
 
         // Keep scrollbars in sync when content scrolls natively
@@ -74,7 +80,10 @@ class HtmlView extends Widget {
         if (html) {
             this.set_html(html);
         }
-        requestAnimationFrame(() => this._syncScrollbars());
+        requestAnimationFrame(() => {
+            this._syncScrollbars();
+            this._scrollReady = true;
+        });
     }
 
     /**
@@ -154,15 +163,51 @@ class HtmlView extends Widget {
         this._syncFromScroll();
     }
 
+    /**
+     * Sets the scroll position using percentages (0–1).
+     * @param {number} h_pct - Horizontal scroll percentage.
+     * @param {number} v_pct - Vertical scroll percentage.
+     */
+    set_scroll_position(h_pct, v_pct) {
+        let maxX = this._content.scrollWidth - this._content.clientWidth;
+        let maxY = this._content.scrollHeight - this._content.clientHeight;
+        if (maxX > 0) this._content.scrollLeft = h_pct * maxX;
+        if (maxY > 0) this._content.scrollTop = v_pct * maxY;
+        this._scrollSilent = true;
+        this._syncFromScroll();
+        this._scrollSilent = false;
+    }
+
+    /**
+     * Returns the current scroll position as [h_pct, v_pct] (0–1).
+     * @returns {number[]}
+     */
+    get_scroll_position() {
+        let maxX = this._content.scrollWidth - this._content.clientWidth;
+        let maxY = this._content.scrollHeight - this._content.clientHeight;
+        return [
+            maxX > 0 ? this._content.scrollLeft / maxX : 0,
+            maxY > 0 ? this._content.scrollTop / maxY : 0,
+        ];
+    }
+
     /** @private */
     _syncFromScroll() {
         let maxX = this._content.scrollWidth - this._content.clientWidth;
         let maxY = this._content.scrollHeight - this._content.clientHeight;
-        if (maxX > 0) {
-            this._hScrollBar.set_scroll_percent(this._content.scrollLeft / maxX);
-        }
-        if (maxY > 0) {
-            this._vScrollBar.set_scroll_percent(this._content.scrollTop / maxY);
+
+        let hPct = maxX > 0 ? this._content.scrollLeft / maxX : 0;
+        let vPct = maxY > 0 ? this._content.scrollTop / maxY : 0;
+
+        if (maxX > 0) this._hScrollBar.set_scroll_percent(hPct);
+        if (maxY > 0) this._vScrollBar.set_scroll_percent(vPct);
+
+        if (this._scrollTimer) clearTimeout(this._scrollTimer);
+        if (this._scrollReady && !this._scrollSilent) {
+            this._scrollTimer = setTimeout(() => {
+                this._scrollTimer = null;
+                this.make_callback('scrolled', hPct, vPct);
+            }, 150);
         }
     }
 
