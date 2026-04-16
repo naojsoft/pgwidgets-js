@@ -91,8 +91,29 @@ class RemoteInterface {
 
         this._ws.onmessage = this._onMessage;
 
-        this._ws.onclose = () => {
-            console.log("RemoteInterface: disconnected");
+        this._ws.onclose = (event) => {
+            console.log("RemoteInterface: disconnected (code=" + event.code + ")");
+            if (event.code >= 4000 && event.code < 5000) {
+                // Application-level rejection — do not reconnect.
+                this._reconnect = false;
+                let reason = event.reason || "Connection rejected by server";
+                console.error("RemoteInterface: " + reason);
+                // Clear stale credentials so a fresh connection works.
+                this._sessionId = null;
+                this._sessionToken = null;
+                try { sessionStorage.removeItem('pgwidgets_session_id'); } catch(e) {}
+                try { sessionStorage.removeItem('pgwidgets_session_token'); } catch(e) {}
+                // Build a clean URL without session/token params.
+                let cleanUrl = new URL(window.location.href);
+                cleanUrl.searchParams.delete('session');
+                cleanUrl.searchParams.delete('token');
+                document.body.innerHTML =
+                    '<div style="padding:2em;font-family:sans-serif">' +
+                    '<h2>Connection Rejected</h2>' +
+                    '<p>' + reason + '</p>' +
+                    '<p><a href="' + cleanUrl.href + '">Start a new session</a></p></div>';
+                return;
+            }
             if (this._reconnect) {
                 setTimeout(() => this.connect(), this._reconnectInterval);
             }
