@@ -52,6 +52,17 @@ WIDGETS = {
 
     # -- Layout containers --
 
+    "Box": {
+        "base": "container",
+        "args": [],
+        "options": ["orientation"],
+        "methods": {
+            "add_widget": ["child", "stretch"],
+            "set_spacing": ["gap"],
+        },
+        "callbacks": [],
+    },
+
     "VBox": {
         "base": "container",
         "args": [],
