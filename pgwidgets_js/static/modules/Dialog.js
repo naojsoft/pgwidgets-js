@@ -18,8 +18,8 @@ class Dialog extends TopLevel {
      * @param {Array} [buttons=[]] - Array of [text, value] tuples for dialog buttons.
      * @param {Object} [options] - Configuration options.
      * @param {boolean} [options.autoclose=false] - If true, hides the dialog when a button is clicked.
-     * @param {boolean} [options.resizable=false] - Whether the dialog can be resized.
-     * @param {boolean} [options.moveable] - Whether the dialog can be dragged.
+     * @param {boolean} [options.resizable=true] - Whether the dialog can be resized.
+     * @param {boolean} [options.moveable=true] - Whether the dialog can be dragged.
      */
     constructor(title = null, buttons = [], options = {}) {
         let topOptions = Object.assign({}, options);

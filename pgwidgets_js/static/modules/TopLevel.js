@@ -13,10 +13,9 @@ class TopLevel extends ContainerWidget {
      * Creates a new TopLevel widget.
      * @param {Object} [options] - Configuration options.
      * @param {HTMLElement} [options.element=null] - Optional pre-existing DOM element to use.
-     * @param {boolean} [options.resizable=false] - Whether the widget can be resized via corner grips.
+     * @param {boolean} [options.resizable=true] - Whether the widget can be resized via corner grips.
      * @param {string|null} [options.title=null] - If provided, displays a draggable title bar.
-     * @param {boolean} [options.moveable] - Whether the widget can be dragged by the title bar.
-     *   Defaults to true if title is set, false otherwise.
+     * @param {boolean} [options.moveable=true] - Whether the widget can be dragged by the title bar.
      * @param {boolean} [options.closeable=true] - Whether a close button is shown in
      *   the title bar. Only takes effect if a title bar exists. Clicking the
      *   button fires the 'close' callback; it does not automatically hide the
@@ -57,14 +56,12 @@ class TopLevel extends ContainerWidget {
         if (title !== null) {
             this._makeTitleBar(title);
         }
-        // default: moveable if title bar exists, not moveable otherwise
-        this._moveable = this.get_option(options, 'moveable',
-                                         this._titleBar !== null);
+        this._moveable = this.get_option(options, 'moveable', true);
         if (this._titleBar && !this._moveable) {
             this._titleBar.style.cursor = 'default';
         }
 
-        let resizable = this.get_option(options, 'resizable', false);
+        let resizable = this.get_option(options, 'resizable', true);
         if (resizable) {
             this._makeResizable();
         }

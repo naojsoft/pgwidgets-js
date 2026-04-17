@@ -31,7 +31,7 @@ class GridBox extends ContainerWidget {
 
         this.element.style.display = 'grid';
         this.element.style.gridTemplateRows = 'auto '.repeat(this.rows).trim();
-        this.element.style.gridTemplateColumns = '1fr '.repeat(this.columns).trim();
+        this.element.style.gridTemplateColumns = 'auto '.repeat(this.columns).trim();
 
         // map from child -> {row, col} for removal
         this.cellMap = new Map();
@@ -54,7 +54,7 @@ class GridBox extends ContainerWidget {
 
     _update_grid() {
         this.element.style.gridTemplateRows = 'auto '.repeat(this.rows).trim();
-        this.element.style.gridTemplateColumns = '1fr '.repeat(this.columns).trim();
+        this.element.style.gridTemplateColumns = 'auto '.repeat(this.columns).trim();
     }
 
     /**
