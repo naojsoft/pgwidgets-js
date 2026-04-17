@@ -155,7 +155,19 @@ class Slider extends Widget {
      * @param {boolean} track - If true, fire continuously; if false, only on release.
      */
     set_tracking(track) {
+        if (track === this.track) return;
+        // Remove the old listener and add the new one
+        if (this.track) {
+            this._input.removeEventListener("input", this._cb_redirect);
+        } else {
+            this._input.removeEventListener("change", this._cb_redirect);
+        }
         this.track = track;
+        if (this.track) {
+            this._input.addEventListener("input", this._cb_redirect);
+        } else {
+            this._input.addEventListener("change", this._cb_redirect);
+        }
     }
 }
 

@@ -22,6 +22,7 @@ class Dialog extends TopLevel {
      * @param {boolean} [options.moveable=true] - Whether the dialog can be dragged.
      */
     constructor(title = null, buttons = [], options = {}) {
+        if (buttons === null || buttons === undefined) buttons = [];
         let topOptions = Object.assign({}, options);
         if (title !== null) {
             topOptions.title = title;

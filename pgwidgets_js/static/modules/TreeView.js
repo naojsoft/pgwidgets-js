@@ -19,8 +19,9 @@ class TreeView extends Widget {
      *   is either a plain string (label, type defaults to 'string') or an
      *   object { label, type } where type is 'string' or 'number'.
      * @param {boolean} [options.show_header=true] - Show the header row.
-     * @param {string} [options.selection_mode='single'] - 'single', 'multi', or 'none'.
+     * @param {string} [options.selection_mode='single'] - 'single', 'multiple', or 'none'.
      * @param {boolean} [options.alternate_row_colors=false] - Shade even rows.
+     * @param {boolean} [options.sortable=false] - Allow sorting by clicking column headers.
      * @param {boolean} [options.show_grid=false] - Draw grid lines between
      *   cells and rows (table-style appearance).
      * @param {HTMLElement} [options.element=null] - Optional pre-existing element.
@@ -43,6 +44,7 @@ class TreeView extends Widget {
             this.element.classList.add('treeview-grid');
         }
         this._showRowNumbers = this.get_option(options, 'show_row_numbers', false);
+        this._sortable = this.get_option(options, 'sortable', false);
 
         // Column widths in fr units (default 1fr each)
         this._colWidths = this._columns.map(() => '1fr');
@@ -166,6 +168,7 @@ class TreeView extends Widget {
         this.get_row_count = this.get_row_count.bind(this);
         this.set_show_grid = this.set_show_grid.bind(this);
         this.set_show_row_numbers = this.set_show_row_numbers.bind(this);
+        this.set_sortable = this.set_sortable.bind(this);
         this.set_column_editable = this.set_column_editable.bind(this);
         this.set_cell = this.set_cell.bind(this);
         this.insert_column = this.insert_column.bind(this);
@@ -305,6 +308,7 @@ class TreeView extends Widget {
     }
 
     _onHeaderClick(colIndex) {
+        if (!this._sortable) return;
         if (this._sortColumn === colIndex) {
             // Same column: toggle direction
             this._sortAscending = !this._sortAscending;
@@ -922,7 +926,7 @@ class TreeView extends Widget {
     _onRowClick(e, node) {
         if (this._selectionMode === 'none') return;
 
-        if (this._selectionMode === 'multi' && (e.ctrlKey || e.metaKey)) {
+        if (this._selectionMode === 'multiple' && (e.ctrlKey || e.metaKey)) {
             // Toggle this node in selection
             let idx = this._selection.indexOf(node);
             if (idx >= 0) {
@@ -930,7 +934,7 @@ class TreeView extends Widget {
             } else {
                 this._selection.push(node);
             }
-        } else if (this._selectionMode === 'multi' && e.shiftKey) {
+        } else if (this._selectionMode === 'multiple' && e.shiftKey) {
             // Range select
             if (this._selection.length > 0) {
                 let visible = this._getVisibleNodes();
@@ -1192,6 +1196,14 @@ class TreeView extends Widget {
      * Toggle grid lines between cells and rows.
      * @param {boolean} tf
      */
+    /**
+     * Enable or disable sorting by clicking column headers.
+     * @param {boolean} tf
+     */
+    set_sortable(tf) {
+        this._sortable = !!tf;
+    }
+
     set_show_grid(tf) {
         this._showGrid = !!tf;
         this.element.classList.toggle('treeview-grid', this._showGrid);

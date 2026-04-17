@@ -137,6 +137,8 @@ WIDGETS = {
         "methods": {
             "set_widget": ["child"],
             "set_title": ["text"],
+            "set_text": ["text"],
+            "get_text": [],
         },
         "callbacks": [],
     },
@@ -283,7 +285,9 @@ WIDGETS = {
         "options": [],
         "methods": {
             "set_text": ["text"],
+            "get_text": [],
             "set_icon": ["url", "size"],
+            "get_icon": [],
             "set_color": ["bg", "fg"],
         },
         "callbacks": ["activated"],
@@ -341,8 +345,8 @@ WIDGETS = {
 
     "TextEntry": {
         "base": "widget",
-        "args": [],
-        "options": ["text", "editable", "linehistory", "password"],
+        "args": ["text"],
+        "options": ["editable", "linehistory", "password"],
         "methods": {
             "set_text": ["text"],
             "get_text": [],
@@ -354,8 +358,8 @@ WIDGETS = {
 
     "TextEntrySet": {
         "base": "widget",
-        "args": [],
-        "options": ["text", "value", "editable", "linehistory"],
+        "args": ["text"],
+        "options": ["label", "editable", "linehistory"],
         "methods": {
             "set_button_text": ["text"],
             "set_text": ["text"],
@@ -541,7 +545,8 @@ WIDGETS = {
         "base": "widget",
         "args": [],
         "options": ["columns", "show_header", "selection_mode",
-                    "alternate_row_colors", "show_grid", "show_row_numbers"],
+                    "alternate_row_colors", "show_grid", "show_row_numbers",
+                    "sortable"],
         "methods": {
             "set_columns": ["columns"],
             "set_tree": ["data"],
@@ -571,6 +576,7 @@ WIDGETS = {
             "get_row_count": [],
             "set_show_grid": ["tf"],
             "set_show_row_numbers": ["tf"],
+            "set_sortable": ["tf"],
             "set_column_editable": ["col_index", "tf"],
             "set_cell": ["row", "col_index", "value"],
             "insert_column": ["index", "column"],
@@ -590,7 +596,8 @@ WIDGETS = {
         "base": "widget",
         "args": [],
         "options": ["columns", "show_header", "selection_mode",
-                    "alternate_row_colors", "show_grid", "show_row_numbers"],
+                    "alternate_row_colors", "show_grid", "show_row_numbers",
+                    "sortable"],
         "methods": {
             "set_columns": ["columns"],
             "set_rows": ["rows"],
@@ -610,6 +617,7 @@ WIDGETS = {
             "get_row_count": [],
             "set_show_grid": ["tf"],
             "set_show_row_numbers": ["tf"],
+            "set_sortable": ["tf"],
             "set_column_editable": ["col_index", "tf"],
             "set_cell": ["row", "col_index", "value"],
             "insert_column": ["index", "column"],

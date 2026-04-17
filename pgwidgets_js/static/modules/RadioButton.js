@@ -19,6 +19,7 @@ class RadioButton extends Widget {
      * @param {HTMLElement} [options.element=null] - Optional pre-existing DOM element to use.
      */
     constructor(text='', options={}) {
+        if (text === null || text === undefined) text = '';
         super();
         this.element = this.get_option(options, 'element', null);
         if (this.element == null) {

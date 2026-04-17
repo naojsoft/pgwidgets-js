@@ -39,6 +39,8 @@ class Frame extends ContainerWidget {
         // JavaScript hack to bind "this" correctly for our methods
         this.set_widget = this.set_widget.bind(this);
         this.set_title = this.set_title.bind(this);
+        this.set_text = this.set_text.bind(this);
+        this.get_text = this.get_text.bind(this);
     }
 
     /**
@@ -79,6 +81,22 @@ class Frame extends ContainerWidget {
             this.element.insertBefore(this.legend, this.contentContainer);
         }
         this.legend.textContent = text;
+    }
+
+    /**
+     * Sets the frame title text. Alias for set_title().
+     * @param {string} text - The title text.
+     */
+    set_text(text) {
+        this.set_title(text);
+    }
+
+    /**
+     * Returns the current frame title text.
+     * @returns {string} The title text.
+     */
+    get_text() {
+        return this.title;
     }
 }
 

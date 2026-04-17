@@ -444,7 +444,7 @@ def make_demo(name):
             columns=[{"label": "", "type": "icon", "icon_size": 16},
                      "Name", "Type",
                      {"label": "Size (KB)", "type": "number"}],
-            selection_mode="multi",
+            selection_mode="multiple",
             alternate_row_colors=True,
         )
         tree.set_tree([

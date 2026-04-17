@@ -12,15 +12,16 @@ class TextEntrySet extends TextEntry {
 
     /**
      * Creates a new TextEntrySet widget.
+     * @param {string} [text=''] - Initial text value of the input.
      * @param {Object} [options] - Configuration options.
-     * @param {string} [options.text='Set'] - Label text for the button.
-     * @param {string} [options.value=''] - Initial text value of the input.
+     * @param {string} [options.label='Set'] - Label text for the button.
      * @param {boolean} [options.editable=true] - Whether the input is editable.
      * @param {number} [options.linehistory=1] - Number of lines to keep in history.
      * @param {HTMLElement} [options.element=null] - Optional pre-existing DOM element to use.
      */
-    constructor(options = {}) {
-        super(options);
+    constructor(text='', options={}) {
+        if (text === null || text === undefined) text = '';
+        super(text, options);
 
         // wrap the input in a container div
         let wrapper = document.createElement('div');
@@ -33,7 +34,7 @@ class TextEntrySet extends TextEntry {
         // button
         this._button = document.createElement('button');
         this._button.className = 'textentryset-button';
-        let btnText = this.get_option(options, 'text', 'Set');
+        let btnText = this.get_option(options, 'label', 'Set');
         this._button.textContent = btnText;
         wrapper.appendChild(this._button);
 
@@ -47,12 +48,6 @@ class TextEntrySet extends TextEntry {
             this._recordHistory();
             this.make_callback('activated', this.get_text());
         });
-
-        // set initial value if provided
-        let value = this.get_option(options, 'value', '');
-        if (value !== '') {
-            this.set_text(value);
-        }
     }
 
     /**

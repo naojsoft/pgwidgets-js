@@ -262,7 +262,7 @@ Hierarchical tree/table with columns, sorting, icons, and multi-selection.
 
 - ``columns`` -- array of column definitions
 - ``show_header`` -- show column headers
-- ``selection_mode`` -- ``"single"`` or ``"multiple"``
+- ``selection_mode`` -- ``"single"``, ``"multiple"``, or ``"none"``
 - ``alternate_row_colors`` -- zebra striping
 - ``show_grid`` -- show grid lines
 - ``show_row_numbers`` -- show row numbers

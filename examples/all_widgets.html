@@ -530,7 +530,7 @@
             let lbl = new Widgets.Label("");
             let table = new Widgets.TableView({
                 columns: ["Name", "Department", {label: "Salary", type: "number"}],
-                selection_mode: "multi",
+                selection_mode: "multiple",
                 alternate_row_colors: true,
             });
             table.set_rows([
@@ -686,7 +686,7 @@
             let lbl = new Widgets.Label("");
             let tree = new Widgets.TreeView({
                 columns: [{label: "", type: "icon", icon_size: 16}, "Name", "Type", {label: "Size (KB)", type: "number"}],
-                selection_mode: "multi",
+                selection_mode: "multiple",
                 alternate_row_colors: true,
             });
             tree.set_tree([

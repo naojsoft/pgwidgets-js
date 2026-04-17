@@ -72,6 +72,7 @@ class TextSource extends Widget {
      * @param {number} [options.font_size=13]
      */
     constructor(text = '', options = {}) {
+        if (text === null || text === undefined) text = '';
         super();
 
         this.element = this.get_option(options, 'element', null);

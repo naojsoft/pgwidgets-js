@@ -33,7 +33,9 @@ class Button extends Widget {
 
         // JavaScript hack to bind "this" correctly for our methods
         this.set_text = this.set_text.bind(this);
+        this.get_text = this.get_text.bind(this);
         this.set_icon = this.set_icon.bind(this);
+        this.get_icon = this.get_icon.bind(this);
         this.set_color = this.set_color.bind(this);
         this._cb_redirect = this._cb_redirect.bind(this);
 
@@ -57,6 +59,14 @@ class Button extends Widget {
     }
 
     /**
+     * Returns the current button label text.
+     * @returns {string} The button text.
+     */
+    get_text() {
+        return this.textElement.textContent;
+    }
+
+    /**
      * Sets the button icon from a URL. The icon is displayed above the text.
      * @param {string} icon_url - URL of the icon image.
      * @param {number[]|null} [iconsize=null] - Optional [width, height] in pixels.
@@ -76,6 +86,17 @@ class Button extends Widget {
             this.iconElement.style.width = '';
             this.iconElement.style.height = '';
         }
+    }
+
+    /**
+     * Returns the current icon URL, or null if no icon is set.
+     * @returns {string|null} The icon URL.
+     */
+    get_icon() {
+        if (this.iconElement === null) {
+            return null;
+        }
+        return this.iconElement.src;
     }
 
     /**

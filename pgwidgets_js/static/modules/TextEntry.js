@@ -12,13 +12,14 @@ class TextEntry extends Widget {
 
     /**
      * Creates a new TextEntry widget.
+     * @param {string} [text=''] - Initial text value.
      * @param {Object} [options] - Configuration options.
-     * @param {string} [options.text=''] - Initial text value.
      * @param {boolean} [options.editable=true] - Whether the input is editable.
      * @param {number} [options.linehistory=1] - Number of lines to keep in history.
      * @param {HTMLElement} [options.element=null] - Optional pre-existing DOM element to use.
      */
-    constructor(options = {text: '', editable: true}) {
+    constructor(text='', options={}) {
+        if (text === null || text === undefined) text = '';
         super();
         this.element = this.get_option(options, 'element', null);
         if (this.element == null) {
@@ -50,8 +51,7 @@ class TextEntry extends Widget {
         this._input.addEventListener("keydown", this._onKeyDown);
         this.enable_callback('activated');
 
-        var text = this.get_option(options, 'text', null);
-        if (text !== null) {
+        if (text !== '') {
             this.set_text(text);
         }
     }
