@@ -17,6 +17,9 @@ class ToolBarAction extends Widget {
      * @param {string|null} [options.icon_url=null] - URL of an icon image.
      * @param {number[]|null} [options.iconsize=null] - Icon size as [width, height] in pixels.
      * @param {boolean} [options.toggle=false] - If true, behaves as a toggle button.
+     * @param {Menu|null} [options.menu=null] - A Menu widget to pop up when clicked.
+     *   Supports click-and-hold (drag to select) and click-to-toggle (click to open,
+     *   click again or select to close).
      * @param {ToolBarAction|null} [options.group=null] - Another ToolBarAction to join its
      *   mutual-exclusion group, or null for independent toggle behavior. Implies toggle=true.
      * @param {HTMLElement} [options.element=null] - Optional pre-existing DOM element to use.
@@ -73,33 +76,38 @@ class ToolBarAction extends Widget {
             this.set_text(text);
         }
 
-        // click handler
-        this.element.addEventListener('click', () => {
-            if (this.toggle) {
-                if (this.group !== null) {
-                    if (this.state) {
-                        this.state = false;
-                        this._updateVisual();
-                        this.make_callback('activated', this.state);
-                    } else {
-                        for (let btn of this.group) {
-                            if (btn !== this && btn.state) {
-                                btn.state = false;
-                                btn._updateVisual();
-                            }
-                        }
-                        this.state = true;
-                        this._updateVisual();
-                        this.make_callback('activated', this.state);
-                    }
-                } else {
-                    this.state = !this.state;
-                    this._updateVisual();
-                    this.make_callback('activated', this.state);
-                }
+        // menu support
+        this._menu = this.get_option(options, 'menu', null);
+        this._menuOpen = false;
+        this._armed = false;
+        this._onDocumentMouseUp = this._onDocumentMouseUp.bind(this);
+        this._onDocumentMouseDown = this._onDocumentMouseDown.bind(this);
+        this.set_menu = this.set_menu.bind(this);
+
+        if (this._menu) {
+            this._setupMenu(this._menu);
+        }
+
+        // Mousedown handler for menu popup (always attached; checks _menu)
+        this._onElementMouseDown = (e) => {
+            if (!this._menu) return;
+            e.preventDefault();
+            e.stopPropagation();
+            if (this._menuOpen && !this._armed) {
+                // click on already-open menu in click mode: close it
+                this._closeMenu();
             } else {
-                this.make_callback('activated');
+                this._openMenu();
+                this._armed = true;
+                document.addEventListener('mouseup', this._onDocumentMouseUp);
             }
+        };
+        this.element.addEventListener('mousedown', this._onElementMouseDown);
+
+        // Click handler for non-menu actions (always attached; skips if menu)
+        this.element.addEventListener('click', () => {
+            if (this._menu) return;
+            this._handleClick();
         });
 
         this.enable_callback('activated');
@@ -174,6 +182,138 @@ class ToolBarAction extends Widget {
      */
     get_state() {
         return this.state;
+    }
+
+    /**
+     * Handles click/toggle logic (extracted for reuse).
+     * @private
+     */
+    _handleClick() {
+        if (this.toggle) {
+            if (this.group !== null) {
+                if (this.state) {
+                    this.state = false;
+                    this._updateVisual();
+                    this.make_callback('activated', this.state);
+                } else {
+                    for (let btn of this.group) {
+                        if (btn !== this && btn.state) {
+                            btn.state = false;
+                            btn._updateVisual();
+                        }
+                    }
+                    this.state = true;
+                    this._updateVisual();
+                    this.make_callback('activated', this.state);
+                }
+            } else {
+                this.state = !this.state;
+                this._updateVisual();
+                this.make_callback('activated', this.state);
+            }
+        } else {
+            this.make_callback('activated');
+        }
+    }
+
+    /**
+     * Sets the menu for this toolbar action.
+     * @param {Menu|null} menu - A Menu widget, or null to remove.
+     */
+    set_menu(menu) {
+        if (this._menuOpen) {
+            this._closeMenu();
+        }
+        this._menu = menu;
+        // Remove old menu element if present
+        let old = this.element.querySelector('.menu-widget');
+        if (old) old.remove();
+        if (menu) {
+            this._setupMenu(menu);
+        }
+    }
+
+    /**
+     * Attaches a menu element to this action's DOM.
+     * @private
+     */
+    _setupMenu(menu) {
+        let menuElt = menu.get_element();
+        menuElt.style.display = 'none';
+        menuElt.style.position = 'absolute';
+        menuElt.style.zIndex = '10000';
+        this.element.style.position = 'relative';
+        this.element.appendChild(menuElt);
+
+        // auto-close when a menu action is selected
+        menuElt.addEventListener('menuaction-select', () => {
+            this._closeMenu();
+        });
+    }
+
+    /**
+     * Opens the attached menu below this action.
+     * @private
+     */
+    _openMenu() {
+        if (!this._menu) return;
+        let menuElt = this._menu.get_element();
+        menuElt.style.top = this.element.offsetHeight + 'px';
+        menuElt.style.left = '0px';
+        menuElt.style.display = '';
+        this._menuOpen = true;
+        this.element.classList.add('active');
+        document.addEventListener('mousedown', this._onDocumentMouseDown);
+    }
+
+    /**
+     * Closes the attached menu.
+     * @private
+     */
+    _closeMenu() {
+        if (!this._menu) return;
+        this._menu.get_element().style.display = 'none';
+        this._menuOpen = false;
+        this._armed = false;
+        this.element.classList.remove('active');
+        document.removeEventListener('mousedown', this._onDocumentMouseDown);
+        document.removeEventListener('mouseup', this._onDocumentMouseUp);
+    }
+
+    /**
+     * Handles mouseup while armed (drag mode).
+     * @private
+     */
+    _onDocumentMouseUp(e) {
+        document.removeEventListener('mouseup', this._onDocumentMouseUp);
+        if (!this._armed) return;
+        this._armed = false;
+
+        // Released on the toolbar action button itself: switch to click mode
+        if (this.element.contains(e.target) &&
+            !this._menu.get_element().contains(e.target)) {
+            return;
+        }
+
+        // Released on a menu action: activate it
+        let actionElt = e.target.closest('.menuaction-widget');
+        if (actionElt && this.element.contains(actionElt)) {
+            actionElt.click();
+            return;
+        }
+
+        // Released elsewhere: close
+        this._closeMenu();
+    }
+
+    /**
+     * Handles mousedown outside in click mode to close menu.
+     * @private
+     */
+    _onDocumentMouseDown(e) {
+        if (!this.element.contains(e.target)) {
+            this._closeMenu();
+        }
     }
 }
 

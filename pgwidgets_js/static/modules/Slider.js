@@ -21,7 +21,9 @@ class Slider extends Widget {
      * @param {number} [options.max=100] - Maximum value.
      * @param {number} [options.step=1] - Step increment.
      * @param {number} [options.value=50] - Initial value.
-     * @param {boolean} [options.show_value=true] - Whether to display the current value.
+     * @param {boolean} [options.show_value=false] - Whether to display the current value.
+     * @param {string} [options.show_value_position='r'] - Position of the value label:
+     *   'l' (left), 't' (top), 'r' (right), 'b' (bottom).
      * @param {HTMLElement} [options.element=null] - Optional pre-existing DOM element to use.
      */
     constructor(options = {orientation: 'horizontal', track: false}) {
@@ -43,21 +45,25 @@ class Slider extends Widget {
         this._input.value = this.get_option(options, 'value', 50);
 
         this.track = this.get_option(options, 'track', false);
-        this._showValue = this.get_option(options, 'show_value', true);
-
-        this.element.appendChild(this._input);
+        this._showValue = this.get_option(options, 'show_value', false);
+        this._showValuePosition = this.get_option(options, 'show_value_position', 'r');
+        this._decimals = this.get_option(options, 'decimals', null);
 
         // value label
         this._valueLabel = document.createElement('span');
         this._valueLabel.className = 'slider-value';
+
         if (this._showValue) {
-            this.element.appendChild(this._valueLabel);
+            this._applyValuePosition();
+        } else {
+            this.element.appendChild(this._input);
         }
 
         // JavaScript hack to bind "this" correctly for our methods
         this.set_value = this.set_value.bind(this);
         this.get_value = this.get_value.bind(this);
         this.set_limits = this.set_limits.bind(this);
+        this.set_decimals = this.set_decimals.bind(this);
         this._cb_redirect = this._cb_redirect.bind(this);
         this._updateValueLabel = this._updateValueLabel.bind(this);
 
@@ -86,13 +92,40 @@ class Slider extends Widget {
     }
 
     /**
+     * Arranges the input and value label according to _showValuePosition.
+     * @private
+     */
+    _applyValuePosition() {
+        // Clear existing children
+        while (this.element.firstChild) {
+            this.element.removeChild(this.element.firstChild);
+        }
+        let pos = this._showValuePosition;
+        if (pos === 't' || pos === 'b') {
+            this.element.style.flexDirection = 'column';
+            this._valueLabel.style.textAlign = 'center';
+        } else {
+            this.element.style.flexDirection = 'row';
+        }
+        if (pos === 'l' || pos === 't') {
+            this.element.appendChild(this._valueLabel);
+            this.element.appendChild(this._input);
+        } else {
+            this.element.appendChild(this._input);
+            this.element.appendChild(this._valueLabel);
+        }
+    }
+
+    /**
      * Updates the value label display.
      * @private
      */
     _updateValueLabel() {
         if (this._showValue) {
             let val = this.get_value();
-            if (this.dtype === 'float') {
+            if (this._decimals != null) {
+                this._valueLabel.textContent = val.toFixed(this._decimals);
+            } else if (this.dtype === 'float') {
                 let decimals = 0;
                 let s = String(this._input.step);
                 if (s.indexOf('.') !== -1) {
@@ -168,6 +201,17 @@ class Slider extends Widget {
         } else {
             this._input.addEventListener("change", this._cb_redirect);
         }
+    }
+
+    /**
+     * Sets the number of decimal places for the value display.
+     * Pass null to revert to deriving it from the step value.
+     * Has no effect when dtype is 'int' and decimals is null.
+     * @param {number|null} num - Decimal places, or null for auto.
+     */
+    set_decimals(num) {
+        this._decimals = (num == null) ? null : Math.max(0, num|0);
+        this._updateValueLabel();
     }
 }
 

@@ -25,6 +25,7 @@ WIDGET_METHODS = {
     "set_border_color": ["color"],
     "resize": ["width", "height"],
     "get_size": [],
+    "get_position": [],
     "set_padding": ["padding"],
     "set_font": ["font", "size", "weight", "style"],
     "set_enabled": ["tf"],
@@ -44,6 +45,9 @@ WIDGET_METHODS = {
 CONTAINER_METHODS = {
     **WIDGET_METHODS,
     "get_children": [],
+    "remove": ["child", "destroy"],
+    "remove_widget": ["child", "destroy"],
+    "remove_all": ["destroy"],
 }
 
 # ---- Widget Definitions ----
@@ -58,6 +62,7 @@ WIDGETS = {
         "options": ["orientation"],
         "methods": {
             "add_widget": ["child", "stretch"],
+            "insert_widget": ["index", "child", "stretch"],
             "set_spacing": ["gap"],
         },
         "callbacks": [],
@@ -69,6 +74,7 @@ WIDGETS = {
         "options": [],
         "methods": {
             "add_widget": ["child", "stretch"],
+            "insert_widget": ["index", "child", "stretch"],
             "set_spacing": ["gap"],
         },
         "callbacks": [],
@@ -80,6 +86,7 @@ WIDGETS = {
         "options": [],
         "methods": {
             "add_widget": ["child", "stretch"],
+            "insert_widget": ["index", "child", "stretch"],
             "set_spacing": ["gap"],
         },
         "callbacks": [],
@@ -88,10 +95,12 @@ WIDGETS = {
     "ButtonBox": {
         "base": "container",
         "args": [],
-        "options": ["orientation"],
+        "options": ["orientation", "halign"],
         "methods": {
             "add_widget": ["child", "stretch"],
+            "insert_widget": ["index", "child", "stretch"],
             "set_spacing": ["gap"],
+            "set_halign": ["halign"],
         },
         "callbacks": [],
     },
@@ -246,13 +255,18 @@ WIDGETS = {
     },
 
     "Dialog": {
-        "base": "widget",
+        "base": "container",
         "args": ["title", "buttons"],
         "options": ["autoclose", "resizable", "moveable", "modal"],
         "methods": {
-            "get_content_area": [],
+            "add_widget": ["child", "stretch"],
+            "insert_widget": ["index", "child", "stretch"],
+            "set_spacing": ["gap"],
+            "set_position": ["x", "y"],
+            "popup": ["x", "y"],
+            "set_modal": ["tf"],
         },
-        "callbacks": ["activated"],
+        "callbacks": ["activated", "move", "close"],
     },
 
     "ColorWidget": {
@@ -475,12 +489,14 @@ WIDGETS = {
         "base": "widget",
         "args": [],
         "options": ["orientation", "track", "dtype", "min", "max",
-                    "step", "value", "show_value"],
+                    "step", "value", "show_value", "show_value_position",
+                    "decimals"],
         "methods": {
             "set_value": ["num"],
             "get_value": [],
             "set_limits": ["minval", "maxval", "incrval"],
             "set_tracking": ["track"],
+            "set_decimals": ["num"],
         },
         "callbacks": ["activated"],
     },
@@ -488,12 +504,14 @@ WIDGETS = {
     "Dial": {
         "base": "widget",
         "args": [],
-        "options": ["track", "dtype", "min", "max", "step", "value"],
+        "options": ["track", "dtype", "min", "max", "step", "value",
+                    "show_value", "show_value_position", "decimals"],
         "methods": {
             "set_value": ["num"],
             "get_value": [],
             "set_limits": ["minval", "maxval", "incrval"],
             "set_tracking": ["track"],
+            "set_decimals": ["num"],
             "set_knob_diameter": ["len_px"],
             "set_icon": ["url", "size"],
         },
@@ -763,7 +781,7 @@ WIDGETS = {
             "add_name": ["name", "checkable"],
             "add_menu": ["name", "menu"],
             "add_separator": [],
-            "popup": [],
+            "popup": ["x", "y"],
         },
         "callbacks": [],
     },
@@ -798,13 +816,14 @@ WIDGETS = {
     "ToolBarAction": {
         "base": "widget",
         "args": [],
-        "options": ["text", "icon_url", "iconsize", "toggle", "group"],
+        "options": ["text", "icon_url", "iconsize", "toggle", "group", "menu"],
         "methods": {
             "set_text": ["text"],
             "get_text": [],
             "set_icon": ["url", "iconsize"],
             "set_state": ["value"],
             "get_state": [],
+            "set_menu": ["menu"],
         },
         "callbacks": ["activated"],
     },

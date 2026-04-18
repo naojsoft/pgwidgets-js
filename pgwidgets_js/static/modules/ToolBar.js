@@ -78,6 +78,9 @@ class ToolBar extends Widget {
      * @returns {ToolBarAction} The newly created action.
      */
     add_action(options = {}) {
+        if (typeof options === 'string') {
+            options = {text: options};
+        }
         let action = new ToolBarAction(options);
         this.add_widget(action);
         return action;

@@ -20,6 +20,9 @@ class Dial extends Widget {
      * @param {number} [options.max=100] - Maximum value.
      * @param {number} [options.step=1] - Step increment.
      * @param {number} [options.value=50] - Initial value.
+     * @param {boolean} [options.show_value=false] - Whether to display the current value.
+     * @param {string} [options.show_value_position='b'] - Position of the value label:
+     *   'b' (bottom), 'ur' (upper right), 'ul' (upper left), 'lr' (lower right), 'll' (lower left).
      * @param {HTMLElement} [options.element=null] - Optional pre-existing DOM element to use.
      */
     constructor(options = {}) {
@@ -36,6 +39,9 @@ class Dial extends Widget {
         this.step = this.get_option(options, 'step', 1);
         this.value = this.get_option(options, 'value', 50);
         this.track = this.get_option(options, 'track', false);
+        this._showValue = this.get_option(options, 'show_value', false);
+        this._showValuePosition = this.get_option(options, 'show_value_position', 'b');
+        this._decimals = this.get_option(options, 'decimals', null);
 
         // angle range: 210 to 510 (300 degree sweep, clockwise from lower-left
         // through top to lower-right, gap at bottom)
@@ -101,11 +107,20 @@ class Dial extends Widget {
 
         this.element.appendChild(this._svg);
 
+        // value label
+        this._valueLabel = document.createElement('span');
+        this._valueLabel.className = 'dial-value';
+        if (this._showValue) {
+            this.element.appendChild(this._valueLabel);
+            this._applyValuePosition();
+        }
+
         // JavaScript hack to bind "this" correctly for our methods
         this.set_value = this.set_value.bind(this);
         this.get_value = this.get_value.bind(this);
         this.set_limits = this.set_limits.bind(this);
         this.set_tracking = this.set_tracking.bind(this);
+        this.set_decimals = this.set_decimals.bind(this);
         this.set_knob_diameter = this.set_knob_diameter.bind(this);
         this.set_icon = this.set_icon.bind(this);
         this._onMouseDown = this._onMouseDown.bind(this);
@@ -127,6 +142,76 @@ class Dial extends Widget {
 
         this.enable_callback('activated');
         this._updateVisual();
+    }
+
+    /**
+     * Positions the value label according to _showValuePosition.
+     * @private
+     */
+    _applyValuePosition() {
+        if (this._showValuePosition === 'b') {
+            // Place label below the dial, pulled up into the arc gap
+            this.element.style.flexDirection = 'column';
+            this._valueLabel.style.position = '';
+            this._valueLabel.style.textAlign = 'center';
+            this._valueLabel.style.marginTop = '-12%';
+            this._valueLabel.style.top = '';
+            this._valueLabel.style.bottom = '';
+            this._valueLabel.style.left = '';
+            this._valueLabel.style.right = '';
+            return;
+        }
+        // Corner positions: overlay the label on the dial
+        this.element.style.flexDirection = '';
+        this.element.style.position = 'relative';
+        this._valueLabel.style.position = 'absolute';
+        this._valueLabel.style.textAlign = '';
+        // reset all corners
+        this._valueLabel.style.top = '';
+        this._valueLabel.style.bottom = '';
+        this._valueLabel.style.left = '';
+        this._valueLabel.style.right = '';
+        switch (this._showValuePosition) {
+            case 'ul':
+                this._valueLabel.style.top = '2px';
+                this._valueLabel.style.left = '2px';
+                break;
+            case 'll':
+                this._valueLabel.style.bottom = '2px';
+                this._valueLabel.style.left = '2px';
+                break;
+            case 'lr':
+                this._valueLabel.style.bottom = '2px';
+                this._valueLabel.style.right = '2px';
+                break;
+            case 'ur':
+            default:
+                this._valueLabel.style.top = '2px';
+                this._valueLabel.style.right = '2px';
+                break;
+        }
+    }
+
+    /**
+     * Updates the value label display.
+     * @private
+     */
+    _updateValueLabel() {
+        if (this._showValue) {
+            let val = this.get_value();
+            if (this._decimals != null) {
+                this._valueLabel.textContent = val.toFixed(this._decimals);
+            } else if (this.dtype === 'float') {
+                let decimals = 0;
+                let s = String(this.step);
+                if (s.indexOf('.') !== -1) {
+                    decimals = s.split('.')[1].length;
+                }
+                this._valueLabel.textContent = val.toFixed(decimals);
+            } else {
+                this._valueLabel.textContent = val;
+            }
+        }
     }
 
     /**
@@ -228,6 +313,8 @@ class Dial extends Widget {
             this._knobIcon.setAttribute('transform',
                 `rotate(${rotDeg} 50 50)`);
         }
+
+        this._updateValueLabel();
     }
 
     /**
@@ -402,6 +489,17 @@ class Dial extends Widget {
         this.value = Math.min(this.max, Math.max(this.min, this.value));
         this._buildTicks();
         this._updateVisual();
+    }
+
+    /**
+     * Sets the number of decimal places for the value display.
+     * Pass null to revert to deriving it from the step value.
+     * Has no effect when dtype is 'int' and decimals is null.
+     * @param {number|null} num - Decimal places, or null for auto.
+     */
+    set_decimals(num) {
+        this._decimals = (num == null) ? null : Math.max(0, num|0);
+        this._updateValueLabel();
     }
 }
 

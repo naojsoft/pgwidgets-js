@@ -45,3 +45,10 @@
     stroke: #999;
     stroke-width: 1;
 }
+
+.dial-value {
+    font-size: 0.8em;
+    color: #333;
+    user-select: none;
+    pointer-events: none;
+}

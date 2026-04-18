@@ -13,7 +13,7 @@ class Expander extends ContainerWidget {
      * Creates a new Expander widget.
      * @param {Object} [options] - Configuration options.
      * @param {string} [options.title=''] - Title text displayed in the header.
-     * @param {boolean} [options.collapsible=false] - Whether the content can be collapsed.
+     * @param {boolean} [options.collapsible=true] - Whether the content can be collapsed.
      * @param {boolean} [options.shadow=false] - Whether to apply a drop shadow.
      * @param {HTMLElement} [options.element=null] - Optional pre-existing DOM element to use.
      */
@@ -24,7 +24,7 @@ class Expander extends ContainerWidget {
         //this.borderWidth = options.borderWidth || '3px';
         //this.borderColor = options.borderColor || 'black';
         //this.borderRadius = options.borderRadius || '2px';
-        this.collapsible = options.collapsible || false;
+        this.collapsible = this.get_option(options, 'collapsible', true);
         this.collapsed = this.collapsible;
         this.shadow = options.shadow || false;
 
@@ -112,7 +112,9 @@ class Expander extends ContainerWidget {
 
         if (this.children.length > 0) {
             // expander can only have one child
-            this.remove(this.children[0]);
+            let old = this.children[0];
+            this.remove_child(old);
+            this.contentContainer.removeChild(old.get_element());
         }
 
         super.add_child(child);

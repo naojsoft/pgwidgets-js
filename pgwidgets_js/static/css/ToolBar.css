@@ -83,6 +83,11 @@
     background-color: #bbb;
 }
 
+.toolbar-action.active {
+    background-color: #d4d4d4;
+    border-color: #bbb;
+}
+
 .toolbar-action-icon {
     width: 18px;
     height: 18px;

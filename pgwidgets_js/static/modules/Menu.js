@@ -116,10 +116,33 @@ class Menu extends Widget {
     }
 
     /**
-     * Pops up the menu at the current position programmatically.
+     * Pops up the menu. If x and y are provided, positions the menu there;
+     * otherwise positions at the mouse cursor or top-left.
+     * @param {number} [x] - Left position in pixels.
+     * @param {number} [y] - Top position in pixels.
      */
-    popup() {
+    popup(x, y) {
+        // Ensure the menu is in the document body for standalone popups
+        if (!document.body.contains(this.element)) {
+            document.body.appendChild(this.element);
+        }
+        if (x !== undefined && y !== undefined) {
+            this.element.style.left = x + 'px';
+            this.element.style.top = y + 'px';
+        }
         this.element.style.display = '';
+
+        // Close on outside click (one-time listener)
+        let onOutsideClick = (e) => {
+            if (!this.element.contains(e.target)) {
+                this.element.style.display = 'none';
+                document.removeEventListener('mousedown', onOutsideClick);
+            }
+        };
+        // Defer so the current click doesn't immediately close it
+        requestAnimationFrame(() => {
+            document.addEventListener('mousedown', onOutsideClick);
+        });
     }
 
     /**

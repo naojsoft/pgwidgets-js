@@ -134,6 +134,15 @@ class Widget extends Callback {
     }
 
     /**
+     * Returns the widget's position within the viewport.
+     * @returns {number[]} A tuple [x, y] in pixels.
+     */
+    get_position() {
+        let rect = this.element.getBoundingClientRect();
+        return [rect.left, rect.top];
+    }
+
+    /**
      * Sets the padding of the widget.
      * @param {number|number[]} padding - A single number for all sides, or
      *   an array of [left, top, right, bottom] values in pixels.
@@ -874,11 +883,31 @@ class ContainerWidget extends Widget {
     /**
      * Removes a child widget and its DOM element from this container.
      * @param {Widget} child - The child widget to remove.
+     * @param {boolean} [destroy=false] - If true, also destroy the child.
      */
-    remove(child) {
+    remove(child, destroy=false) {
         let idx = this.remove_child(child);
         if (idx > -1) {
             this.element.removeChild(child.get_element());
+            if (destroy) {
+                child.destroy();
+            }
+        }
+    }
+
+    /** Alias for remove(). */
+    remove_widget(child, destroy=false) {
+        this.remove(child, destroy);
+    }
+
+    /**
+     * Removes all children from this container.
+     * @param {boolean} [destroy=false] - If true, also destroy each child.
+     */
+    remove_all(destroy=false) {
+        let kids = this.children.slice();
+        for (let child of kids) {
+            this.remove(child, destroy);
         }
     }
 
