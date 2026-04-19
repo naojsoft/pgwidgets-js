@@ -109,6 +109,17 @@ class Dialog extends TopLevel {
     /** Hides the dialog, removing the modal overlay if present. */
     hide() {
         super.hide();
+        this._removeOverlay();
+    }
+
+    /** Destroys the dialog, removing the modal overlay if present. */
+    destroy() {
+        this._removeOverlay();
+        super.destroy();
+    }
+
+    /** @private */
+    _removeOverlay() {
         if (this._overlay) {
             this._overlay.remove();
             this._overlay = null;

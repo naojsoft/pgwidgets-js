@@ -235,6 +235,24 @@ WIDGETS = {
         "callbacks": ["page-switch", "page-close", "scrolled"],
     },
 
+    "MDISubWindow": {
+        "base": "widget",
+        "args": [],
+        "options": [],
+        "methods": {
+            "set_position": ["x", "y"],
+            "resize": ["width", "height"],
+            "set_title": ["title"],
+            "raise_": [],
+            "lower": [],
+            "toggle_minimize": [],
+            "toggle_maximize": [],
+            "close": [],
+            "get_child": [],
+        },
+        "callbacks": ["move", "resize"],
+    },
+
     # -- Top-level windows --
 
     "TopLevel": {
