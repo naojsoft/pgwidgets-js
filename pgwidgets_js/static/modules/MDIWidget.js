@@ -535,6 +535,10 @@ class MDIWidget extends ContainerWidget {
         this.get_subwin = this.get_subwin.bind(this);
         this.get_configuration = this.get_configuration.bind(this);
         this.close_child = this.close_child.bind(this);
+        this.get_index = this.get_index.bind(this);
+        this.set_index = this.set_index.bind(this);
+        this.index_of = this.index_of.bind(this);
+        this.index_to_widget = this.index_to_widget.bind(this);
         this.set_resistance = this.set_resistance.bind(this);
         this.set_scroll_position = this.set_scroll_position.bind(this);
         this._updateWorkspaceSize = this._updateWorkspaceSize.bind(this);
@@ -830,6 +834,63 @@ class MDIWidget extends ContainerWidget {
             height: parseInt(style.height, 10) || 0,
             title: subwin.titleText.innerHTML,
         };
+    }
+
+    /**
+     * Returns the 0-based index of the currently active (topmost) sub-window's
+     * child widget, or -1 if there are no children.
+     * @returns {number} The index, or -1.
+     */
+    get_index() {
+        if (this.children.length === 0) return -1;
+        // find the subwindow with the highest z-index
+        let maxZ = -1;
+        let activeIdx = 0;
+        for (let i = 0; i < this.children.length; i++) {
+            let z = parseInt(this.children[i].get_element().style.zIndex) || 0;
+            if (z > maxZ) {
+                maxZ = z;
+                activeIdx = i;
+            }
+        }
+        return activeIdx;
+    }
+
+    /**
+     * Raises the sub-window at the given index to the top (makes it active).
+     * @param {number} index - 0-based index into the children list.
+     */
+    set_index(index) {
+        if (index >= 0 && index < this.children.length) {
+            let subwin = this.children[index];
+            subwin.raise_();
+        }
+    }
+
+    /**
+     * Returns the index of the given child widget, or -1 if not found.
+     * @param {Widget} child - The child widget to look up.
+     * @returns {number} The 0-based index, or -1.
+     */
+    index_of(child) {
+        for (let i = 0; i < this.children.length; i++) {
+            if (this.children[i].get_child() === child) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Returns the child widget at the given index, or null if out of range.
+     * @param {number} index - 0-based index.
+     * @returns {Widget|null} The child widget, or null.
+     */
+    index_to_widget(index) {
+        if (index < 0 || index >= this.children.length) {
+            return null;
+        }
+        return this.children[index].get_child();
     }
 
     /**

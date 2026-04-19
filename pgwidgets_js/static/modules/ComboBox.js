@@ -59,6 +59,7 @@ class ComboBox extends Widget {
         this.set_index = this.set_index.bind(this);
         this.get_index = this.get_index.bind(this);
         this.get_alpha = this.get_alpha.bind(this);
+        this.show_text = this.show_text.bind(this);
         this.clear = this.clear.bind(this);
         this.set_length = this.set_length.bind(this);
         this._buildDropdown = this._buildDropdown.bind(this);
@@ -273,6 +274,21 @@ class ComboBox extends Widget {
             return null;
         }
         return this._items[idx];
+    }
+
+    /**
+     * Shows the item matching the given text. If found in the items list,
+     * selects it. Otherwise, if editable, sets the input to the text.
+     * @param {string} text - The text to show.
+     */
+    show_text(text) {
+        let idx = this._items.indexOf(text);
+        if (idx !== -1) {
+            this._selectedIdx = idx;
+            this._input.value = text;
+        } else if (this._editable) {
+            this._input.value = text;
+        }
     }
 
     /** Removes all options and clears the input. */

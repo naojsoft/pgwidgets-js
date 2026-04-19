@@ -24,12 +24,14 @@ class Menu extends Widget {
         this.element.className = 'menu-widget';
 
         this._items = [];
+        this._menus = {};
 
         // JavaScript hack to bind "this" correctly for our methods
         this.add_widget = this.add_widget.bind(this);
         this.add_name = this.add_name.bind(this);
         this.add_menu = this.add_menu.bind(this);
         this.add_separator = this.add_separator.bind(this);
+        this.get_menu = this.get_menu.bind(this);
         this.popup = this.popup.bind(this);
         this._closeSubmenus = this._closeSubmenus.bind(this);
 
@@ -102,8 +104,19 @@ class Menu extends Widget {
         });
 
         this._items.push(menu);
+        this._menus[name] = menu;
         this.element.appendChild(item);
         return menu;
+    }
+
+    /**
+     * Returns the submenu added with the given name, or null if not found.
+     * @param {string} name - The submenu label.
+     * @returns {Menu|null} The submenu, or null.
+     */
+    get_menu(name) {
+        let menu = this._menus[name];
+        return menu ? menu : null;
     }
 
     /**

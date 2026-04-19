@@ -326,7 +326,10 @@ class TopLevel extends ContainerWidget {
 
     /** Removes the TopLevel element from the document body, hiding it. */
     hide() {
-        document.body.removeChild(this.get_element());
+        let elt = this.get_element();
+        if (elt.parentNode) {
+            elt.parentNode.removeChild(elt);
+        }
     }
 };    
 

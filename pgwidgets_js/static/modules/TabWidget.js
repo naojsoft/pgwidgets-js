@@ -53,6 +53,7 @@ class TabWidget extends ContainerWidget {
         this.close_widget = this.close_widget.bind(this);
         this.show_widget = this.show_widget.bind(this);
         this.set_tab_position = this.set_tab_position.bind(this);
+        this.index_to_widget = this.index_to_widget.bind(this);
 
         this.tabContentContainer = document.createElement('div');
         this.tabContentContainer.className = 'tab-content-container';
@@ -298,6 +299,20 @@ class TabWidget extends ContainerWidget {
         if (tab_rec && tab_rec.tabButton) {
             tab_rec.tabButton.style.backgroundColor = bgcolor !== null ? bgcolor : '';
         }
+    }
+
+    /**
+     * Returns the child widget at the given tab index, or null if out of range.
+     * @param {number} index - The 0-based tab index.
+     * @returns {Widget|null} The child widget, or null.
+     */
+    index_to_widget(index) {
+        if (index < 0 || index >= this.tabs.length) {
+            return null;
+        }
+        const tab_id = this.tabs[index];
+        const tab_rec = this.tab_info.get(tab_id);
+        return tab_rec ? tab_rec.child : null;
     }
 
     /**

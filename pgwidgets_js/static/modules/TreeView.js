@@ -187,15 +187,18 @@ class TreeView extends Widget {
      * Accepts plain strings or {label, type} objects.
      */
     _parseColumns(raw) {
+        this._dictMode = false;
         this._columns = raw.map(c => {
             if (typeof c === 'string') {
-                return { label: c, type: 'string', editable: false };
+                return { label: c, type: 'string', editable: false, key: null };
             }
             let col = {
                 label: c.label || '',
                 type: c.type || 'string',
                 editable: !!c.editable,
+                key: c.key || null,
             };
+            if (col.key) this._dictMode = true;
             if (c.icon_size) col.icon_size = c.icon_size;
             return col;
         });
@@ -388,7 +391,8 @@ class TreeView extends Widget {
     set_data(data) {
         this.clear();
         for (let row of data) {
-            let values = Array.isArray(row) ? row : [row];
+            let values = (Array.isArray(row) || (this._dictMode && typeof row === 'object' && row !== null))
+                ? row : [row];
             this._root.children.push({
                 values: values,
                 children: [],
@@ -411,7 +415,8 @@ class TreeView extends Widget {
     add_item(parent, values) {
         let parentNode = this._resolveNode(parent) || this._root;
         let node = {
-            values: Array.isArray(values) ? values : [values],
+            values: (Array.isArray(values) || (this._dictMode && typeof values === 'object' && values !== null))
+                ? values : [values],
             children: [],
             expanded: false,
             depth: parentNode.depth + 1,
@@ -458,7 +463,8 @@ class TreeView extends Widget {
                 let node = this._nodeAtPath(item.path);
                 if (node) {
                     // Update existing node
-                    node.values = Array.isArray(item.values) ? item.values : [item.values];
+                    node.values = (Array.isArray(item.values) || (this._dictMode && typeof item.values === 'object' && item.values !== null))
+                        ? item.values : [item.values];
                 } else {
                     // Path doesn't exist - add under parent (all but last index)
                     let parentPath = item.path.slice(0, -1);
@@ -713,7 +719,13 @@ class TreeView extends Widget {
         // Measure all rows
         this._walkNodes(this._root, (node) => {
             for (let i = 0; i < numCols; i++) {
-                let val = i < node.values.length ? node.values[i] : '';
+                let val;
+                if (this._dictMode && i < this._columns.length && this._columns[i].key) {
+                    val = node.values[this._columns[i].key];
+                } else {
+                    val = i < node.values.length ? node.values[i] : '';
+                }
+                if (val === undefined) val = '';
                 let colType = i < this._columns.length ? this._columns[i].type : 'string';
                 if (colType === 'icon') {
                     let size = this._columns[i].icon_size || 16;
@@ -877,12 +889,20 @@ class TreeView extends Widget {
         row.appendChild(toggle);
 
         // Data cells
-        let numCols = Math.max(this._columns.length, node.values.length, 1);
+        let numCols = this._dictMode
+            ? this._columns.length
+            : Math.max(this._columns.length, node.values.length, 1);
         for (let i = 0; i < numCols; i++) {
             let cell = document.createElement('span');
             cell.className = 'treeview-cell';
             cell._colIndex = i;
-            let val = i < node.values.length ? node.values[i] : '';
+            let val;
+            if (this._dictMode && i < this._columns.length && this._columns[i].key) {
+                val = node.values[this._columns[i].key];
+            } else {
+                val = i < node.values.length ? node.values[i] : '';
+            }
+            if (val === undefined) val = '';
             let colType = i < this._columns.length ? this._columns[i].type : 'string';
             let editable = i < this._columns.length && this._columns[i].editable
                            && colType !== 'icon';
@@ -1245,8 +1265,12 @@ class TreeView extends Widget {
             node = this._resolveNode(rowRef);
         }
         if (!node) return;
-        while (node.values.length <= colIndex) node.values.push('');
-        node.values[colIndex] = value;
+        if (this._dictMode && colIndex < this._columns.length && this._columns[colIndex].key) {
+            node.values[this._columns[colIndex].key] = value;
+        } else {
+            while (node.values.length <= colIndex) node.values.push('');
+            node.values[colIndex] = value;
+        }
         this._renderAll();
     }
 
@@ -1365,7 +1389,13 @@ class TreeView extends Widget {
     _startEdit(node, colIndex, cell) {
         if (this._editor) this._commitEdit();
 
-        let oldValue = colIndex < node.values.length ? node.values[colIndex] : '';
+        let oldValue;
+        if (this._dictMode && colIndex < this._columns.length && this._columns[colIndex].key) {
+            oldValue = node.values[this._columns[colIndex].key];
+        } else {
+            oldValue = colIndex < node.values.length ? node.values[colIndex] : '';
+        }
+        if (oldValue === undefined) oldValue = '';
         let colType = colIndex < this._columns.length
             ? this._columns[colIndex].type : 'string';
 
@@ -1411,9 +1441,16 @@ class TreeView extends Widget {
         // Clear first to avoid reentry via blur
         this._editor = null;
         this._editInfo = null;
-        while (node.values.length <= colIndex) node.values.push('');
-        let changed = node.values[colIndex] !== newValue;
-        node.values[colIndex] = newValue;
+        let changed;
+        if (this._dictMode && colIndex < this._columns.length && this._columns[colIndex].key) {
+            let key = this._columns[colIndex].key;
+            changed = node.values[key] !== newValue;
+            node.values[key] = newValue;
+        } else {
+            while (node.values.length <= colIndex) node.values.push('');
+            changed = node.values[colIndex] !== newValue;
+            node.values[colIndex] = newValue;
+        }
         // Restore the cell in place rather than rebuilding the whole body;
         // a full _renderAll here disturbs browser state (dblclick tracking)
         // and discards unrelated scroll/focus context.
@@ -1445,8 +1482,15 @@ class TreeView extends Widget {
             ? this._columns[colIndex].type : 'string';
 
         node.children.sort((a, b) => {
-            let va = colIndex < a.values.length ? a.values[colIndex] : '';
-            let vb = colIndex < b.values.length ? b.values[colIndex] : '';
+            let va, vb;
+            if (this._dictMode && colIndex < this._columns.length && this._columns[colIndex].key) {
+                let key = this._columns[colIndex].key;
+                va = a.values[key];
+                vb = b.values[key];
+            } else {
+                va = colIndex < a.values.length ? a.values[colIndex] : '';
+                vb = colIndex < b.values.length ? b.values[colIndex] : '';
+            }
             if (va == null) va = '';
             if (vb == null) vb = '';
             let cmp;

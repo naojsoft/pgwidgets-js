@@ -30,6 +30,7 @@ class ComboBoxNative extends Widget {
         this.set_text = this.set_text.bind(this);
         this.get_text = this.get_text.bind(this);
         this.get_alpha = this.get_alpha.bind(this);
+        this.show_text = this.show_text.bind(this);
         this.clear = this.clear.bind(this);
         this._cb_redirect = this._cb_redirect.bind(this);
 
@@ -160,6 +161,20 @@ class ComboBoxNative extends Widget {
             return null;
         }
         return this.element.options[idx].textContent;
+    }
+
+    /**
+     * Selects the option matching the given text, if found.
+     * @param {string} text - The text to show.
+     */
+    show_text(text) {
+        let opts = this.element.options;
+        for (let i = 0; i < opts.length; i++) {
+            if (opts[i].textContent === text) {
+                this.element.selectedIndex = i;
+                return;
+            }
+        }
     }
 
     _cb_redirect(action) {
