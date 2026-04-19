@@ -121,8 +121,12 @@ class Widget extends Callback {
      * @param {number} height - Height in pixels.
      */
     resize(width, height) {
-        this.element.style.width = width + 'px';
-        this.element.style.height = height + 'px';
+        if (width != null) {
+            this.element.style.width = width + 'px';
+        }
+        if (height != null) {
+            this.element.style.height = height + 'px';
+        }
     }
 
     /**

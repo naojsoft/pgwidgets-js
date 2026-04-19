@@ -59,14 +59,21 @@ class Box extends ContainerWidget {
 
         // main axis: stretch=0 means natural size, stretch>0 means
         // distribute extra space proportionally (like Qt's stretch factor)
+        let orient = this.orientation;
         if (stretch > 0) {
             elt.style.flex = stretch + ' 1 0px';
         } else {
             elt.style.flex = '0 0 auto';
+            // Override any height/width:100% the child's own CSS class
+            // may set, so it sizes to content on the main axis.
+            if (orient === 'vertical') {
+                elt.style.height = 'auto';
+            } else {
+                elt.style.width = 'auto';
+            }
         }
 
         // cross axis: always fill (like Qt)
-        let orient = this.orientation;
         if (orient === 'vertical') {
             elt.style.width = '100%';
         } else {
@@ -101,13 +108,18 @@ class Box extends ContainerWidget {
         let elt = child.get_element();
         elt.classList.add('box-child');
 
+        let orient = this.orientation;
         if (stretch > 0) {
             elt.style.flex = stretch + ' 1 0px';
         } else {
             elt.style.flex = '0 0 auto';
+            if (orient === 'vertical') {
+                elt.style.height = 'auto';
+            } else {
+                elt.style.width = 'auto';
+            }
         }
 
-        let orient = this.orientation;
         if (orient === 'vertical') {
             elt.style.width = '100%';
         } else {
