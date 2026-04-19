@@ -33,6 +33,8 @@ class ComboBox extends Widget {
         this._input = document.createElement('input');
         this._input.type = 'text';
         this._input.className = 'combobox-input';
+        this._input.size = 1;
+        this._fixedSize = false;
         this._input.readOnly = !this._editable;
         this.element.appendChild(this._input);
 
@@ -62,6 +64,7 @@ class ComboBox extends Widget {
         this.show_text = this.show_text.bind(this);
         this.clear = this.clear.bind(this);
         this.set_length = this.set_length.bind(this);
+        this._autoSize = this._autoSize.bind(this);
         this._buildDropdown = this._buildDropdown.bind(this);
         this._showDropdown = this._showDropdown.bind(this);
         this._hideDropdown = this._hideDropdown.bind(this);
@@ -110,6 +113,7 @@ class ComboBox extends Widget {
             idx = Math.min(this._items.length - 1, Math.max(0, idx));
             this._selectedIdx = idx;
             this._input.value = this._items[idx];
+            this._autoSize();
             this.make_callback('activated', idx, this._items[idx]);
         });
 
@@ -187,12 +191,23 @@ class ComboBox extends Widget {
         }
     }
 
+    /** @private */
+    _autoSize() {
+        if (this._fixedSize) return;
+        let maxLen = this._input.value.length || 1;
+        for (let item of this._items) {
+            if (item.length > maxLen) maxLen = item.length;
+        }
+        this._input.size = maxLen;
+    }
+
     /**
      * Appends an option to the list.
      * @param {string} text - The display text for the option.
      */
     append_text(text) {
         this._items.push(text);
+        this._autoSize();
     }
 
     /**
@@ -211,6 +226,7 @@ class ComboBox extends Widget {
         if (!inserted) {
             this._items.push(text);
         }
+        this._autoSize();
     }
 
     /**
@@ -221,6 +237,7 @@ class ComboBox extends Widget {
         let idx = this._items.indexOf(text);
         if (idx !== -1) {
             this._items.splice(idx, 1);
+            this._autoSize();
         }
     }
 
@@ -234,6 +251,7 @@ class ComboBox extends Widget {
         if (idx !== -1) {
             this._selectedIdx = idx;
         }
+        this._autoSize();
     }
 
     /**
@@ -252,6 +270,7 @@ class ComboBox extends Widget {
         if (idx >= 0 && idx < this._items.length) {
             this._selectedIdx = idx;
             this._input.value = this._items[idx];
+            this._autoSize();
         }
     }
 
@@ -289,6 +308,7 @@ class ComboBox extends Widget {
         } else if (this._editable) {
             this._input.value = text;
         }
+        this._autoSize();
     }
 
     /** Removes all options and clears the input. */
@@ -296,6 +316,7 @@ class ComboBox extends Widget {
         this._items = [];
         this._selectedIdx = -1;
         this._input.value = '';
+        this._autoSize();
     }
 
     /**
@@ -304,6 +325,7 @@ class ComboBox extends Widget {
      */
     set_length(numchars) {
         this._input.size = numchars;
+        this._fixedSize = true;
     }
 }
 

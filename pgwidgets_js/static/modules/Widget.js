@@ -823,6 +823,7 @@ class ContainerWidget extends Widget {
 
         // JavaScript hack to bind "this" correctly for our methods
         this.get_children = this.get_children.bind(this);
+        this.num_children = this.num_children.bind(this);
         this.add = this.add.bind(this);
         this.add_child = this.add_child.bind(this);
         this.remove = this.remove.bind(this);
@@ -843,6 +844,14 @@ class ContainerWidget extends Widget {
      */
     get_children() {
         return this.children;
+    }
+
+    /**
+     * Returns the number of child widgets in this container.
+     * @returns {number} The child count.
+     */
+    num_children() {
+        return this.children.length;
     }
 
     /**

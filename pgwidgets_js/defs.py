@@ -45,6 +45,7 @@ WIDGET_METHODS = {
 CONTAINER_METHODS = {
     **WIDGET_METHODS,
     "get_children": [],
+    "num_children": [],
     "remove": ["child", "destroy"],
     "remove_widget": ["child", "destroy"],
     "remove_all": ["destroy"],
@@ -155,7 +156,7 @@ WIDGETS = {
     "Expander": {
         "base": "widget",
         "args": [],
-        "options": ["title", "collapsible", "shadow"],
+        "options": ["title", "collapsible", "shadow", "bg_color"],
         "methods": {
             "set_widget": ["child"],
             "set_collapsed": ["collapsed"],

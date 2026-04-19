@@ -38,7 +38,10 @@ class Expander extends ContainerWidget {
         // Create the title element
         const titleElement = document.createElement('div');
         titleElement.className = 'expander-title';
-        //titleElement.innerText = this.title;
+        let bgColor = this.get_option(options, 'bg_color', null);
+        if (bgColor) {
+            titleElement.style.backgroundColor = bgColor;
+        }
         this.element.appendChild(titleElement);
 
         if (this.collapsible) {

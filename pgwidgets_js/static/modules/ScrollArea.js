@@ -77,14 +77,6 @@ class ScrollArea extends ContainerWidget {
         // native scroll (e.g. touch, programmatic)
         this._viewport.addEventListener('scroll', () => this._syncFromScroll());
 
-        // mouse wheel on the viewport
-        this._viewport.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            this._viewport.scrollTop += e.deltaY;
-            this._viewport.scrollLeft += e.deltaX;
-            this._syncFromScroll();
-        });
-
         // observe content size changes
         this._resizeObserver = new ResizeObserver(() => this._syncScrollbars());
         this._resizeObserver.observe(this._viewport);

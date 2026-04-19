@@ -30,6 +30,8 @@ class TextEntry extends Widget {
         this.element.type = this.get_option(options, 'password', false) ? 'password' : 'text';
         this.element.readOnly = ! this.get_option(options, 'editable', true);
         this.element.placeholder = '';
+        this.element.size = 1;
+        this._fixedSize = false;
 
         // the input element used by all text methods
         this._input = this.element;
@@ -45,10 +47,12 @@ class TextEntry extends Widget {
         this.get_text = this.get_text.bind(this);
         this.clear = this.clear.bind(this);
         this.set_length = this.set_length.bind(this);
+        this._autoSize = this._autoSize.bind(this);
         this._onKeyDown = this._onKeyDown.bind(this);
         this._recordHistory = this._recordHistory.bind(this);
 
         this._input.addEventListener("keydown", this._onKeyDown);
+        this._input.addEventListener("input", () => this._autoSize());
         this.enable_callback('activated');
 
         if (text !== '') {
@@ -110,12 +114,19 @@ class TextEntry extends Widget {
         this._historyIdx = -1;
     }
 
+    /** @private */
+    _autoSize() {
+        if (this._fixedSize) return;
+        this._input.size = this._input.value.length || 1;
+    }
+
     /**
      * Sets the input text value.
      * @param {string} text - The text to set.
      */
     set_text(text) {
         this._input.value = text;
+        this._autoSize();
     }
 
     /**
@@ -129,14 +140,17 @@ class TextEntry extends Widget {
     /** Clears the input text. */
     clear() {
         this._input.value = '';
+        this._autoSize();
     }
 
     /**
      * Sets the visible width of the input in character units.
+     * Disables auto-sizing.
      * @param {number} numchars - Number of characters to show.
      */
     set_length(numchars) {
         this._input.size = numchars;
+        this._fixedSize = true;
     }
 }
 

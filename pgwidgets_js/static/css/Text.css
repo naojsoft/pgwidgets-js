@@ -2,7 +2,8 @@
  * Styling the Text widgets
  */
 .text-widget {
-    border: 2px;
+    border: 2px solid transparent;
     padding: 4px;
     overflow: hidden;
+    font-family: sans-serif;
 }

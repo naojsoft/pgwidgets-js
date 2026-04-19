@@ -30,8 +30,9 @@ class GridBox extends ContainerWidget {
         this.columns = this.get_option(options, 'columns', 1);
 
         this.element.style.display = 'grid';
-        this.element.style.gridTemplateRows = '1fr '.repeat(this.rows).trim();
-        this.element.style.gridTemplateColumns = '1fr '.repeat(this.columns).trim();
+        this.element.style.gridTemplateRows = 'auto '.repeat(this.rows).trim();
+        this.element.style.gridTemplateColumns = 'auto '.repeat(this.columns).trim();
+        this.element.style.gap = '2px';
 
         // map from child -> {row, col} for removal
         this.cellMap = new Map();
@@ -53,8 +54,8 @@ class GridBox extends ContainerWidget {
     }
 
     _update_grid() {
-        this.element.style.gridTemplateRows = '1fr '.repeat(this.rows).trim();
-        this.element.style.gridTemplateColumns = '1fr '.repeat(this.columns).trim();
+        this.element.style.gridTemplateRows = 'auto '.repeat(this.rows).trim();
+        this.element.style.gridTemplateColumns = 'auto '.repeat(this.columns).trim();
     }
 
     /**
@@ -79,23 +80,10 @@ class GridBox extends ContainerWidget {
         elt.style.gridColumn = (col + 1).toString();
         elt.style.minWidth = '0';
         elt.style.minHeight = '0';
-        elt.style.width = '100%';
-        elt.style.height = '100%';
-        elt.style.overflow = 'hidden';
 
         this.cellMap.set(child, {row: row, col: col});
         super.add_child(child);
         this.element.appendChild(elt);
-
-        // The grid cell owns the child's size on both axes.  Wrap
-        // resize() so a caller-supplied pixel size doesn't override
-        // the stretch once the container is shrunk and re-expanded.
-        let origResize = child.resize.bind(child);
-        child.resize = function(w, h) {
-            origResize(w, h);
-            elt.style.width = '100%';
-            elt.style.height = '100%';
-        };
     }
 
     /**

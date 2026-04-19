@@ -64,7 +64,15 @@ class MenuBar extends Widget {
 
         let menuElt = menu.get_element();
         menuElt.style.display = 'none';
-        container.appendChild(menuElt);
+        menuElt.style.position = 'fixed';
+        menuElt.style.zIndex = '10000';
+        document.body.appendChild(menuElt);
+
+        const positionMenu = () => {
+            let rect = button.getBoundingClientRect();
+            menuElt.style.left = rect.left + 'px';
+            menuElt.style.top = rect.bottom + 'px';
+        };
 
         button.addEventListener('mousedown', (e) => {
             e.preventDefault();
@@ -74,6 +82,7 @@ class MenuBar extends Widget {
                 this._closeAll();
             } else {
                 this._closeAll();
+                positionMenu();
                 menuElt.style.display = '';
                 button.classList.add('active');
                 this._openName = name;
@@ -87,6 +96,7 @@ class MenuBar extends Widget {
         button.addEventListener('mouseenter', () => {
             if (this._openName !== null && this._openName !== name) {
                 this._closeAll();
+                positionMenu();
                 menuElt.style.display = '';
                 button.classList.add('active');
                 this._openName = name;
