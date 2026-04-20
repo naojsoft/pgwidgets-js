@@ -370,14 +370,14 @@
             let lbl = new Widgets.Label("0%");
             content.add_widget(new Widgets.Label("Horizontal:"), 0);
             let hsb = new Widgets.ScrollBar({orientation: 'horizontal'});
-            hsb.set_thumb_width(0.2);
+            hsb.set_thumb_percent(0.2);
             hsb.add_callback('activated', (w, pct) => lbl.set_text((pct * 100).toFixed(0) + "%"));
             content.add_widget(hsb, 0);
             let hbox = new Widgets.HBox();
             hbox.set_spacing(8);
             hbox.add_widget(new Widgets.Label("Vertical:"), 0);
             let vsb = new Widgets.ScrollBar({orientation: 'vertical'});
-            vsb.set_thumb_width(0.3);
+            vsb.set_thumb_percent(0.3);
             vsb.add_callback('activated', (w, pct) => lbl.set_text((pct * 100).toFixed(0) + "%"));
             hbox.add_widget(vsb, 0);
             hbox.add_widget(lbl, 1);

@@ -2,6 +2,7 @@
  * ScrollBar widget styles
  */
 .scrollbar-widget {
+    --scrollbar-thickness: 15px;
     position: relative;
     background-color: #e0e0e0;
     border-radius: 3px;
@@ -11,10 +12,12 @@
 
 .scrollbar-widget.horizontal {
     width: 100%;
+    height: var(--scrollbar-thickness) !important;
 }
 
 .scrollbar-widget.vertical {
     height: 100%;
+    width: var(--scrollbar-thickness) !important;
 }
 
 .scrollbar-thumb {

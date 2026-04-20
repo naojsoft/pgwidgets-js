@@ -1075,10 +1075,10 @@ class TreeView extends Widget {
         this._corner.style.display = (showH && showV) ? '' : 'none';
 
         if (showH) {
-            this._hScrollBar.set_thumb_width(Math.min(1, vw / Math.max(1, cw)));
+            this._hScrollBar.set_thumb_percent(Math.min(1, vw / Math.max(1, cw)));
         }
         if (showV) {
-            this._vScrollBar.set_thumb_width(Math.min(1, vh / Math.max(1, ch)));
+            this._vScrollBar.set_thumb_percent(Math.min(1, vh / Math.max(1, ch)));
         }
 
         this._syncFromScroll();

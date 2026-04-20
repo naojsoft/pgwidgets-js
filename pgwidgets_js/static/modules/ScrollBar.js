@@ -30,12 +30,11 @@ class ScrollBar extends Widget {
         this._scrollPct = 0;
         this._thumbPct = 0.2;
 
+        this.element.style.setProperty('--scrollbar-thickness', this._thickness + 'px');
         if (this._orientation === 'vertical') {
             this.element.classList.add('vertical');
-            this.element.style.width = this._thickness + 'px';
         } else {
             this.element.classList.add('horizontal');
-            this.element.style.height = this._thickness + 'px';
         }
 
         // thumb element
@@ -46,7 +45,8 @@ class ScrollBar extends Widget {
         // JavaScript hack to bind "this" correctly for our methods
         this.set_scroll_percent = this.set_scroll_percent.bind(this);
         this.get_scroll_percent = this.get_scroll_percent.bind(this);
-        this.set_thumb_width = this.set_thumb_width.bind(this);
+        this.set_thumb_percent = this.set_thumb_percent.bind(this);
+        this.get_thumb_percent = this.get_thumb_percent.bind(this);
 
         // drag handling
         this._setupDrag();
@@ -95,10 +95,21 @@ class ScrollBar extends Widget {
      * Sets the thumb length as a fraction of the track length.
      * @param {number} pct - Thumb size between 0 and 1.
      */
-    set_thumb_width(pct) {
+    set_thumb_percent(pct) {
         this._thumbPct = Math.max(0.01, Math.min(1, pct));
         this._updateThumb();
     }
+
+    /**
+     * Returns the thumb length as a fraction of the track length.
+     * @returns {number} Thumb size between 0 and 1.
+     */
+    get_thumb_percent() {
+        return this._thumbPct;
+    }
+
+    // backward compat alias
+    set_thumb_width(pct) { this.set_thumb_percent(pct); }
 
     /** @private */
     _updateThumb() {

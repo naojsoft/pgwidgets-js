@@ -289,14 +289,14 @@ def make_demo(name):
         lbl = Widgets.Label("0%")
         content.add_widget(Widgets.Label("Horizontal:"), 0)
         hsb = Widgets.ScrollBar(orientation="horizontal")
-        hsb.set_thumb_width(0.2)
+        hsb.set_thumb_percent(0.2)
         hsb.on("activated",
                lambda pct: lbl.set_text(f"{int(pct * 100)}%"))
         content.add_widget(hsb, 0)
         hbox = Widgets.HBox(spacing=8)
         hbox.add_widget(Widgets.Label("Vertical:"), 0)
         vsb = Widgets.ScrollBar(orientation="vertical")
-        vsb.set_thumb_width(0.3)
+        vsb.set_thumb_percent(0.3)
         vsb.on("activated",
                lambda pct: lbl.set_text(f"{int(pct * 100)}%"))
         hbox.add_widget(vsb, 0)

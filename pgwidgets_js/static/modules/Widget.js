@@ -701,6 +701,16 @@ class Widget extends Callback {
         payload.url = dt.getData('text/uri-list') || null;
         payload.html = dt.getData('text/html') || null;
 
+        // Browser address bar drags typically provide text/plain
+        // with the URL but not text/uri-list.  Promote text to url
+        // when it looks like a URL.
+        if (!payload.url && payload.text) {
+            let t = payload.text.trim();
+            if (/^https?:\/\/\S+$/.test(t) || /^file:\/\/\S+$/.test(t)) {
+                payload.url = t;
+            }
+        }
+
         let files = dt.files;
         if (files.length === 0) {
             // No files — fire both start and end immediately.

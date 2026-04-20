@@ -166,16 +166,36 @@ WIDGETS = {
         "callbacks": ["toggled"],
     },
 
+    "AbstractScrollArea": {
+        "base": "widget",
+        "args": [],
+        "options": ["thickness"],
+        "methods": {
+            "set_widget": ["child"],
+            "set_thumb_percent": ["h_pct", "v_pct"],
+            "get_thumb_percent": [],
+            "set_scroll_percent": ["h_pct", "v_pct"],
+            "get_scroll_percent": [],
+            "set_scroll_bar_visibility": ["horizontal", "vertical"],
+        },
+        "callbacks": ["scrolled", "area-resize"],
+    },
+
     "ScrollArea": {
         "base": "widget",
         "args": [],
-        "options": ["hscrollbar", "vscrollbar"],
+        "options": ["hscrollbar", "vscrollbar", "thickness"],
         "methods": {
             "set_widget": ["child"],
+            "set_thumb_percent": ["h_pct", "v_pct"],
+            "get_thumb_percent": [],
+            "set_scroll_percent": ["h_pct", "v_pct"],
+            "get_scroll_percent": [],
+            "set_scroll_bar_visibility": ["horizontal", "vertical"],
             "set_scroll_position": ["h_pct", "v_pct"],
             "get_scroll_position": [],
         },
-        "callbacks": ["scrolled"],
+        "callbacks": ["scrolled", "area-resize"],
     },
 
     "TabWidget": {
@@ -552,7 +572,8 @@ WIDGETS = {
         "methods": {
             "set_scroll_percent": ["pct"],
             "get_scroll_percent": [],
-            "set_thumb_width": ["pct"],
+            "set_thumb_percent": ["pct"],
+            "get_thumb_percent": [],
         },
         "callbacks": ["activated"],
     },

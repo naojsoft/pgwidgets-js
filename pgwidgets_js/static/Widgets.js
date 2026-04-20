@@ -9,6 +9,7 @@ import {Callback} from "./modules/Callback.js";
 import {Widget, ContainerWidget} from "./modules/Widget.js";
 import {Box, VBox, HBox, ButtonBox} from "./modules/Box.js";
 import {TopLevel} from "./modules/TopLevel.js";
+import {AbstractScrollArea} from "./modules/AbstractScrollArea.js";
 import {ScrollArea} from "./modules/ScrollArea.js";
 import {MDIWidget} from "./modules/MDIWidget.js";
 import {TabWidget, StackWidget} from "./modules/TabWidget.js";
@@ -55,7 +56,7 @@ import {VideoWidget} from "./modules/VideoWidget.js";
 
 
 const Widgets = {Callback, Widget, ContainerWidget, Box, VBox, HBox, ButtonBox,
-                 TopLevel, ScrollArea, MDIWidget, Splitter, TabWidget,
+                 TopLevel, AbstractScrollArea, ScrollArea, MDIWidget, Splitter, TabWidget,
                  StackWidget, Expander, Page, Text, Label, TextArea, TextSource,
                  Frame, GridBox, Button, ToggleButton, CheckBox,
                  RadioButton, ComboBox, ComboBoxNative, TextEntry,

@@ -31,7 +31,7 @@
     hbox1.set_padding(6);
 
     let hsb = new Widgets.ScrollBar({orientation: 'horizontal'});
-    hsb.set_thumb_width(0.2);
+    hsb.set_thumb_percent(0.2);
     hsb.set_scroll_percent(0);
     hsb.add_callback('activated', (w, pct) => {
         status.set_text("Horizontal: " + (pct * 100).toFixed(1) + "%");
@@ -47,7 +47,7 @@
     hbox2.set_padding(6);
 
     let hsb2 = new Widgets.ScrollBar({orientation: 'horizontal'});
-    hsb2.set_thumb_width(0.5);
+    hsb2.set_thumb_percent(0.5);
     hsb2.set_scroll_percent(0.3);
     hsb2.add_callback('activated', (w, pct) => {
         status.set_text("Wide thumb: " + (pct * 100).toFixed(1) + "%");
@@ -66,7 +66,7 @@
     hbox3.add_widget(contentLabel, 1);
 
     let vsb = new Widgets.ScrollBar({orientation: 'vertical'});
-    vsb.set_thumb_width(0.3);
+    vsb.set_thumb_percent(0.3);
     vsb.set_scroll_percent(0);
     vsb.add_callback('activated', (w, pct) => {
         status.set_text("Vertical: " + (pct * 100).toFixed(1) + "%");
