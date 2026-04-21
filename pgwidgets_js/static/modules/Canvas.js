@@ -100,6 +100,7 @@ class Canvas extends Widget {
         if (this._rafId !== null) return;
         this._rafId = requestAnimationFrame(() => {
             this._rafId = null;
+            if (this.element.width === 0 || this.element.height === 0) return;
             let ctx = this.element.getContext('2d');
             // Clear then blit; offscreen is known to be the same size.
             ctx.clearRect(0, 0, this.element.width, this.element.height);

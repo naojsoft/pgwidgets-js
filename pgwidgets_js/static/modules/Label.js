@@ -15,8 +15,7 @@ class Label extends Widget {
      * @param {string} [options.halign='left'] - Horizontal text alignment: 'left', 'center', or 'right'.
      * @param {HTMLElement} [options.element=null] - Optional pre-existing DOM element to use.
      */
-    constructor(text='', options={}) {
-        if (text === null || text === undefined) text = '';
+    constructor(text=null, options={}) {
         super();
         this.element = this.get_option(options, 'element', null);
         if (this.element == null) {
@@ -32,7 +31,7 @@ class Label extends Widget {
         this.get_text = this.get_text.bind(this);
         this.set_color = this.set_color.bind(this);
         this.set_halign = this.set_halign.bind(this);
-        if (text !== '') {
+        if (text !== null && text !== undefined) {
             this.set_text(text);
         }
     }
@@ -42,7 +41,10 @@ class Label extends Widget {
      * @param {string} text - The text to display.
      */
     set_text(text) {
-        this.element.innerText = text;
+        this._text = text;
+        // Use a non-breaking space when empty so the element
+        // retains one line of height in flex layouts.
+        this.element.innerHTML = text || '&nbsp;';
     }
 
     /**
@@ -50,7 +52,7 @@ class Label extends Widget {
      * @returns {string} The label text.
      */
     get_text() {
-        return this.element.innerText;
+        return this._text;
     }
 
     /**

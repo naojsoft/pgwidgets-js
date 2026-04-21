@@ -100,7 +100,9 @@ class Image extends Widget {
             ctx.clearRect(0, 0,
                           this._offscreen ? this._offscreen.width : this.element.width,
                           this._offscreen ? this._offscreen.height : this.element.height);
-            ctx.drawImage(img, 0, 0, this.element.width, this.element.height);
+            if (this.element.width > 0 && this.element.height > 0) {
+                ctx.drawImage(img, 0, 0, this.element.width, this.element.height);
+            }
             this.update();
         });
     }
@@ -131,6 +133,7 @@ class Image extends Widget {
         if (this._rafId !== null) return;
         this._rafId = requestAnimationFrame(() => {
             this._rafId = null;
+            if (this.element.width === 0 || this.element.height === 0) return;
             let ctx = this.element.getContext('2d');
             ctx.clearRect(0, 0, this.element.width, this.element.height);
             ctx.drawImage(this._offscreen, 0, 0);

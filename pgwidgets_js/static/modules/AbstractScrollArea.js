@@ -90,6 +90,15 @@ class AbstractScrollArea extends ContainerWidget {
         this._updateVisibility();
     }
 
+    /** @override */
+    destroy() {
+        if (this._resizeObserver) {
+            this._resizeObserver.disconnect();
+            this._resizeObserver = null;
+        }
+        super.destroy();
+    }
+
     /**
      * Sets the single child widget.
      * @param {Widget} child
@@ -188,6 +197,7 @@ class AbstractScrollArea extends ContainerWidget {
 
     /** @private */
     _fireAreaResize() {
+        if (!this.element) return;
         let w = this.element.clientWidth;
         let h = this.element.clientHeight;
         let vbarW = this._vScrollBar.get_element().style.display !== 'none'

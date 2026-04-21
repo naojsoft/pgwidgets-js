@@ -199,10 +199,21 @@ class RemoteInterface {
      * @private
      */
     _handleInit(msg) {
+        // Build the result with stored credentials FIRST, before any
+        // cleanup that might throw — the server needs these to
+        // reconnect us to an existing session.
+        let result = {type: "result", id: msg.id};
+        if (this._sessionId !== null && this._sessionToken !== null) {
+            result.session_id = this._sessionId;
+            result.token = this._sessionToken;
+        }
+
         // Destroy all registered widgets. Iterate over a copy since
         // destroy() mutates the registry.
         for (let [wid, widget] of [...Callback._registry]) {
-            widget.destroy();
+            try { widget.destroy(); } catch (e) {
+                console.warn("RemoteInterface: error destroying widget", e);
+            }
         }
         Callback._registry.clear();
         Callback._nextId = 1;
@@ -213,13 +224,6 @@ class RemoteInterface {
         // Clear the document body of any leftover DOM.
         document.body.innerHTML = '';
 
-        // Include stored session credentials so the server can
-        // reconnect us to an existing session if valid.
-        let result = {type: "result", id: msg.id};
-        if (this._sessionId !== null && this._sessionToken !== null) {
-            result.session_id = this._sessionId;
-            result.token = this._sessionToken;
-        }
         return result;
     }
 

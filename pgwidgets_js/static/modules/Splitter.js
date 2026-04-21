@@ -83,12 +83,14 @@ class Splitter extends ContainerWidget {
         // pixel size doesn't override the stretch once the container
         // is shrunk and re-expanded.  Subclass side effects still run
         // via the original resize.
-        let origResize = child.resize.bind(child);
-        child.resize = function(w, h) {
-            origResize(w, h);
-            elt.style.width = '';
-            elt.style.height = '';
-        };
+        if (typeof child.resize === 'function') {
+            let origResize = child.resize.bind(child);
+            child.resize = function(w, h) {
+                origResize(w, h);
+                elt.style.width = '';
+                elt.style.height = '';
+            };
+        }
     }
 
     /**

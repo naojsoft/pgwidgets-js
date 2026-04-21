@@ -92,15 +92,17 @@ class Box extends ContainerWidget {
         // a subsequent resize(w, h) sets style.width/height to pixels
         // and the child no longer grows past that value when the
         // container is re-expanded.
-        let origResize = child.resize.bind(child);
-        child.resize = function(w, h) {
-            origResize(w, h);
-            if (orient === 'vertical') {
-                elt.style.width = '100%';
-            } else {
-                elt.style.height = '100%';
-            }
-        };
+        if (typeof child.resize === 'function') {
+            let origResize = child.resize.bind(child);
+            child.resize = function(w, h) {
+                origResize(w, h);
+                if (orient === 'vertical') {
+                    elt.style.width = '100%';
+                } else {
+                    elt.style.height = '100%';
+                }
+            };
+        }
     }
 
     /**
@@ -147,15 +149,17 @@ class Box extends ContainerWidget {
         }
 
         // Wrap resize() for cross-axis stretch (same as add_widget)
-        let origResize = child.resize.bind(child);
-        child.resize = function(w, h) {
-            origResize(w, h);
-            if (orient === 'vertical') {
-                elt.style.width = '100%';
-            } else {
-                elt.style.height = '100%';
-            }
-        };
+        if (typeof child.resize === 'function') {
+            let origResize = child.resize.bind(child);
+            child.resize = function(w, h) {
+                origResize(w, h);
+                if (orient === 'vertical') {
+                    elt.style.width = '100%';
+                } else {
+                    elt.style.height = '100%';
+                }
+            };
+        }
     }
 
     /**

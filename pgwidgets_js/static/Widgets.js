@@ -19,6 +19,7 @@ import {Text} from "./modules/TextWidget.js";
 import {TextArea} from "./modules/TextArea.js";
 import {TextSource} from "./modules/TextSource.js";
 import {Label} from "./modules/Label.js";
+import {StatusBar} from "./modules/StatusBar.js";
 import {Button} from "./modules/Button.js";
 import {CheckBox} from "./modules/CheckBox.js";
 import {ComboBox} from "./modules/ComboBox.js";
@@ -57,7 +58,7 @@ import {VideoWidget} from "./modules/VideoWidget.js";
 
 const Widgets = {Callback, Widget, ContainerWidget, Box, VBox, HBox, ButtonBox,
                  TopLevel, AbstractScrollArea, ScrollArea, MDIWidget, Splitter, TabWidget,
-                 StackWidget, Expander, Page, Text, Label, TextArea, TextSource,
+                 StackWidget, Expander, Page, Text, Label, StatusBar, TextArea, TextSource,
                  Frame, GridBox, Button, ToggleButton, CheckBox,
                  RadioButton, ComboBox, ComboBoxNative, TextEntry,
                  Slider, Canvas, SpinBox, ProgressBar, Image, Dial,

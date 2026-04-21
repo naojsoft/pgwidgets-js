@@ -699,6 +699,12 @@ class TreeView extends Widget {
      * and sets pixel widths accordingly.
      */
     set_optimal_column_widths() {
+        // Defer if not yet in the DOM — font metrics need inherited styles
+        if (!this.element.isConnected) {
+            requestAnimationFrame(() => this.set_optimal_column_widths());
+            return;
+        }
+
         let numCols = this._columns.length;
         if (numCols === 0) return;
 

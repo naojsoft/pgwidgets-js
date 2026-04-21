@@ -307,6 +307,7 @@ WIDGETS = {
         "methods": {
             "add_widget": ["child", "stretch"],
             "insert_widget": ["index", "child", "stretch"],
+            "add_button": ["child", "value"],
             "set_spacing": ["gap"],
             "set_position": ["x", "y"],
             "popup": ["x", "y"],
@@ -397,6 +398,19 @@ WIDGETS = {
         "methods": {
             "set_text": ["text"],
             "get_text": [],
+            "set_color": ["bg", "fg"],
+            "set_halign": ["align"],
+        },
+        "callbacks": [],
+    },
+
+    "StatusBar": {
+        "base": "widget",
+        "args": [],
+        "options": ["halign"],
+        "methods": {
+            "set_message": ["text", "duration"],
+            "clear": [],
             "set_color": ["bg", "fg"],
             "set_halign": ["align"],
         },

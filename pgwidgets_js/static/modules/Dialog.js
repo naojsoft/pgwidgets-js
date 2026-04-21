@@ -43,6 +43,7 @@ class Dialog extends TopLevel {
         this.get_content_area = this.get_content_area.bind(this);
         this.add_widget = this.add_widget.bind(this);
         this.insert_widget = this.insert_widget.bind(this);
+        this.add_button = this.add_button.bind(this);
         this.set_spacing = this.set_spacing.bind(this);
 
         // main layout: content area + button bar
@@ -69,7 +70,8 @@ class Dialog extends TopLevel {
             this._buttonBox.add_widget(btn, 0);
         }
 
-        if (buttons.length > 0) {
+        this._buttonBoxAttached = buttons.length > 0;
+        if (this._buttonBoxAttached) {
             this._vbox.add_widget(this._buttonBox, 0);
         }
 
@@ -151,6 +153,27 @@ class Dialog extends TopLevel {
      */
     set_spacing(gap = 0) {
         this._contentArea.set_spacing(gap);
+    }
+
+    /**
+     * Adds a button widget to the dialog's button bar.
+     * Clicking the button fires the dialog's 'activated' callback
+     * with the given value, and auto-closes if autoclose is enabled.
+     * @param {Widget} button - The button widget to add.
+     * @param {*} value - Value passed to the 'activated' callback.
+     */
+    add_button(button, value) {
+        button.add_callback('activated', () => {
+            this.make_callback('activated', value);
+            if (this._autoclose) {
+                this.hide();
+            }
+        });
+        this._buttonBox.add_widget(button, 0);
+        if (!this._buttonBoxAttached) {
+            this._vbox.add_widget(this._buttonBox, 0);
+            this._buttonBoxAttached = true;
+        }
     }
 
     /**
