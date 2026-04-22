@@ -29,6 +29,7 @@ SHARED_JS_MODULE = {
     "HBox": "Box",
     "ButtonBox": "Box",
     "StackWidget": "TabWidget",
+    "MDISubWindow": "MDIWidget",
 }
 
 
