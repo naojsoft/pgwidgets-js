@@ -66,9 +66,10 @@ class ToolBarAction extends Widget {
             this.set_icon(icon_url, iconsize);
         }
 
-        // label
+        // label (hidden until text is set, so gap doesn't add space)
         this._label = document.createElement('span');
         this._label.className = 'toolbar-action-label';
+        this._label.style.display = 'none';
         this.element.appendChild(this._label);
 
         let text = this.get_option(options, 'text', null);
@@ -131,6 +132,7 @@ class ToolBarAction extends Widget {
      */
     set_text(text) {
         this._label.textContent = text;
+        this._label.style.display = text ? '' : 'none';
     }
 
     /**

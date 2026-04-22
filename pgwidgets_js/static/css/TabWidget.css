@@ -92,7 +92,7 @@
 .tab-content-container {
     overflow: hidden;
     border: 1px solid #C3C3C3;
-    padding: 2px;
+    padding: 0;
     display: block;
     flex: 1;
 }

@@ -911,7 +911,10 @@ class ContainerWidget extends Widget {
     remove(child, destroy=false) {
         let idx = this.remove_child(child);
         if (idx > -1) {
-            this.element.removeChild(child.get_element());
+            let elt = child.get_element();
+            if (elt.parentNode) {
+                elt.parentNode.removeChild(elt);
+            }
             if (destroy) {
                 child.destroy();
             }

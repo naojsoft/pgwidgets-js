@@ -41,6 +41,7 @@ class MDISubWindow extends ContainerWidget {
         this.signal_close = this.signal_close.bind(this);
         this.close = this.close.bind(this);
         this.set_title = this.set_title.bind(this);
+        this.move = this.move.bind(this);
 
         this.enable_callback('move');
 
@@ -151,6 +152,11 @@ class MDISubWindow extends ContainerWidget {
         if (this.mdi_widget) {
             this.mdi_widget._updateWorkspaceSize();
         }
+    }
+
+    /** Alias for set_position. */
+    move(x, y) {
+        this.set_position(x, y);
     }
 
     resize(width, height) {
@@ -532,8 +538,14 @@ class MDIWidget extends ContainerWidget {
         this.add_widget = this.add_widget.bind(this);
         this.cascade_windows = this.cascade_windows.bind(this);
         this.tile_windows = this.tile_windows.bind(this);
+        this.get_children = this.get_children.bind(this);
+        this.get_subwindows = this.get_subwindows.bind(this);
         this.get_subwin = this.get_subwin.bind(this);
         this.get_configuration = this.get_configuration.bind(this);
+        this.move_child = this.move_child.bind(this);
+        this.resize_child = this.resize_child.bind(this);
+        this.get_child_size = this.get_child_size.bind(this);
+        this.get_child_position = this.get_child_position.bind(this);
         this.close_child = this.close_child.bind(this);
         this.get_index = this.get_index.bind(this);
         this.set_index = this.set_index.bind(this);
@@ -816,6 +828,22 @@ class MDIWidget extends ContainerWidget {
     }
 
     /**
+     * Returns the content child widgets (not the MDISubWindow wrappers).
+     * @returns {Widget[]} Array of content widgets.
+     */
+    get_children() {
+        return this.children.map(subwin => subwin.get_child());
+    }
+
+    /**
+     * Returns the MDISubWindow wrappers.
+     * @returns {MDISubWindow[]} Array of sub-window objects.
+     */
+    get_subwindows() {
+        return this.children.slice();
+    }
+
+    /**
      * Returns the configuration of the sub-window containing the given child.
      * @param {Widget} child - The child widget to look up.
      * @returns {Object|null} Configuration object with x, y, width, height,
@@ -834,6 +862,55 @@ class MDIWidget extends ContainerWidget {
             height: parseInt(style.height, 10) || 0,
             title: subwin.titleText.innerHTML,
         };
+    }
+
+    /**
+     * Moves the sub-window containing the given child widget.
+     * @param {Widget} child - The child widget to look up.
+     * @param {number} x - Left position in pixels.
+     * @param {number} y - Top position in pixels.
+     */
+    move_child(child, x, y) {
+        let subwin = this.get_subwin(child);
+        if (subwin !== null) {
+            subwin.set_position(x, y);
+        }
+    }
+
+    /**
+     * Resizes the sub-window containing the given child widget.
+     * @param {Widget} child - The child widget to look up.
+     * @param {number} width - Width in pixels.
+     * @param {number} height - Height in pixels.
+     */
+    resize_child(child, width, height) {
+        let subwin = this.get_subwin(child);
+        if (subwin !== null) {
+            subwin.resize(width, height);
+        }
+    }
+
+    /**
+     * Returns the size of the sub-window containing the given child.
+     * @param {Widget} child - The child widget to look up.
+     * @returns {number[]} [width, height] in pixels, or [0, 0] if not found.
+     */
+    get_child_size(child) {
+        let subwin = this.get_subwin(child);
+        if (subwin === null) return [0, 0];
+        return subwin.get_size();
+    }
+
+    /**
+     * Returns the position of the sub-window containing the given child.
+     * @param {Widget} child - The child widget to look up.
+     * @returns {number[]} [x, y] in pixels, or [0, 0] if not found.
+     */
+    get_child_position(child) {
+        let subwin = this.get_subwin(child);
+        if (subwin === null) return [0, 0];
+        let style = subwin.get_element().style;
+        return [parseInt(style.left, 10) || 0, parseInt(style.top, 10) || 0];
     }
 
     /**
@@ -897,6 +974,20 @@ class MDIWidget extends ContainerWidget {
      * Closes and removes the sub-window containing the given child widget.
      * @param {Widget} child - The child widget whose sub-window to close.
      */
+    /**
+     * Removes a child widget (or its subwindow) from the MDI workspace.
+     * Accepts either a content widget or an MDISubWindow.
+     */
+    remove(child, destroy=false) {
+        let subwin = this.get_subwin(child);
+        if (subwin !== null) {
+            subwin.close();
+        } else {
+            // Maybe it's a subwindow directly
+            super.remove(child, destroy);
+        }
+    }
+
     close_child(child) {
         let subwin = this.get_subwin(child);
         if (subwin !== null) {
