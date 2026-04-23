@@ -80,7 +80,7 @@ Vertical box layout. Children are stacked top to bottom.
    * - ``set_spacing(gap)``
      - Set spacing between children in pixels.
 
-**Callbacks:** None (inherits ``resize`` from Widget).
+**Callbacks:** ``child-added``, ``child-removed`` (from ContainerWidget).
 
 .. code-block:: javascript
 
@@ -112,7 +112,7 @@ Horizontal box layout. Children are placed left to right.
    * - ``set_spacing(gap)``
      - Set spacing between children in pixels.
 
-**Callbacks:** None.
+**Callbacks:** ``child-added``, ``child-removed``.
 
 .. code-block:: javascript
 
@@ -168,7 +168,7 @@ Grid layout with row/column placement.
    * - ``delete_column(index)``
      - Delete column at *index*.
 
-**Callbacks:** None.
+**Callbacks:** ``child-added``, ``child-removed``.
 
 .. code-block:: javascript
 
@@ -209,6 +209,7 @@ Resizable split pane (horizontal or vertical).
 
 **Callbacks:**
 
+- ``child-added``, ``child-removed`` -- container child events.
 - ``sizing`` -- fired when pane sizes change.
 
 .. code-block:: javascript
@@ -264,8 +265,9 @@ Tabbed container with switchable pages.
 
 **Callbacks:**
 
-- ``page-switch`` -- fired when the active tab changes.
-- ``page-close`` -- fired when a tab is closed.
+- ``child-added``, ``child-removed`` -- container child events.
+- ``page-switch`` -- fired when the active tab changes. Handler receives ``(widget, child, index)``.
+- ``page-close`` -- fired when a tab close button is clicked.
 
 .. code-block:: javascript
 
@@ -302,7 +304,9 @@ Stacked pages without tab headers. Only one page is visible at a time.
 
 **Callbacks:**
 
+- ``child-added``, ``child-removed`` -- container child events.
 - ``page-switch`` -- fired when the visible page changes.
+- ``page-close`` -- fired when a page is closed.
 
 .. _widget-scrollarea:
 
@@ -329,7 +333,7 @@ Scrollable viewport wrapping a single child widget.
    * - ``set_widget(child)``
      - Set the scrollable content widget.
 
-**Callbacks:** None.
+**Callbacks:** ``scrolled``.
 
 .. _widget-frame:
 
@@ -392,7 +396,7 @@ Collapsible section with a clickable header.
    * - ``toggleContent()``
      - Toggle collapsed/expanded state.
 
-**Callbacks:** None.
+**Callbacks:** ``toggled`` -- fired when the section is collapsed or expanded.
 
 .. _widget-mdiwidget:
 
@@ -425,6 +429,22 @@ Multiple Document Interface workspace with draggable, resizable sub-windows.
      - Close a sub-window.
    * - ``set_resistance(value)``
      - Set edge resistance for sub-window dragging.
+   * - ``get_children()``
+     - Return content widgets (not sub-windows).
+   * - ``get_subwindows()``
+     - Return the MDISubWindow objects.
+   * - ``move_child(child, x, y)``
+     - Move a child's sub-window.
+   * - ``resize_child(child, width, height)``
+     - Resize a child's sub-window.
+   * - ``get_child_size(child)``
+     - Return ``[width, height]`` of a child's sub-window.
+   * - ``get_child_position(child)``
+     - Return ``[x, y]`` of a child's sub-window.
+   * - ``index_of(child)``
+     - Return the index of a child.
+   * - ``index_to_widget(index)``
+     - Return the child at an index.
 
 **Sub-window methods** (via ``get_subwin(child)``):
 
@@ -438,11 +458,15 @@ Multiple Document Interface workspace with draggable, resizable sub-windows.
      - Change the sub-window title text.
    * - ``set_position(x, y)``
      - Move the sub-window to the given position.
+   * - ``move(x, y)``
+     - Alias for set_position.
 
 **Callbacks:**
 
+- ``child-added``, ``child-removed`` -- container child events.
 - ``page-switch`` -- fired when the active sub-window changes.
 - ``page-close`` -- fired when a sub-window is closed.
+- ``scrolled`` -- fired when the workspace is scrolled.
 
 .. code-block:: javascript
 

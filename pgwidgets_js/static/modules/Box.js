@@ -160,6 +160,8 @@ class Box extends ContainerWidget {
                 }
             };
         }
+
+        this.make_callback('child-added', child);
     }
 
     /**

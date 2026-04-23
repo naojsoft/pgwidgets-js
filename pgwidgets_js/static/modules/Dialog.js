@@ -135,6 +135,7 @@ class Dialog extends TopLevel {
      */
     add_widget(child, stretch = 0) {
         this._contentArea.add_widget(child, stretch);
+        this.make_callback('child-added', child);
     }
 
     /**

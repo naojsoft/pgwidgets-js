@@ -57,6 +57,8 @@ All visual widgets support:
 
 - **resize** -- fired as ``(widget, width_px, height_px)`` whenever the
   widget's size changes.
+- **child-added** -- fired on container widgets when a child is added.
+- **child-removed** -- fired on container widgets when a child is removed.
 
 Interactive widgets (Image, Canvas) support pointer and keyboard events:
 
@@ -84,11 +86,17 @@ Widget-Specific Callbacks
 Each widget documents its own callback actions. Common patterns:
 
 - **activated** -- the primary action (button click, value change, selection)
-- **page-switch** -- tab or stack page changed
-- **page-close** -- tab closed
+- **page-switch** -- tab, stack, or MDI page changed
+- **page-close** -- tab or MDI sub-window closed
 - **expired**, **cancelled** -- timer events
 - **pick** -- color selected
 - **changed**, **cursor_moved** -- text editor events
+- **child-added** -- child widget added to a container
+- **child-removed** -- child widget removed from a container
+- **sizing** -- splitter pane sizes changed
+- **toggled** -- expander collapsed/expanded
+- **scrolled** -- scroll position changed (ScrollArea, MDIWidget)
+- **cell_edited** -- table/tree cell edited by user
 
 See the individual widget reference pages for the full list of callbacks
 each widget supports.

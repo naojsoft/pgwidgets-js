@@ -459,6 +459,7 @@ class MDISubWindow extends ContainerWidget {
         mdi.windowStateMap.delete(this.element);
         this.element.remove();
         mdi._updateWorkspaceSize();
+        mdi.make_callback('child-removed', this._child);
     }
 }
     
@@ -608,6 +609,7 @@ class MDIWidget extends ContainerWidget {
 
         subwin.raise_();
         this._updateWorkspaceSize();
+        this.make_callback('child-added', child);
         return subwin;
     }
     
@@ -986,6 +988,18 @@ class MDIWidget extends ContainerWidget {
             // Maybe it's a subwindow directly
             super.remove(child, destroy);
         }
+    }
+
+    /**
+     * Override remove_child to suppress the base class child-removed
+     * callback — MDISubWindow.close() fires it with the content widget.
+     */
+    remove_child(child) {
+        let idx = this.children.indexOf(child);
+        if (idx > -1) {
+            this.children.splice(idx, 1);
+        }
+        return idx;
     }
 
     close_child(child) {

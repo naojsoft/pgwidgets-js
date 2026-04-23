@@ -838,6 +838,10 @@ class ContainerWidget extends Widget {
         this.add_child = this.add_child.bind(this);
         this.remove = this.remove.bind(this);
         this.remove_child = this.remove_child.bind(this);
+
+        for (let name of ['child-added', 'child-removed']) {
+            this.enable_callback(name);
+        }
     }
 /*
     init_style() {
@@ -875,6 +879,7 @@ class ContainerWidget extends Widget {
         if (idx == -1) {
             // only add if child is not already present
             this.children.push(child);
+            this.make_callback('child-added', child);
         }
         return idx;
     }
@@ -899,6 +904,7 @@ class ContainerWidget extends Widget {
         let idx = this.children.indexOf(child);
         if (idx > -1) {
             this.children.splice(idx, 1);
+            this.make_callback('child-removed', child);
         }
         return idx;
     }

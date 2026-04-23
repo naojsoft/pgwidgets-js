@@ -51,6 +51,9 @@ CONTAINER_METHODS = {
     "remove_all": ["destroy"],
 }
 
+# Common callbacks for all containers
+CONTAINER_CALLBACKS = ["child-added", "child-removed"]
+
 # ---- Widget Definitions ----
 
 WIDGETS = {
@@ -66,7 +69,7 @@ WIDGETS = {
             "insert_widget": ["index", "child", "stretch"],
             "set_spacing": ["gap"],
         },
-        "callbacks": [],
+        "callbacks": [*CONTAINER_CALLBACKS],
     },
 
     "VBox": {
@@ -78,7 +81,7 @@ WIDGETS = {
             "insert_widget": ["index", "child", "stretch"],
             "set_spacing": ["gap"],
         },
-        "callbacks": [],
+        "callbacks": [*CONTAINER_CALLBACKS],
     },
 
     "HBox": {
@@ -90,7 +93,7 @@ WIDGETS = {
             "insert_widget": ["index", "child", "stretch"],
             "set_spacing": ["gap"],
         },
-        "callbacks": [],
+        "callbacks": [*CONTAINER_CALLBACKS],
     },
 
     "ButtonBox": {
@@ -103,7 +106,7 @@ WIDGETS = {
             "set_spacing": ["gap"],
             "set_halign": ["halign"],
         },
-        "callbacks": [],
+        "callbacks": [*CONTAINER_CALLBACKS],
     },
 
     "GridBox": {
@@ -124,7 +127,7 @@ WIDGETS = {
             "append_column": ["widgets"],
             "delete_column": ["index"],
         },
-        "callbacks": [],
+        "callbacks": [*CONTAINER_CALLBACKS],
     },
 
     "Splitter": {
@@ -137,7 +140,7 @@ WIDGETS = {
             "get_sizes": [],
             "set_minimum_size": ["child", "min_px"],
         },
-        "callbacks": ["sizing"],
+        "callbacks": [*CONTAINER_CALLBACKS, "sizing"],
     },
 
     "Frame": {
@@ -215,7 +218,7 @@ WIDGETS = {
             "highlight_tab": ["child", "bgcolor"],
             "set_tab_position": ["tabpos"],
         },
-        "callbacks": ["page-switch", "page-close"],
+        "callbacks": [*CONTAINER_CALLBACKS, "page-switch", "page-close"],
     },
 
     "StackWidget": {
@@ -230,7 +233,7 @@ WIDGETS = {
             "index_of": ["child"],
             "index_to_widget": ["index"],
         },
-        "callbacks": ["page-switch"],
+        "callbacks": [*CONTAINER_CALLBACKS, "page-switch", "page-close"],
     },
 
     "MDIWidget": {
@@ -257,7 +260,7 @@ WIDGETS = {
             "set_scroll_position": ["h_pct", "v_pct"],
             "get_scroll_position": [],
         },
-        "callbacks": ["page-switch", "page-close", "scrolled"],
+        "callbacks": [*CONTAINER_CALLBACKS, "page-switch", "page-close", "scrolled"],
     },
 
     "MDISubWindow": {
@@ -319,7 +322,7 @@ WIDGETS = {
             "popup": ["x", "y"],
             "set_modal": ["tf"],
         },
-        "callbacks": ["activated", "move", "close"],
+        "callbacks": [*CONTAINER_CALLBACKS, "activated", "move", "close"],
     },
 
     "ColorWidget": {

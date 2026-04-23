@@ -240,6 +240,7 @@ class TabWidget extends ContainerWidget {
     add_widget(child, options = { title: "" }) {
         let tab = this._addTab(options.title, child);
         this.children.push(child);
+        this.make_callback('child-added', child);
     }
     
     /**

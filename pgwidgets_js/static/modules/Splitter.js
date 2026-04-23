@@ -77,6 +77,7 @@ class Splitter extends ContainerWidget {
         this.panes.push(pane);
         this.paneMins.push(defaultMin);
         this.children.push(child);
+        this.make_callback('child-added', child);
 
         // The pane owns the child's size on both axes via flex and
         // align-items: stretch.  Wrap resize() so a caller-supplied

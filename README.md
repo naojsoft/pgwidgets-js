@@ -61,6 +61,8 @@ top.show();
 | **Frame** | Titled border container |
 | **Expander** | Collapsible section with a clickable header |
 | **MDIWidget** | Multiple Document Interface workspace with sub-windows |
+| **ButtonBox** | Box layout for buttons with uniform sizing and alignment |
+| **AbstractScrollArea** | Low-level scrollable viewport with custom scrollbars |
 
 ### Controls
 
@@ -76,6 +78,7 @@ top.show();
 | **Dial** | Rotary knob control |
 | **ScrollBar** | Standalone scrollbar with draggable thumb |
 | **ProgressBar** | Determinate progress indicator |
+| **StatusBar** | Horizontal status bar with message sections |
 
 ### Text & Display
 
@@ -88,6 +91,10 @@ top.show();
 | **Image** | Image display widget |
 | **Canvas** | HTML5 canvas for custom drawing |
 | **TreeView** | Hierarchical tree/table with columns, sorting, icons, and multi-selection |
+| **HtmlView** | Rich HTML content display |
+| **TableView** | Flat table with columns, sorting, and multi-selection |
+| **VideoWidget** | Video playback with controls |
+| **ExternalWidget** | Embed third-party content (Plotly, Bokeh, etc.) in layout containers |
 
 ### Menus & Toolbars
 
@@ -96,6 +103,7 @@ top.show();
 | **MenuBar** | Horizontal menu bar |
 | **Menu** | Dropdown menu with actions |
 | **ToolBar** | Toolbar with buttons, toggles, and separators |
+| **ToolBarAction** | Individual toolbar button/toggle with icon support |
 
 ### Dialogs
 
@@ -103,6 +111,13 @@ top.show();
 |--------|-------------|
 | **Dialog** | Modal or non-modal dialog with configurable buttons |
 | **ColorDialog** | Color picker with SV plane, hue strip, and RGB/HSV/hex inputs |
+| **FileDialog** | Browser file open/save dialog |
+
+### Non-Visual
+
+| Widget | Description |
+|--------|-------------|
+| **Timer** | Non-visual timer for delayed and periodic actions |
 
 ## Documentation
 
