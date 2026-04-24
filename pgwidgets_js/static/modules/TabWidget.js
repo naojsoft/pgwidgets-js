@@ -139,7 +139,7 @@ class TabWidget extends ContainerWidget {
         let tab_rec = { title, content, tabButton, child };
         this.tab_info.set(tab_id, tab_rec);
         this.tabs.push(tab_id);
-      
+
         if (index === 0) {
             this._showTab(tab_id);
         }
@@ -171,18 +171,16 @@ class TabWidget extends ContainerWidget {
         const tab_rec = this.tab_info.get(tab_id);
         if (tab_rec) {
             if (tab_id === this.current_tab_id) {
-                // closing the currently displayed tab
-                this.tabContentContainer.removeChild(tab_rec.content);
                 this.current_tab_id = -1;
             }
 
-            // bye-bye tab
+            // remove content and tab button from the DOM
             const index = this.tabs.indexOf(tab_id);
             this.tabs.splice(index, 1);
             if (tab_rec.tabButton !== null) {
                 this.tabHeader.removeChild(tab_rec.tabButton);
             }
-            //this.tabContentContainer.removeChild(tab_rec.content);
+            this.tabContentContainer.removeChild(tab_rec.content);
             this.tab_info.delete(tab_id);
 
             // if there are any tabs left to show, show one
@@ -258,12 +256,22 @@ class TabWidget extends ContainerWidget {
      * Closes (removes) the tab containing the given child widget.
      * @param {Widget} child - The child widget whose tab to close.
      */
-    close_widget(child) {
+    /**
+     * Removes a child widget from the tab widget, cleaning up the
+     * tab button and metadata.
+     * @param {Widget} child - The child widget to remove.
+     * @param {boolean} [destroy=false] - If true, also destroy the child.
+     */
+    remove(child, destroy=false) {
         const tab_id = this.get_tab_id(child);
         if (tab_id !== null) {
-            this.remove(child);
             this._closeTab(tab_id);
         }
+        super.remove(child, destroy);
+    }
+
+    close_widget(child) {
+        this.remove(child);
     }
 
     /**

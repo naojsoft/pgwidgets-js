@@ -35,17 +35,27 @@ class MenuBar extends Widget {
         this._onDocumentMouseUp = this._onDocumentMouseUp.bind(this);
 
         // close any open menu when clicking outside
-        document.addEventListener('mousedown', (e) => {
-            if (!this.element) return;
-            if (!this.element.contains(e.target)) {
-                this._closeAll();
+        this._onDocumentMouseDown = (e) => {
+            if (this._destroyed) return;
+            if (this.element.contains(e.target)) return;
+            // Check if the click is inside any of our dropdown menus
+            // (which live in document.body, not inside the menubar).
+            for (let name in this._menus) {
+                let menuElt = this._menus[name].menu.get_element();
+                if (menuElt.contains(e.target)) return;
             }
-        });
-
-        // close menus when a menu action is selected (click mode)
-        this.element.addEventListener('menuaction-select', () => {
             this._closeAll();
-        });
+        };
+        document.addEventListener('mousedown', this._onDocumentMouseDown);
+
+        // close menus when a menu action is selected — handled per-menu
+        // in add_menu since menus live in document.body, not inside the
+        // menubar element.
+    }
+
+    destroy() {
+        document.removeEventListener('mousedown', this._onDocumentMouseDown);
+        super.destroy();
     }
 
     /**
@@ -106,6 +116,11 @@ class MenuBar extends Widget {
             }
         });
 
+        // Close the menubar when an action inside this menu is selected.
+        menuElt.addEventListener('menuaction-select', () => {
+            this._closeAll();
+        });
+
         this.element.appendChild(container);
         this._menus[name] = { menu, button };
     }
@@ -152,11 +167,15 @@ class MenuBar extends Widget {
         // released on a menu action: activate it (the menuaction-select
         // event will close the menus via the listener above)
         let actionElt = e.target.closest('.menuaction-widget');
-        if (actionElt && this.element.contains(actionElt)) {
-            // find the MenuAction's _activate method via its click handler
-            // simulate a click so the action fires
-            actionElt.click();
-            return;
+        if (actionElt) {
+            // Check if the action is inside any of our dropdown menus
+            for (let name in this._menus) {
+                let menuElt = this._menus[name].menu.get_element();
+                if (menuElt.contains(actionElt)) {
+                    actionElt.click();
+                    return;
+                }
+            }
         }
 
         // released elsewhere: close all
