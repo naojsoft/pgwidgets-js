@@ -23,6 +23,8 @@ class Widget extends Callback {
         this.get_element = this.get_element.bind(this);
         this.set_border_width = this.set_border_width.bind(this);
         this.set_border_color = this.set_border_color.bind(this);
+        this.set_min_size = this.set_min_size.bind(this);
+        this.set_max_size = this.set_max_size.bind(this);
         this.init_style = this.init_style.bind(this);
         this.resize = this.resize.bind(this);
         this.set_enabled = this.set_enabled.bind(this);
@@ -105,6 +107,32 @@ class Widget extends Callback {
     set_border_width(width) {
         this.element.style.borderWidth = width + 'px';
         this.element.style.borderStyle = width > 0 ? 'solid' : 'none';
+    }
+
+    /**
+     * Sets the minimum size of the widget. Pass null for either
+     * dimension to clear that constraint.
+     * @param {number|null} width - Minimum width in pixels, or null.
+     * @param {number|null} height - Minimum height in pixels, or null.
+     */
+    set_min_size(width, height) {
+        this.element.style.minWidth =
+            (width === null || width === undefined) ? '' : width + 'px';
+        this.element.style.minHeight =
+            (height === null || height === undefined) ? '' : height + 'px';
+    }
+
+    /**
+     * Sets the maximum size of the widget. Pass null for either
+     * dimension to clear that constraint.
+     * @param {number|null} width - Maximum width in pixels, or null.
+     * @param {number|null} height - Maximum height in pixels, or null.
+     */
+    set_max_size(width, height) {
+        this.element.style.maxWidth =
+            (width === null || width === undefined) ? '' : width + 'px';
+        this.element.style.maxHeight =
+            (height === null || height === undefined) ? '' : height + 'px';
     }
 
     /**

@@ -23,6 +23,8 @@ WIDGET_METHODS = {
     "get_element": [],
     "set_border_width": ["width"],
     "set_border_color": ["color"],
+    "set_min_size": ["width", "height"],
+    "set_max_size": ["width", "height"],
     "resize": ["width", "height"],
     "get_size": [],
     "get_position": [],

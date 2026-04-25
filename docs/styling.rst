@@ -140,6 +140,10 @@ override CSS when called:
      - ``border-color``
    * - ``resize(w, h)``
      - ``width``, ``height``
+   * - ``set_min_size(w, h)``
+     - ``min-width``, ``min-height`` (``None`` clears that side)
+   * - ``set_max_size(w, h)``
+     - ``max-width``, ``max-height`` (``None`` clears that side)
    * - ``set_padding(p)``
      - ``padding``
    * - ``show()`` / ``hide()``

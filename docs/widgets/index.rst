@@ -23,6 +23,14 @@ All visual widgets support these methods from the ``Widget`` base class:
      - Set widget size in pixels
    * - ``get_size()``
      - Return current ``[width, height]``
+   * - ``set_min_size(width, height)``
+     - Set minimum size in pixels.  Pass ``None`` for either
+       dimension to leave that constraint unset.  No-op for
+       ``Canvas`` and ``Image(use_animation_frame=True)``.
+   * - ``set_max_size(width, height)``
+     - Set maximum size in pixels.  Pass ``None`` for either
+       dimension to leave that constraint unset.  No-op for
+       ``Canvas`` and ``Image(use_animation_frame=True)``.
    * - ``show()`` / ``hide()``
      - Show or hide the widget
    * - ``is_visible()``

@@ -67,42 +67,26 @@ class Box extends ContainerWidget {
             elt.style.width = 'auto';
         }
 
-        // main axis: stretch=0 means natural size, stretch>0 means
-        // distribute extra space proportionally (like Qt's stretch factor).
-        // Using 'auto' flex-basis so children contribute their content
-        // size to parent intrinsic sizing (Qt-like: stretch distributes
-        // extra space beyond content, not all space).
+        // main axis sizing:
+        // - stretch=0 : rigid, never shrinks below natural size, never
+        //   grows beyond it.  The box's intrinsic size includes this
+        //   widget's natural size and propagates up to a boundary
+        //   container (Splitter, ScrollArea, TopLevel).
+        // - stretch>0 : grows proportionally into extra space, AND can
+        //   shrink (with min-* overrides) so widgets whose intrinsic
+        //   size depends on layout (Canvas, Image with use_animation_frame)
+        //   don't form a feedback loop that ratchets their size upward.
         if (stretch > 0) {
             elt.style.flex = stretch + ' 1 auto';
+            elt.style.minWidth = '0';
+            elt.style.minHeight = '0';
         } else {
             elt.style.flex = '0 0 auto';
         }
 
-        // cross axis: always fill (like Qt)
-        if (orient === 'vertical') {
-            elt.style.width = '100%';
-        } else {
-            elt.style.height = '100%';
-        }
-        elt.style.minWidth = '0';
-        elt.style.minHeight = '0';
-
-        // Wrap resize() so that a caller-supplied pixel size doesn't
-        // override the cross-axis stretch applied above.  Without this,
-        // a subsequent resize(w, h) sets style.width/height to pixels
-        // and the child no longer grows past that value when the
-        // container is re-expanded.
-        if (typeof child.resize === 'function') {
-            let origResize = child.resize.bind(child);
-            child.resize = function(w, h) {
-                origResize(w, h);
-                if (orient === 'vertical') {
-                    elt.style.width = '100%';
-                } else {
-                    elt.style.height = '100%';
-                }
-            };
-        }
+        // cross axis: rely on align-items:stretch (set in box-widget CSS)
+        // to make auto-sized children fill the box.  Widgets with an
+        // explicit CSS size keep that size — matching Qt's "Fixed" policy.
     }
 
     /**
@@ -126,17 +110,14 @@ class Box extends ContainerWidget {
 
         if (stretch > 0) {
             elt.style.flex = stretch + ' 1 auto';
+            elt.style.minWidth = '0';
+            elt.style.minHeight = '0';
         } else {
             elt.style.flex = '0 0 auto';
         }
 
-        if (orient === 'vertical') {
-            elt.style.width = '100%';
-        } else {
-            elt.style.height = '100%';
-        }
-        elt.style.minWidth = '0';
-        elt.style.minHeight = '0';
+        // cross axis: rely on align-items:stretch from box-widget CSS;
+        // widgets with explicit CSS size keep that size (Qt "Fixed").
 
         // Insert into children array at the right position
         if (index >= this.children.length) {
@@ -146,19 +127,6 @@ class Box extends ContainerWidget {
             let refChild = this.children[index];
             this.children.splice(index, 0, child);
             this.element.insertBefore(elt, refChild.get_element());
-        }
-
-        // Wrap resize() for cross-axis stretch (same as add_widget)
-        if (typeof child.resize === 'function') {
-            let origResize = child.resize.bind(child);
-            child.resize = function(w, h) {
-                origResize(w, h);
-                if (orient === 'vertical') {
-                    elt.style.width = '100%';
-                } else {
-                    elt.style.height = '100%';
-                }
-            };
         }
 
         this.make_callback('child-added', child);

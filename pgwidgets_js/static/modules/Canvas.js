@@ -125,6 +125,22 @@ class Canvas extends Widget {
      * Cancel any pending animation-frame flip and drop the offscreen
      * buffer before the base class tears down the visible element.
      */
+    /**
+     * No-op override: setting CSS min-* on a canvas with intrinsic
+     * size (bitmap) creates a feedback loop with flex layout that
+     * ratchets the canvas size up.  Wrap the canvas in a Frame/Box
+     * and apply set_min_size to the wrapper instead.
+     */
+    set_min_size(width, height) {
+        console.warn("Canvas.set_min_size: ignored to avoid flex feedback. " +
+                     "Wrap in a container and apply set_min_size to the wrapper.");
+    }
+
+    set_max_size(width, height) {
+        console.warn("Canvas.set_max_size: ignored to avoid flex feedback. " +
+                     "Wrap in a container and apply set_max_size to the wrapper.");
+    }
+
     destroy() {
         if (this._destroyed) return;
         if (this._rafId !== null) {
