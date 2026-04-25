@@ -6,9 +6,9 @@
 }
 
 .scrollarea-content {
-    position: absolute;
-    top: 0;
-    left: 0;
-    min-width: 100%;
     width: max-content;
+    min-width: 100%;
+    height: max-content;
+    min-height: 100%;
+    box-sizing: border-box;
 }
