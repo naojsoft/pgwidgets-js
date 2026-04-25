@@ -12,7 +12,8 @@
 .frame-title {
     padding: 0 6px;
     margin-left: 10%;
-    font-size: 13px;
+    font-family: sans-serif;
+    font-size: 15px;
     color: #444;
 }
 

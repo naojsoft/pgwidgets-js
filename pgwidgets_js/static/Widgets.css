@@ -16,6 +16,7 @@
 @import "css/Expander.css";
 
 /* regular widgets */
+@import "css/Label.css";
 @import "css/Button.css";
 @import "css/CheckBox.css";
 @import "css/ComboBox.css";
