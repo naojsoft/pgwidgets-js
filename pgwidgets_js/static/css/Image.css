@@ -4,12 +4,14 @@
     max-height: 100%;
 }
 
-/* <img> mode (use_animation_frame=false): fill container while
-   maintaining aspect ratio.  In animation-frame mode the element is
-   a <canvas> and its size is driven by its width/height attrs, so we
-   only set this on img elements. */
+/* <img> mode (use_animation_frame=false): let flex (align-items:
+   stretch + flex-grow) drive the element box size so the image fills
+   its container in both axes.  object-fit: fill stretches the image
+   content to fill the element box (may distort aspect ratio).
+   In animation-frame mode the element is a <canvas> whose size is
+   driven by its width/height attrs, so we only set this on img. */
 img.image-widget {
-    object-fit: contain;
-    width: 100%;
-    height: 100%;
+    object-fit: fill;
+    min-width: 0;
+    min-height: 0;
 }

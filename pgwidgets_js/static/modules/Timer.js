@@ -43,6 +43,31 @@ class Timer extends Callback {
         this.time_left = this.time_left.bind(this);
         this.set_duration = this.set_duration.bind(this);
         this.get_duration = this.get_duration.bind(this);
+        this.set = this.set.bind(this);
+        this.cond_set = this.cond_set.bind(this);
+    }
+
+    /**
+     * Set the timer to *duration* seconds and (re)start it.  Equivalent
+     * to start(duration).
+     * @param {number} duration - Duration in seconds.
+     */
+    set(duration) {
+        this.start(duration);
+    }
+
+    /**
+     * Conditionally set: if the timer is already running, do nothing.
+     * Otherwise set the timer to *duration* seconds and start it.
+     *
+     * Single-threaded JS guarantees the is_set check and start are
+     * atomic with respect to each other; concurrent Python callers
+     * funnel through the WebSocket so messages are processed serially.
+     * @param {number} duration - Duration in seconds.
+     */
+    cond_set(duration) {
+        if (this._running) return;
+        this.start(duration);
     }
 
     /**

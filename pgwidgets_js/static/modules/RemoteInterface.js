@@ -238,6 +238,25 @@ class RemoteInterface {
         this._saveSessionCredentials();
         this._updateUrl();
         console.log("RemoteInterface: session " + msg.session_id);
+        // Send the current viewport size and listen for changes so the
+        // server can answer get_screen_size() without a round-trip.
+        this._sendViewport();
+        if (!this._viewportListenerInstalled) {
+            this._viewportListenerInstalled = true;
+            window.addEventListener('resize', () => this._sendViewport());
+        }
+    }
+
+    /**
+     * Send the current browser viewport size to the server.
+     * @private
+     */
+    _sendViewport() {
+        this._send({
+            type: "viewport",
+            width: window.innerWidth,
+            height: window.innerHeight,
+        });
     }
 
     /**

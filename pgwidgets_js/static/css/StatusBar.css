@@ -3,5 +3,7 @@
  */
 .statusbar-widget {
     padding: 2px 6px;
-    font-size: 12px;
+    font-size: 13px;
+    background-color: #e8e8e8;
+    font-family: sans-serif;
 }

@@ -732,6 +732,8 @@ WIDGETS = {
             "start": ["duration"],
             "stop": [],
             "cancel": [],
+            "set": ["duration"],
+            "cond_set": ["duration"],
             "is_set": [],
             "elapsed_time": [],
             "time_left": [],
