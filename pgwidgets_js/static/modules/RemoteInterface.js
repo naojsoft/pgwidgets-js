@@ -391,6 +391,15 @@ class RemoteInterface {
                 Callback._registry.set(savedWid, savedWidget);
             }
             widget.wid = msg.wid;
+            // If we're replacing an existing widget at this wid, drop
+            // any _listeners entries pointing at the old instance —
+            // otherwise subsequent "listen" messages get dedup'd and
+            // the new widget's cb stays empty.
+            for (let key of [...this._listeners.keys()]) {
+                if (key.startsWith(msg.wid + ":")) {
+                    this._listeners.delete(key);
+                }
+            }
             Callback._registry.set(msg.wid, widget);
         }
         return {type: "result", id: msg.id, wid: widget.wid};

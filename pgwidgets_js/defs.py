@@ -872,6 +872,8 @@ WIDGETS = {
             "set_icon": ["url", "iconsize"],
             "set_checked": ["checked"],
             "get_checked": [],
+            "set_state": ["tf"],
+            "get_state": [],
         },
         "callbacks": ["activated"],
     },

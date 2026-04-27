@@ -36,6 +36,8 @@ class MenuAction extends Widget {
         this.set_icon = this.set_icon.bind(this);
         this.set_checked = this.set_checked.bind(this);
         this.get_checked = this.get_checked.bind(this);
+        this.set_state = this.set_state.bind(this);
+        this.get_state = this.get_state.bind(this);
         this._activate = this._activate.bind(this);
 
         // checkbox indicator (hidden unless checkable)
@@ -136,6 +138,24 @@ class MenuAction extends Widget {
      */
     get_checked() {
         return this.checked;
+    }
+
+    /**
+     * Alias for set_checked() for API consistency with other toggleable
+     * widgets (CheckBox, ToggleButton, RadioButton).
+     * @param {boolean} tf - Whether the action is checked.
+     */
+    set_state(tf) {
+        this.set_checked(tf);
+    }
+
+    /**
+     * Alias for get_checked() for API consistency with other toggleable
+     * widgets.
+     * @returns {boolean} Whether the action is checked.
+     */
+    get_state() {
+        return this.get_checked();
     }
 }
 
