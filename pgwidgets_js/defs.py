@@ -405,14 +405,19 @@ WIDGETS = {
     "Label": {
         "base": "widget",
         "args": ["text"],
-        "options": ["halign"],
+        "options": ["halign", "interactive", "menu"],
         "methods": {
             "set_text": ["text"],
             "get_text": [],
             "set_color": ["bg", "fg"],
             "set_halign": ["align"],
+            "set_menu": ["menu"],
         },
-        "callbacks": [],
+        "callbacks": ["pointer-down", "pointer-up", "pointer-move",
+                      "enter", "leave", "click", "dblclick",
+                      "scroll", "key-down", "key-up", "key-press",
+                      "focus-in", "focus-out", "drop-start", "drop-end",
+                      "drag-over", "drop-progress", "contextmenu"],
     },
 
     "StatusBar": {

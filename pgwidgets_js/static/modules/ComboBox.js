@@ -51,6 +51,11 @@ class ComboBox extends Widget {
         document.body.appendChild(this._dropdown);
 
         this._selectedIdx = -1;
+        // Tracks whether set_index has been called explicitly.  When
+        // false, appending the first item auto-selects it so the
+        // combobox displays a sensible value.  set_index() and
+        // user-driven selections set this to true; clear() resets it.
+        this._indexExplicit = false;
 
         // JavaScript hack to bind "this" correctly for our methods
         this.append_text = this.append_text.bind(this);
@@ -206,7 +211,12 @@ class ComboBox extends Widget {
      * @param {string} text - The display text for the option.
      */
     append_text(text) {
+        let wasEmpty = this._items.length === 0;
         this._items.push(text);
+        if (wasEmpty && !this._indexExplicit) {
+            this._selectedIdx = 0;
+            this._input.value = text;
+        }
         this._autoSize();
     }
 
@@ -215,6 +225,7 @@ class ComboBox extends Widget {
      * @param {string} text - The display text for the option.
      */
     insert_alpha(text) {
+        let wasEmpty = this._items.length === 0;
         let inserted = false;
         for (let i = 0; i < this._items.length; i++) {
             if (text.localeCompare(this._items[i]) < 0) {
@@ -225,6 +236,10 @@ class ComboBox extends Widget {
         }
         if (!inserted) {
             this._items.push(text);
+        }
+        if (wasEmpty && !this._indexExplicit) {
+            this._selectedIdx = 0;
+            this._input.value = this._items[0];
         }
         this._autoSize();
     }
@@ -267,6 +282,9 @@ class ComboBox extends Widget {
      * @param {number} idx - The 0-based index to select.
      */
     set_index(idx) {
+        // Mark explicit even if idx is out of range — the caller's
+        // intent is to control selection, so disable auto-select.
+        this._indexExplicit = true;
         if (idx >= 0 && idx < this._items.length) {
             this._selectedIdx = idx;
             this._input.value = this._items[idx];
@@ -315,6 +333,7 @@ class ComboBox extends Widget {
     clear() {
         this._items = [];
         this._selectedIdx = -1;
+        this._indexExplicit = false;
         this._input.value = '';
         this._autoSize();
     }

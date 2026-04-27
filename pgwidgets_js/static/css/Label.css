@@ -2,3 +2,9 @@
     font-family: sans-serif;
     font-size: 13px;
 }
+
+/* Labels configured with a context menu (`menu` option / set_menu)
+   use a pointer cursor to match menubar items. */
+.label-widget.label-widget-menu {
+    cursor: pointer;
+}
