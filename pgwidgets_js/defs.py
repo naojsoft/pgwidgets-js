@@ -627,6 +627,7 @@ WIDGETS = {
         "options": ["url", "interactive", "use_animation_frame"],
         "methods": {
             "set_image": ["url"],
+            "set_binary_image": ["data", "format"],
             "get_draw_context": [],
             "update": [],
         },

@@ -84,6 +84,9 @@ class RemoteInterface {
             return;
         }
         this._ws = new WebSocket(this._url);
+        // Receive binary frames as ArrayBuffer so we can wrap them
+        // in a Blob with the right MIME type for image decoding.
+        this._ws.binaryType = "arraybuffer";
 
         this._ws.onopen = () => {
             console.log("RemoteInterface: connected to " + this._url);
@@ -135,11 +138,33 @@ class RemoteInterface {
 
     /** @private */
     _onMessage(event) {
+        // Binary frame: pair with the most recently queued binary-call
+        // header (FIFO).  Used for image streaming and similar cases
+        // where base64 in JSON would inflate the payload by ~33%.
+        if (event.data instanceof ArrayBuffer
+                || event.data instanceof Blob) {
+            let header = this._pendingBinary && this._pendingBinary.shift();
+            if (!header) {
+                console.error("RemoteInterface: unexpected binary frame "
+                              + "with no queued header");
+                return;
+            }
+            this._handleBinaryCall(header, event.data);
+            return;
+        }
+
         let msg;
         try {
             msg = JSON.parse(event.data);
         } catch (e) {
             console.error("RemoteInterface: invalid JSON", event.data);
+            return;
+        }
+
+        // Queue the binary-call header; the next binary frame is its data.
+        if (msg && msg.type === "binary-call") {
+            if (!this._pendingBinary) this._pendingBinary = [];
+            this._pendingBinary.push(msg);
             return;
         }
 
@@ -156,6 +181,28 @@ class RemoteInterface {
         let result = this._dispatch(msg);
         if (result !== undefined) {
             this._send(result);
+        }
+    }
+
+    /** @private */
+    _handleBinaryCall(header, payload) {
+        let widget = Callback._registry.get(header.wid);
+        if (!widget) {
+            console.warn("binary-call for unknown wid", header.wid);
+            return;
+        }
+        let method = widget[header.method];
+        if (typeof method !== 'function') {
+            console.warn("binary-call: " + header.method
+                         + " is not a function on " + widget.constructor.name);
+            return;
+        }
+        // Args are followed by the binary payload as the last argument.
+        let args = (header.args || []).concat([payload]);
+        try {
+            method.apply(widget, args);
+        } catch (e) {
+            console.error("binary-call dispatch error:", e);
         }
     }
 

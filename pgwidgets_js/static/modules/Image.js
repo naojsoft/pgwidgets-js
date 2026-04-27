@@ -108,6 +108,49 @@ class Image extends Widget {
     }
 
     /**
+     * Set the image from a raw ArrayBuffer received over a binary
+     * WebSocket frame.  Used by the Python side's set_binary_image
+     * to avoid base64 framing.
+     *
+     * @param {string} format - Image format ('jpeg', 'png', 'webp', 'gif').
+     * @param {ArrayBuffer} buffer - Raw image bytes.
+     */
+    set_binary_image(format, buffer) {
+        let blob = new Blob([buffer], {type: 'image/' + format});
+        let url = URL.createObjectURL(blob);
+
+        if (!this._useAnimationFrame) {
+            // Plain <img>: keep the object URL alive until the next
+            // image replaces it, then revoke the previous one.
+            if (this._objectUrl) URL.revokeObjectURL(this._objectUrl);
+            this._objectUrl = url;
+            this.element.src = url;
+            return;
+        }
+
+        // Animation-frame canvas mode: decode, draw to offscreen,
+        // flip to visible canvas, then revoke immediately — the
+        // canvas owns the pixels at that point.
+        let img = new globalThis.Image();
+        img.addEventListener("load", () => {
+            let ctx = this.get_draw_context();
+            ctx.clearRect(0, 0,
+                this._offscreen ? this._offscreen.width : this.element.width,
+                this._offscreen ? this._offscreen.height : this.element.height);
+            if (this.element.width > 0 && this.element.height > 0) {
+                ctx.drawImage(img, 0, 0,
+                              this.element.width, this.element.height);
+            }
+            this.update();
+            URL.revokeObjectURL(url);
+        });
+        img.addEventListener("error", () => {
+            URL.revokeObjectURL(url);
+        });
+        img.src = url;
+    }
+
+    /**
      * Returns the 2D drawing context. When use_animation_frame is
      * enabled, returns the offscreen buffer's context. Otherwise
      * returns null (plain img mode has no drawing context).
@@ -175,6 +218,10 @@ class Image extends Widget {
         if (this._rafId !== null) {
             cancelAnimationFrame(this._rafId);
             this._rafId = null;
+        }
+        if (this._objectUrl) {
+            URL.revokeObjectURL(this._objectUrl);
+            this._objectUrl = null;
         }
         this._offscreen = null;
         super.destroy();
