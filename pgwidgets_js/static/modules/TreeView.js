@@ -821,10 +821,14 @@ class TreeView extends Widget {
 
     /**
      * Add a single dict-shaped node as a child of *parent* under the
-     * given key.  Distinguishes leaf vs interior:
-     *   - has __values__ → interior with own column data
-     *   - any value is a non-array object → interior, no own values
-     *   - else → leaf (the dict IS the values)
+     * given key.  Detection rules for leaf vs interior:
+     *   - has __values__ key → interior with own column data
+     *   - empty dict → interior with no children (more useful default
+     *     than a value-less leaf)
+     *   - any value is a non-array object → interior; primitive entries
+     *     in the same dict become the interior's own values (no
+     *     __values__ sentinel needed)
+     *   - else (all primitives) → leaf (the dict IS the values)
      * @private
      */
     _addNodeFromDict(parent, key, data) {
@@ -833,8 +837,7 @@ class TreeView extends Widget {
             values = null;
             childData = null;
         } else if (typeof data !== 'object' || Array.isArray(data)) {
-            // Primitive or array — treat as a single-column leaf
-            // (uncommon, but tolerated for set_data fallthroughs).
+            // Primitive or array — treat as a single-column leaf.
             values = {};
             if (this._columns.length > 0) {
                 values[this._columns[0].key] = data;
@@ -844,16 +847,36 @@ class TreeView extends Widget {
             values = data.__values__ || null;
             childData = {};
             for (let [k, v] of Object.entries(data)) {
-                if (k === '__values__') continue;
-                childData[k] = v;
+                if (k !== '__values__') childData[k] = v;
             }
-        } else if (this._dictHasObjectChildren(data)) {
+        } else if (Object.keys(data).length === 0) {
+            // Empty dict → empty interior (folder with no contents).
             values = null;
-            childData = data;
+            childData = {};
         } else {
-            // Leaf
-            values = data;
-            childData = null;
+            // Mixed/leaf: split primitives (own values) from object
+            // children.  If any object children are present, this is
+            // an interior whose primitives become its __values__;
+            // otherwise it's a pure leaf.
+            let ownValues = null;
+            let kids = null;
+            for (let [k, v] of Object.entries(data)) {
+                if (v !== null && typeof v === 'object'
+                        && !Array.isArray(v)) {
+                    if (kids == null) kids = {};
+                    kids[k] = v;
+                } else {
+                    if (ownValues == null) ownValues = {};
+                    ownValues[k] = v;
+                }
+            }
+            if (kids != null) {
+                values = ownValues;
+                childData = kids;
+            } else {
+                values = ownValues;
+                childData = null;
+            }
         }
 
         let isInterior = childData !== null;
@@ -872,15 +895,6 @@ class TreeView extends Widget {
             }
         }
         return node;
-    }
-
-    _dictHasObjectChildren(data) {
-        for (let v of Object.values(data)) {
-            if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     // -- Internal: rendering --
