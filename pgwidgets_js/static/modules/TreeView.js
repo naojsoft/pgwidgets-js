@@ -16,8 +16,14 @@ class TreeView extends Widget {
     /**
      * @param {Object} [options]
      * @param {Array} [options.columns=[]] - Column descriptors. Each entry
-     *   is either a plain string (label, type defaults to 'string') or an
-     *   object { label, type } where type is 'string' or 'number'.
+     *   is either a plain string (label; type defaults to 'string') or an
+     *   object { label, type, key, editable, halign, icon_size }.
+     *   Supported types: 'string' (alias 'str'), 'integer' (alias 'int'),
+     *   'float' (alias 'number'), 'boolean' (renders a checkmark when
+     *   truthy), and 'icon' (cell value is a URL or data: URL used as
+     *   the image source).  halign is 'left' | 'center' | 'right';
+     *   default depends on type (numeric → right, boolean/icon →
+     *   center, otherwise left).
      * @param {boolean} [options.show_header=true] - Show the header row.
      * @param {string} [options.selection_mode='single'] - 'single', 'multiple', or 'none'.
      * @param {boolean} [options.alternate_row_colors=false] - Shade even rows.
@@ -190,18 +196,60 @@ class TreeView extends Widget {
         this._dictMode = false;
         this._columns = raw.map(c => {
             if (typeof c === 'string') {
-                return { label: c, type: 'string', editable: false, key: null };
+                return { label: c, type: 'string', editable: false,
+                         key: null, halign: 'left' };
             }
+            let type = TreeView._normalizeType(c.type);
             let col = {
                 label: c.label || '',
-                type: c.type || 'string',
+                type: type,
                 editable: !!c.editable,
                 key: c.key || null,
+                halign: TreeView._normalizeHalign(c.halign, type),
             };
             if (col.key) this._dictMode = true;
             if (c.icon_size) col.icon_size = c.icon_size;
             return col;
         });
+    }
+
+    /**
+     * Normalise an halign spec.  Returns 'left' | 'center' | 'right'.
+     * If unspecified, picks a default based on column type: numeric
+     * columns right-align, boolean and icon center, everything else
+     * left.
+     */
+    static _normalizeHalign(halign, type) {
+        if (halign === 'left' || halign === 'center'
+                || halign === 'right') {
+            return halign;
+        }
+        if (type === 'integer' || type === 'float') return 'right';
+        if (type === 'boolean' || type === 'icon')  return 'center';
+        return 'left';
+    }
+
+    /**
+     * Normalise a column type spec.  Accepts aliases and falls back to
+     * 'string' for unknown values.  Canonical types are: 'string',
+     * 'integer', 'float', 'boolean', 'icon'.
+     */
+    static _normalizeType(t) {
+        if (!t) return 'string';
+        switch (t) {
+            case 'str':     return 'string';
+            case 'int':     return 'integer';
+            case 'number':  return 'float';
+            case 'bool':    return 'boolean';
+            case 'string':
+            case 'integer':
+            case 'float':
+            case 'boolean':
+            case 'icon':
+                return t;
+            default:
+                return 'string';
+        }
     }
 
     // -- Column grid template --
@@ -253,6 +301,10 @@ class TreeView extends Widget {
             let labelSpan = document.createElement('span');
             labelSpan.className = 'treeview-header-label';
             labelSpan.textContent = this._columns[i].label;
+            let halign = this._columns[i].halign;
+            if (halign && halign !== 'left') {
+                labelSpan.style.textAlign = halign;
+            }
             cell.appendChild(labelSpan);
 
             let indicator = document.createElement('span');
@@ -372,7 +424,14 @@ class TreeView extends Widget {
 
     /**
      * Populate from a hierarchical data structure.
-     * Each node: { values: [...], children: [...] }
+     * Each node: { values: [...] | {key: val, ...}, children: [...] }.
+     *
+     * Auto-spanning: in dict mode, omitting a column's key from a row
+     * (or setting it to null/undefined) lets the previous present cell
+     * extend across that column.  Explicit empty strings render as a
+     * real (empty) cell and do not get absorbed.  Useful for parent
+     * rows that only need a label in the first column.
+     *
      * @param {Object[]} data - Array of root-level nodes.
      */
     set_tree(data) {
@@ -736,6 +795,9 @@ class TreeView extends Widget {
                 if (colType === 'icon') {
                     let size = this._columns[i].icon_size || 16;
                     widths[i] = Math.max(widths[i], size + 12);
+                } else if (colType === 'boolean') {
+                    measure.textContent = '✓';
+                    widths[i] = Math.max(widths[i], measure.offsetWidth + 12);
                 } else {
                     measure.textContent = val != null ? String(val) : '';
                     // cell padding: 6px each side
@@ -894,21 +956,37 @@ class TreeView extends Widget {
         }
         row.appendChild(toggle);
 
-        // Data cells
+        // Data cells.  Auto-span: a present cell extends across following
+        // columns whose key is missing (dict mode) or whose value is
+        // null/undefined/out-of-range (positional mode).  Explicit empty
+        // strings still render as their own (empty) cell.
         let numCols = this._dictMode
             ? this._columns.length
             : Math.max(this._columns.length, node.values.length, 1);
-        for (let i = 0; i < numCols; i++) {
+        let i = 0;
+        while (i < numCols) {
             let cell = document.createElement('span');
             cell.className = 'treeview-cell';
             cell._colIndex = i;
-            let val;
-            if (this._dictMode && i < this._columns.length && this._columns[i].key) {
-                val = node.values[this._columns[i].key];
-            } else {
-                val = i < node.values.length ? node.values[i] : '';
-            }
+            let present = this._cellPresent(node, i);
+            let val = this._cellValue(node, i);
             if (val === undefined) val = '';
+
+            // If this cell is present, swallow following missing columns.
+            let span = 1;
+            if (present) {
+                while (i + span < numCols
+                        && !this._cellPresent(node, i + span)) {
+                    span++;
+                }
+            }
+            if (span > 1) cell.style.gridColumn = 'span ' + span;
+
+            let colDef = i < this._columns.length ? this._columns[i] : null;
+            if (colDef && colDef.halign && colDef.halign !== 'left') {
+                cell.style.textAlign = colDef.halign;
+            }
+
             let colType = i < this._columns.length ? this._columns[i].type : 'string';
             let editable = i < this._columns.length && this._columns[i].editable
                            && colType !== 'icon';
@@ -921,6 +999,9 @@ class TreeView extends Widget {
                 img.width = size;
                 img.height = size;
                 cell.appendChild(img);
+            } else if (colType === 'boolean') {
+                cell.textContent = val ? '✓' : '';
+                cell.title = val ? 'true' : 'false';
             } else {
                 cell.textContent = val != null ? String(val) : '';
                 cell.title = cell.textContent;
@@ -936,6 +1017,7 @@ class TreeView extends Widget {
                 });
             }
             row.appendChild(cell);
+            i += span;
         }
 
         // Click to select
@@ -1179,6 +1261,49 @@ class TreeView extends Widget {
 
     // -- Internal: tree traversal helpers --
 
+    /**
+     * Is column *i* "present" on *node*?  A cell is present if the row
+     * supplied a value for it; absent cells are eligible to be absorbed
+     * by a preceding cell's span.  Missing-key (dict mode) and
+     * null/undefined/out-of-range (positional mode) count as absent;
+     * explicit empty strings count as present.
+     * @private
+     */
+    _cellPresent(node, i) {
+        if (this._dictMode && i < this._columns.length
+                && this._columns[i].key) {
+            let key = this._columns[i].key;
+            return node.values != null
+                && typeof node.values === 'object'
+                && key in node.values
+                && node.values[key] !== null
+                && node.values[key] !== undefined;
+        }
+        if (Array.isArray(node.values)) {
+            return i < node.values.length
+                && node.values[i] !== null
+                && node.values[i] !== undefined;
+        }
+        return false;
+    }
+
+    /** @private Fetch the raw value for column i (or '' if absent). */
+    _cellValue(node, i) {
+        if (this._dictMode && i < this._columns.length
+                && this._columns[i].key) {
+            let key = this._columns[i].key;
+            if (node.values != null && typeof node.values === 'object'
+                    && key in node.values) {
+                return node.values[key];
+            }
+            return '';
+        }
+        if (Array.isArray(node.values) && i < node.values.length) {
+            return node.values[i];
+        }
+        return '';
+    }
+
     _walkNodes(node, fn) {
         if (node !== this._root) fn(node);
         for (let child of node.children) {
@@ -1292,13 +1417,18 @@ class TreeView extends Widget {
         // Parse the single column the same way _parseColumns does
         let parsed;
         if (typeof column === 'string') {
-            parsed = { label: column, type: 'string', editable: false };
+            parsed = { label: column, type: 'string', editable: false,
+                       key: null, halign: 'left' };
         } else {
+            let type = TreeView._normalizeType(column.type);
             parsed = {
                 label: column.label || '',
-                type: column.type || 'string',
+                type: type,
                 editable: !!column.editable,
+                key: column.key || null,
+                halign: TreeView._normalizeHalign(column.halign, type),
             };
+            if (parsed.key) this._dictMode = true;
             if (column.icon_size) parsed.icon_size = column.icon_size;
         }
         this._columns.splice(index, 0, parsed);
@@ -1440,9 +1570,22 @@ class TreeView extends Widget {
         let colType = colIndex < this._columns.length
             ? this._columns[colIndex].type : 'string';
         let newValue = raw;
-        if (colType === 'number') {
+        if (colType === 'integer') {
+            let n = parseInt(raw, 10);
+            newValue = isNaN(n) ? oldValue : n;
+        } else if (colType === 'float') {
             let n = parseFloat(raw);
             newValue = isNaN(n) ? oldValue : n;
+        } else if (colType === 'boolean') {
+            let s = String(raw).trim().toLowerCase();
+            if (s === 'true' || s === '1' || s === 'yes' || s === 'y') {
+                newValue = true;
+            } else if (s === 'false' || s === '0' || s === 'no'
+                       || s === 'n' || s === '') {
+                newValue = false;
+            } else {
+                newValue = oldValue;
+            }
         }
         // Clear first to avoid reentry via blur
         this._editor = null;
@@ -1479,8 +1622,16 @@ class TreeView extends Widget {
     /** @private Replace editor with plain text content in the given cell. */
     _restoreCell(cell, value) {
         if (!cell) return;
-        cell.textContent = value != null ? String(value) : '';
-        cell.title = cell.textContent;
+        let colIndex = cell._colIndex;
+        let colType = colIndex != null && colIndex < this._columns.length
+            ? this._columns[colIndex].type : 'string';
+        if (colType === 'boolean') {
+            cell.textContent = value ? '✓' : '';
+            cell.title = value ? 'true' : 'false';
+        } else {
+            cell.textContent = value != null ? String(value) : '';
+            cell.title = cell.textContent;
+        }
     }
 
     _sortChildren(node, colIndex, ascending) {
@@ -1500,14 +1651,17 @@ class TreeView extends Widget {
             if (va == null) va = '';
             if (vb == null) vb = '';
             let cmp;
-            if (colType === 'number') {
-                let na = typeof va === 'number' ? va : parseFloat(va);
-                let nb = typeof vb === 'number' ? vb : parseFloat(vb);
+            if (colType === 'integer' || colType === 'float') {
+                let parse = colType === 'integer' ? parseInt : parseFloat;
+                let na = typeof va === 'number' ? va : parse(va, 10);
+                let nb = typeof vb === 'number' ? vb : parse(vb, 10);
                 // push NaN to the end
                 if (isNaN(na) && isNaN(nb)) cmp = 0;
                 else if (isNaN(na)) cmp = 1;
                 else if (isNaN(nb)) cmp = -1;
                 else cmp = na - nb;
+            } else if (colType === 'boolean') {
+                cmp = (!!va) - (!!vb);
             } else {
                 cmp = String(va).localeCompare(String(vb), undefined, {sensitivity: 'base'});
             }
