@@ -5,9 +5,21 @@ import {ScrollBar} from "./ScrollBar.js";
 
 /**
  * A tree/table view widget similar to Qt's QTreeWidget.
- * Displays hierarchical or flat tabular data with column headers,
- * expand/collapse, selection, column resizing, and optional
- * alternating row colours.
+ *
+ * Tree data is stored as a hierarchy of dicts.  Each child of an
+ * interior node is keyed by a unique string identifier; that key is
+ * the node's stable identity.  Paths to nodes are arrays of those
+ * keys, and they remain valid no matter how the visible tree is
+ * sorted.
+ *
+ * Leaf shape: `{COL_KEY: value, ...}` (all values are primitives).
+ * Interior shape with no own values: `{childKey: <subdict>, ...}`.
+ * Interior shape with own values: `{__values__: {COL_KEY: ...},
+ * childKey: <subdict>, ...}`.
+ *
+ * The first column auto-displays the node's dict key when the row
+ * doesn't supply a value for it; this means interiors typically need
+ * no `__values__` at all — their dict key is their label.
  *
  * @extends Widget
  */
@@ -15,22 +27,24 @@ class TreeView extends Widget {
 
     /**
      * @param {Object} [options]
-     * @param {Array} [options.columns=[]] - Column descriptors. Each entry
-     *   is either a plain string (label; type defaults to 'string') or an
-     *   object { label, type, key, editable, halign, icon_size }.
-     *   Supported types: 'string' (alias 'str'), 'integer' (alias 'int'),
-     *   'float' (alias 'number'), 'boolean' (renders a checkmark when
-     *   truthy), and 'icon' (cell value is a URL or data: URL used as
-     *   the image source).  halign is 'left' | 'center' | 'right';
+     * @param {Array} [options.columns=[]] - Column descriptors.  Each
+     *   entry is either a plain string (label; type defaults to
+     *   'string', auto key generated) or an object
+     *   { label, type, key, editable, halign, icon_size }.  Supported
+     *   types: 'string' (alias 'str'), 'integer' (alias 'int'),
+     *   'float' (alias 'number'), 'boolean' (renders ✓ when truthy),
+     *   and 'icon' (cell value is a URL or data: URL used as the
+     *   image source).  halign is 'left' | 'center' | 'right';
      *   default depends on type (numeric → right, boolean/icon →
-     *   center, otherwise left).
-     * @param {boolean} [options.show_header=true] - Show the header row.
+     *   center, otherwise left).  Each column gets a stable string
+     *   key — auto-generated as `_col0`, `_col1`, ... if not supplied.
+     * @param {boolean} [options.show_header=true]
      * @param {string} [options.selection_mode='single'] - 'single', 'multiple', or 'none'.
-     * @param {boolean} [options.alternate_row_colors=false] - Shade even rows.
-     * @param {boolean} [options.sortable=false] - Allow sorting by clicking column headers.
-     * @param {boolean} [options.show_grid=false] - Draw grid lines between
-     *   cells and rows (table-style appearance).
-     * @param {HTMLElement} [options.element=null] - Optional pre-existing element.
+     * @param {boolean} [options.alternate_row_colors=false]
+     * @param {boolean} [options.sortable=false]
+     * @param {boolean} [options.show_grid=false]
+     * @param {boolean} [options.show_row_numbers=false]
+     * @param {HTMLElement} [options.element=null]
      */
     constructor(options = {}) {
         super();
@@ -40,7 +54,7 @@ class TreeView extends Widget {
         }
         this.element.className = 'treeview-widget';
 
-        this._columns = [];      // normalised: [{label, type}, ...]
+        this._columns = [];
         this._parseColumns(this.get_option(options, 'columns', []));
         this._showHeader = this.get_option(options, 'show_header', true);
         this._selectionMode = this.get_option(options, 'selection_mode', 'single');
@@ -52,27 +66,32 @@ class TreeView extends Widget {
         this._showRowNumbers = this.get_option(options, 'show_row_numbers', false);
         this._sortable = this.get_option(options, 'sortable', false);
 
-        // Column widths in fr units (default 1fr each)
         this._colWidths = this._columns.map(() => '1fr');
 
-        // Sort state: which column is sorted and in which direction
-        this._sortColumn = -1;       // -1 = no active sort
+        // Sort state.  _sortColKey is the key of the active sort
+        // column (null = no sort).  When set, every node's
+        // _sortedView caches the sorted view of its children;
+        // node.children itself stays in canonical (insertion) order.
+        this._sortColKey = null;
         this._sortAscending = true;
 
-        // Active inline editor (if any)
         this._editor = null;
-        this._editInfo = null;  // {node, col, oldValue}
+        this._editInfo = null;
 
-        // Enable callbacks
         for (let name of ['activated', 'selected', 'expanded', 'collapsed',
-                          'sorted', 'cell_edited']) {
+                          'sorted', 'cell_edited', 'scrolled']) {
             this.enable_callback(name);
         }
 
-        // Implicit root node - never rendered
-        this._root = { values: [], children: [], expanded: true, depth: -1,
-                        element: null, parent: null };
-        this._selection = [];   // currently selected nodes
+        // Implicit root.  Children Map is keyed by string ids.
+        this._root = this._makeNode({
+            key: null,
+            values: null,
+            depth: -1,
+            parent: null,
+            expanded: true,
+        });
+        this._selection = [];
 
         // -- Header --
         this._header = document.createElement('div');
@@ -88,17 +107,14 @@ class TreeView extends Widget {
         this._bodyArea.className = 'treeview-body-area';
         this.element.appendChild(this._bodyArea);
 
-        // Viewport clips the content
         this._viewport = document.createElement('div');
         this._viewport.className = 'treeview-viewport';
         this._bodyArea.appendChild(this._viewport);
 
-        // Content wrapper - rows go here, sized naturally
         this._body = document.createElement('div');
         this._body.className = 'treeview-body';
         this._viewport.appendChild(this._body);
 
-        // ScrollBar widgets
         this._vScrollBar = new ScrollBar({orientation: 'vertical'});
         this._hScrollBar = new ScrollBar({orientation: 'horizontal'});
         this._vScrollBar.get_element().classList.add('treeview-vbar');
@@ -111,7 +127,6 @@ class TreeView extends Widget {
         this._bodyArea.appendChild(this._hScrollBar.get_element());
         this._bodyArea.appendChild(this._corner);
 
-        // Scrollbar callbacks - scroll the content
         this._vScrollBar.add_callback('activated', (w, pct) => {
             let maxScroll = this._body.scrollHeight - this._viewport.clientHeight;
             this._viewport.scrollTop = pct * maxScroll;
@@ -123,10 +138,7 @@ class TreeView extends Widget {
             this._syncFromScroll();
         });
 
-        // native scroll (e.g. touch, programmatic)
         this._viewport.addEventListener('scroll', () => this._syncFromScroll());
-
-        // Mouse wheel
         this._viewport.addEventListener('wheel', (e) => {
             e.preventDefault();
             this._viewport.scrollTop += e.deltaY;
@@ -137,91 +149,76 @@ class TreeView extends Widget {
         this._scrollTimer = null;
         this._scrollReady = false;
 
-        // Observe size changes
         this._syncScrollbars = this._syncScrollbars.bind(this);
         this._resizeObserver = new ResizeObserver(() => this._syncScrollbars());
         this._resizeObserver.observe(this._viewport);
         this._resizeObserver.observe(this._body);
 
-        // Keyboard handling
         this.element.tabIndex = 0;
         this.element.addEventListener('keydown', (e) => this._onKeyDown(e));
 
         // Bind public methods
-        this.set_tree = this.set_tree.bind(this);
-        this.set_data = this.set_data.bind(this);
-        this.add_item = this.add_item.bind(this);
-        this.remove_item = this.remove_item.bind(this);
-        this.update_tree = this.update_tree.bind(this);
-        this.remove_items = this.remove_items.bind(this);
-        this.clear = this.clear.bind(this);
-        this.expand_all = this.expand_all.bind(this);
-        this.collapse_all = this.collapse_all.bind(this);
-        this.get_expanded = this.get_expanded.bind(this);
-        this.get_collapsed = this.get_collapsed.bind(this);
-        this.get_selected = this.get_selected.bind(this);
-        this.set_selected = this.set_selected.bind(this);
-        this.set_column_width = this.set_column_width.bind(this);
-        this.select_path = this.select_path.bind(this);
-        this.select_paths = this.select_paths.bind(this);
-        this.select_all = this.select_all.bind(this);
-        this.set_optimal_column_widths = this.set_optimal_column_widths.bind(this);
-        this.sort_by_column = this.sort_by_column.bind(this);
-        this.scroll_to_path = this.scroll_to_path.bind(this);
-        this.scroll_to_end = this.scroll_to_end.bind(this);
-        this.set_scroll_position = this.set_scroll_position.bind(this);
-        this.get_column_count = this.get_column_count.bind(this);
-        this.get_row_count = this.get_row_count.bind(this);
-        this.set_show_grid = this.set_show_grid.bind(this);
-        this.set_show_row_numbers = this.set_show_row_numbers.bind(this);
-        this.set_sortable = this.set_sortable.bind(this);
-        this.set_column_editable = this.set_column_editable.bind(this);
-        this.set_cell = this.set_cell.bind(this);
-        this.insert_column = this.insert_column.bind(this);
-        this.append_column = this.append_column.bind(this);
-        this.delete_column = this.delete_column.bind(this);
-        this.insert_row = this.insert_row.bind(this);
-        this.append_row = this.append_row.bind(this);
-        this.delete_row = this.delete_row.bind(this);
+        for (let name of [
+            'set_tree', 'add_tree', 'update_tree', 'set_data',
+            'add_item', 'remove_item', 'remove_items', 'clear',
+            'expand_all', 'collapse_all', 'get_expanded', 'get_collapsed',
+            'expand_item', 'collapse_item',
+            'get_selected', 'set_selected', 'select_path', 'select_paths',
+            'select_all',
+            'set_column_width', 'set_optimal_column_widths',
+            'sort_by_column', 'scroll_to_path', 'scroll_to_end',
+            'set_scroll_position', 'get_scroll_position',
+            'get_column_count', 'get_row_count',
+            'set_show_grid', 'set_show_row_numbers', 'set_sortable',
+            'set_column_editable', 'set_cell',
+            'insert_column', 'append_column', 'delete_column',
+            'insert_row', 'append_row', 'delete_row',
+        ]) {
+            this[name] = this[name].bind(this);
+        }
         requestAnimationFrame(() => { this._scrollReady = true; });
+    }
+
+    // -- Internal: node factory --
+
+    _makeNode({key, values, depth, parent, expanded}) {
+        return {
+            key: key,                  // string key in parent's children Map
+            values: values,            // dict of column values, or null
+            children: new Map(),       // canonical: insertion order
+            sortedView: null,          // array of children in sort order
+            expanded: expanded !== undefined ? expanded : true,
+            depth: depth,
+            element: null,
+            parent: parent,
+        };
     }
 
     // -- Column parsing --
 
-    /**
-     * Normalise the columns option into [{label, type}, ...].
-     * Accepts plain strings or {label, type} objects.
-     */
     _parseColumns(raw) {
-        this._dictMode = false;
-        this._columns = raw.map(c => {
+        let autoIdx = 0;
+        this._columns = raw.map((c, i) => {
             if (typeof c === 'string') {
                 return { label: c, type: 'string', editable: false,
-                         key: null, halign: 'left' };
+                         key: '_col' + (autoIdx++), halign: 'left' };
             }
             let type = TreeView._normalizeType(c.type);
-            let col = {
+            let key = c.key;
+            if (!key) key = '_col' + (autoIdx++);
+            return {
                 label: c.label || '',
                 type: type,
                 editable: !!c.editable,
-                key: c.key || null,
+                key: key,
                 halign: TreeView._normalizeHalign(c.halign, type),
+                icon_size: c.icon_size,
             };
-            if (col.key) this._dictMode = true;
-            if (c.icon_size) col.icon_size = c.icon_size;
-            return col;
         });
     }
 
-    /**
-     * Normalise an halign spec.  Returns 'left' | 'center' | 'right'.
-     * If unspecified, picks a default based on column type: numeric
-     * columns right-align, boolean and icon center, everything else
-     * left.
-     */
     static _normalizeHalign(halign, type) {
-        if (halign === 'left' || halign === 'center'
-                || halign === 'right') {
+        if (halign === 'left' || halign === 'center' || halign === 'right') {
             return halign;
         }
         if (type === 'integer' || type === 'float') return 'right';
@@ -229,11 +226,6 @@ class TreeView extends Widget {
         return 'left';
     }
 
-    /**
-     * Normalise a column type spec.  Accepts aliases and falls back to
-     * 'string' for unknown values.  Canonical types are: 'string',
-     * 'integer', 'float', 'boolean', 'icon'.
-     */
     static _normalizeType(t) {
         if (!t) return 'string';
         switch (t) {
@@ -252,10 +244,25 @@ class TreeView extends Widget {
         }
     }
 
+    /** Find the column descriptor for a key.  Returns null if unknown. */
+    _columnByKey(key) {
+        for (let col of this._columns) {
+            if (col.key === key) return col;
+        }
+        return null;
+    }
+
+    /** Find the column index for a key.  Returns -1 if unknown. */
+    _columnIndex(key) {
+        for (let i = 0; i < this._columns.length; i++) {
+            if (this._columns[i].key === key) return i;
+        }
+        return -1;
+    }
+
     // -- Column grid template --
 
     _gridTemplate() {
-        // optional row-number gutter, then indent + toggle, then data columns
         let cols = '';
         if (this._showRowNumbers) cols += 'min-content ';
         cols += '16px 18px ' + this._colWidths.join(' ');
@@ -276,14 +283,12 @@ class TreeView extends Widget {
         this._header.innerHTML = '';
         this._header.style.gridTemplateColumns = this._gridTemplate();
 
-        // Optional row-number column header
         if (this._showRowNumbers) {
             let rn = document.createElement('div');
             rn.className = 'treeview-header-spacer treeview-rownum-header';
             this._header.appendChild(rn);
         }
 
-        // Spacers for indent + toggle
         let sp1 = document.createElement('div');
         sp1.className = 'treeview-header-spacer';
         this._header.appendChild(sp1);
@@ -296,6 +301,7 @@ class TreeView extends Widget {
         for (let i = 0; i < this._columns.length; i++) {
             let cell = document.createElement('div');
             cell.className = 'treeview-header-cell';
+            cell._colKey = this._columns[i].key;
             this._headerCells.push(cell);
 
             let labelSpan = document.createElement('span');
@@ -311,14 +317,11 @@ class TreeView extends Widget {
             indicator.className = 'treeview-sort-indicator';
             cell.appendChild(indicator);
 
-            // Click to sort
             cell.addEventListener('click', (e) => {
-                // Ignore if the click was on the resize handle
                 if (e.target.classList.contains('treeview-resize-handle')) return;
-                this._onHeaderClick(i);
+                this._onHeaderClick(this._columns[i].key);
             });
 
-            // Resize handle
             if (i < this._columns.length - 1) {
                 let handle = document.createElement('div');
                 handle.className = 'treeview-resize-handle';
@@ -334,7 +337,6 @@ class TreeView extends Widget {
 
     _setupColumnResize(handle, colIndex) {
         let startX, startWidthA, startWidthB;
-
         const onMouseMove = (e) => {
             let dx = e.clientX - startX;
             let newA = Math.max(30, startWidthA + dx);
@@ -343,17 +345,14 @@ class TreeView extends Widget {
             this._colWidths[colIndex + 1] = newB + 'px';
             this._applyGridTemplate();
         };
-
         const onMouseUp = () => {
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);
         };
-
         handle.addEventListener('mousedown', (e) => {
             e.preventDefault();
             e.stopPropagation();
             startX = e.clientX;
-            // Measure current pixel widths of the two adjacent columns
             let cells = this._header.querySelectorAll('.treeview-header-cell');
             startWidthA = cells[colIndex].getBoundingClientRect().width;
             startWidthB = cells[colIndex + 1].getBoundingClientRect().width;
@@ -362,59 +361,94 @@ class TreeView extends Widget {
         });
     }
 
-    _onHeaderClick(colIndex) {
+    _onHeaderClick(colKey) {
         if (!this._sortable) return;
-        if (this._sortColumn === colIndex) {
-            // Same column: toggle direction
-            this._sortAscending = !this._sortAscending;
-        } else {
-            // New column: sort ascending
-            this._sortColumn = colIndex;
-            this._sortAscending = true;
-        }
-        this._applySort();
-        this._updateSortIndicators();
-        this._renderAll();
-        this.make_callback('sorted', this._sortColumn, this._sortAscending);
+        let ascending = (this._sortColKey === colKey) ? !this._sortAscending : true;
+        this.sort_by_column(colKey, ascending);
+        this.make_callback('sorted', colKey, ascending);
     }
 
     _updateSortIndicators() {
         if (!this._headerCells) return;
         for (let i = 0; i < this._headerCells.length; i++) {
-            let indicator = this._headerCells[i].querySelector('.treeview-sort-indicator');
-            if (i === this._sortColumn) {
-                indicator.textContent = this._sortAscending ? ' ▲' : ' ▼';
+            let ind = this._headerCells[i].querySelector('.treeview-sort-indicator');
+            if (!ind) continue;
+            if (this._columns[i].key === this._sortColKey) {
+                ind.textContent = this._sortAscending ? '▲' : '▼';
+                ind.classList.add('treeview-sort-indicator-active');
             } else {
-                indicator.textContent = '';
+                ind.textContent = '';
+                ind.classList.remove('treeview-sort-indicator-active');
             }
         }
     }
 
-    /** Apply the current sort recursively to all levels. */
+    // -- Sort --
+
+    /**
+     * Build a sorted view for *node*'s children using the current
+     * sort criterion.  Sets node.sortedView to an array of children
+     * in display order (canonical Map untouched).  No-op if no sort
+     * is active.
+     * @private
+     */
+    _applySortToNode(node) {
+        if (this._sortColKey == null) {
+            node.sortedView = null;
+            return;
+        }
+        if (node.children.size === 0) {
+            node.sortedView = null;
+            return;
+        }
+        node.sortedView = this._sortChildren(node, this._sortColKey,
+                                             this._sortAscending);
+    }
+
     _applySort() {
-        if (this._sortColumn < 0) return;
-        this._sortRecursive(this._root, this._sortColumn, this._sortAscending);
+        if (this._sortColKey == null) {
+            this._walkNodes(this._root, (n) => { n.sortedView = null; });
+            return;
+        }
+        this._walkNodesIncludingRoot(this._root, (n) => {
+            this._applySortToNode(n);
+        });
     }
 
-    _sortRecursive(node, colIndex, ascending) {
-        if (node.children.length > 0) {
-            this._sortChildren(node, colIndex, ascending);
-            for (let child of node.children) {
-                this._sortRecursive(child, colIndex, ascending);
+    _sortChildren(node, colKey, ascending) {
+        let col = this._columnByKey(colKey);
+        let colType = col ? col.type : 'string';
+        let arr = [...node.children.values()];
+        arr.sort((a, b) => {
+            let va = this._cellValue(a, this._columnIndex(colKey));
+            let vb = this._cellValue(b, this._columnIndex(colKey));
+            if (va == null) va = '';
+            if (vb == null) vb = '';
+            let cmp;
+            if (colType === 'integer' || colType === 'float') {
+                let parse = colType === 'integer' ? parseInt : parseFloat;
+                let na = typeof va === 'number' ? va : parse(va, 10);
+                let nb = typeof vb === 'number' ? vb : parse(vb, 10);
+                if (isNaN(na) && isNaN(nb)) cmp = 0;
+                else if (isNaN(na)) cmp = 1;
+                else if (isNaN(nb)) cmp = -1;
+                else cmp = na - nb;
+            } else if (colType === 'boolean') {
+                cmp = (!!va) - (!!vb);
+            } else {
+                cmp = String(va).localeCompare(String(vb), undefined, {sensitivity: 'base'});
             }
-        }
+            return ascending ? cmp : -cmp;
+        });
+        return arr;
     }
 
     // -- Public API --
 
-    /**
-     * Set columns (replaces existing header).
-     * @param {string[]} columns - Array of column header labels.
-     */
     set_columns(columns) {
         this._parseColumns(columns);
         this._colWidths = this._columns.map(() => '1fr');
-        this._sortColumn = -1;
+        this._sortColKey = null;
         if (this._showHeader && this._columns.length > 0) {
             this._header.style.display = '';
         }
@@ -423,238 +457,190 @@ class TreeView extends Widget {
     }
 
     /**
-     * Populate from a hierarchical data structure.
-     * Each node: { values: [...] | {key: val, ...}, children: [...] }.
-     *
-     * Auto-spanning: in dict mode, omitting a column's key from a row
-     * (or setting it to null/undefined) lets the previous present cell
-     * extend across that column.  Explicit empty strings render as a
-     * real (empty) cell and do not get absorbed.  Useful for parent
-     * rows that only need a label in the first column.
-     *
-     * @param {Object[]} data - Array of root-level nodes.
+     * Replace the tree with a hierarchical dict.  See class doc
+     * for shape conventions.
+     * @param {Object} tree
      */
-    set_tree(data) {
+    set_tree(tree) {
         this.clear();
-        for (let item of data) {
-            this._addNodeFromData(this._root, item);
-        }
+        this._loadDictTree(this._root, tree);
         this._applySort();
         this._renderAll();
     }
 
     /**
-     * Populate from a flat array of rows (no tree structure).
-     * @param {Array[]} data - Array of row arrays.
+     * Phase 1: simple alias for set_tree.  A future implementation
+     * can compute the diff between current and new trees and apply
+     * minimal updates.
+     * @param {Object} tree
+     */
+    update_tree(tree) {
+        this.set_tree(tree);
+    }
+
+    /**
+     * Merge a hierarchical dict into the existing tree under *parent*.
+     * Keys that already exist are replaced (subtree-deep); new keys
+     * are appended.
+     * @param {Object} tree
+     * @param {Array<string>|null} [parent=null] - Parent path (array
+     *   of keys), or null for root.
+     */
+    add_tree(tree, parent = null) {
+        let parentNode = parent == null ? this._root : this._nodeAtPath(parent);
+        if (!parentNode) return;
+        this._loadDictTree(parentNode, tree);
+        this._applySort();
+        this._renderAll();
+    }
+
+    /**
+     * Populate from a flat array of rows.  Each row is either a dict
+     * of column-key → value, or an array of values matching column
+     * order.  Synthetic keys (`row0`, `row1`, ...) are generated
+     * internally so paths and reconstruction work uniformly.
+     * @param {Array} data
      */
     set_data(data) {
         this.clear();
-        for (let row of data) {
-            let values = (Array.isArray(row) || (this._dictMode && typeof row === 'object' && row !== null))
-                ? row : [row];
-            this._root.children.push({
-                values: values,
-                children: [],
-                expanded: false,
-                depth: 0,
-                element: null,
-                parent: this._root,
+        for (let i = 0; i < data.length; i++) {
+            let row = data[i];
+            let values;
+            if (Array.isArray(row)) {
+                values = {};
+                for (let c = 0; c < this._columns.length && c < row.length; c++) {
+                    values[this._columns[c].key] = row[c];
+                }
+            } else if (row != null && typeof row === 'object') {
+                values = row;
+            } else {
+                values = {};
+                if (this._columns.length > 0) {
+                    values[this._columns[0].key] = row;
+                }
+            }
+            let key = 'row' + i;
+            let node = this._makeNode({
+                key: key, values: values, depth: 0,
+                parent: this._root, expanded: false,
             });
+            this._root.children.set(key, node);
         }
         this._applySort();
         this._renderAll();
     }
 
     /**
-     * Add a single item.
-     * @param {Object|Array|null} parent - Parent node, index path, or null for top-level.
-     * @param {Array} values - Column values.
-     * @returns {Array} The index path of the new node.
+     * Add a single child under a parent.
+     * @param {Array<string>|null} parent - Parent path (array of keys).
+     * @param {string} key - Key for the new child.
+     * @param {Object} values - Column values dict, or a child subtree
+     *   if it contains nested dicts.
+     * @returns {Array<string>} The path of the new node.
      */
-    add_item(parent, values) {
-        let parentNode = this._resolveNode(parent) || this._root;
-        let node = {
-            values: (Array.isArray(values) || (this._dictMode && typeof values === 'object' && values !== null))
-                ? values : [values],
-            children: [],
-            expanded: false,
-            depth: parentNode.depth + 1,
-            element: null,
-            parent: parentNode,
-        };
-        parentNode.children.push(node);
-        this._applySort();
+    add_item(parent, key, values) {
+        let parentNode = parent == null ? this._root : this._nodeAtPath(parent);
+        if (!parentNode) return null;
+        this._addNodeFromDict(parentNode, key, values || {});
+        this._applySortToNode(parentNode);
         this._renderAll();
-        return this._pathOfNode(node);
+        return this._pathOfNode(parentNode.children.get(key));
     }
 
     /**
-     * Remove an item and all its descendants.
-     * @param {Object|Array} node - The node or index path to remove.
+     * Remove a node by path.
+     * @param {Array<string>} path
      */
-    remove_item(node) {
-        node = this._resolveNode(node);
+    remove_item(path) {
+        let node = this._resolveNode(path);
         if (!node || !node.parent) return;
-        let siblings = node.parent.children;
-        let idx = siblings.indexOf(node);
-        if (idx >= 0) siblings.splice(idx, 1);
-        // Remove from selection
+        node.parent.children.delete(node.key);
+        this._applySortToNode(node.parent);
         this._selection = this._selection.filter(n => n !== node);
         this._renderAll();
     }
 
     /**
-     * Batch add or update items with a single re-render.
-     * Each entry is an object:
-     *   { path: [...], values: [...] }
-     *     - If the path resolves to an existing node, its values are updated.
-     *     - If the path does not exist but its parent does, a new child is added.
-     *       The last element of the path is ignored for adds (appended at end).
-     *   { parent: [...], values: [...] }
-     *     - Adds a new child under parent (null/omitted for top-level).
-     *   { parent: [...], values: [...], children: [...] }
-     *     - Adds a subtree. children follows the same format as set_tree data.
-     * @param {Array} items - Array of update/add descriptors.
-     */
-    update_tree(items) {
-        for (let item of items) {
-            if (item.path) {
-                let node = this._nodeAtPath(item.path);
-                if (node) {
-                    // Update existing node
-                    node.values = (Array.isArray(item.values) || (this._dictMode && typeof item.values === 'object' && item.values !== null))
-                        ? item.values : [item.values];
-                } else {
-                    // Path doesn't exist - add under parent (all but last index)
-                    let parentPath = item.path.slice(0, -1);
-                    let parentNode = parentPath.length > 0
-                        ? this._nodeAtPath(parentPath) : this._root;
-                    if (parentNode) {
-                        this._addNodeFromData(parentNode,
-                            { values: item.values, children: item.children });
-                    }
-                }
-            } else {
-                // Add under parent
-                let parentNode = item.parent
-                    ? this._nodeAtPath(item.parent) : this._root;
-                if (!parentNode) parentNode = this._root;
-                this._addNodeFromData(parentNode,
-                    { values: item.values, children: item.children });
-            }
-        }
-        this._applySort();
-        this._renderAll();
-    }
-
-    /**
-     * Remove multiple items by path with a single re-render.
-     * Paths are sorted deepest-first and highest-index-first so that
-     * removals don't invalidate subsequent paths.
-     * @param {Array} paths - Array of index paths.
+     * Remove multiple nodes by their key paths.
+     * @param {Array<Array<string>>} paths
      */
     remove_items(paths) {
-        // Sort: longer paths first, then by last index descending
-        let sorted = paths.slice().sort((a, b) => {
-            if (a.length !== b.length) return b.length - a.length;
-            for (let i = 0; i < a.length; i++) {
-                if (a[i] !== b[i]) return b[i] - a[i];
-            }
-            return 0;
-        });
-
+        // Sort so deeper paths come first (so removing a parent doesn't
+        // invalidate child paths still in the queue).
+        let sorted = paths.slice().sort((a, b) => b.length - a.length);
+        let touched = new Set();
         for (let path of sorted) {
             let node = this._nodeAtPath(path);
             if (!node || !node.parent) continue;
-            let siblings = node.parent.children;
-            let idx = siblings.indexOf(node);
-            if (idx >= 0) siblings.splice(idx, 1);
+            node.parent.children.delete(node.key);
+            touched.add(node.parent);
             this._selection = this._selection.filter(n => n !== node);
         }
+        for (let p of touched) this._applySortToNode(p);
         this._renderAll();
     }
 
-    /** Remove all items. */
     clear() {
-        this._root.children = [];
+        this._root.children = new Map();
+        this._root.sortedView = null;
         this._selection = [];
         this._body.innerHTML = '';
     }
 
-    /** Expand all branch nodes. */
     expand_all() {
         this._walkNodes(this._root, (node) => {
-            if (node.children.length > 0) node.expanded = true;
+            if (node.children.size > 0) node.expanded = true;
         });
         this._renderAll();
     }
 
-    /** Collapse all branch nodes. */
     collapse_all() {
         this._walkNodes(this._root, (node) => {
-            if (node.children.length > 0) node.expanded = false;
+            if (node.children.size > 0) node.expanded = false;
         });
         this._renderAll();
     }
 
-    /**
-     * Get paths of all expanded branch nodes.
-     * @returns {Array} Array of index paths.
-     */
     get_expanded() {
         let paths = [];
         this._walkNodes(this._root, (node) => {
-            if (node.children.length > 0 && node.expanded) {
+            if (node.children.size > 0 && node.expanded) {
                 paths.push(this._pathOfNode(node));
             }
         });
         return paths;
     }
 
-    /**
-     * Get paths of all collapsed branch nodes.
-     * @returns {Array} Array of index paths.
-     */
     get_collapsed() {
         let paths = [];
         this._walkNodes(this._root, (node) => {
-            if (node.children.length > 0 && !node.expanded) {
+            if (node.children.size > 0 && !node.expanded) {
                 paths.push(this._pathOfNode(node));
             }
         });
         return paths;
     }
 
-    /**
-     * Expand a specific node.
-     * @param {Object|Array} node - Node or index path.
-     */
-    expand_item(node) {
-        node = this._resolveNode(node);
-        if (node && node.children.length > 0) {
+    expand_item(path) {
+        let node = this._resolveNode(path);
+        if (node && node.children.size > 0) {
             node.expanded = true;
             this._renderAll();
-            this.make_callback('expanded', node.values, this._pathOfNode(node));
+            this.make_callback('expanded', node.values,
+                               this._pathOfNode(node));
         }
     }
 
-    /**
-     * Collapse a specific node.
-     * @param {Object|Array} node - Node or index path.
-     */
-    collapse_item(node) {
-        node = this._resolveNode(node);
-        if (node && node.children.length > 0) {
+    collapse_item(path) {
+        let node = this._resolveNode(path);
+        if (node && node.children.size > 0) {
             node.expanded = false;
             this._renderAll();
-            this.make_callback('collapsed', node.values, this._pathOfNode(node));
+            this.make_callback('collapsed', node.values,
+                               this._pathOfNode(node));
         }
     }
 
-    /**
-     * Get the currently selected item(s).
-     * @returns {Array} Array of {path, values} objects.
-     */
     get_selected() {
         return this._selection.map(n => ({
             path: this._pathOfNode(n),
@@ -662,37 +648,28 @@ class TreeView extends Widget {
         }));
     }
 
-    /**
-     * Set the selection.
-     * @param {Array} items - Array of node objects or index paths.
-     *   A single path/node may be passed directly (not wrapped in an array).
-     *   Pass null or [] to clear.
-     */
-    set_selected(items) {
-        if (items == null) {
+    set_selected(paths) {
+        if (paths == null) {
             this._selection = [];
-        } else if (!Array.isArray(items)) {
-            // single node object
-            this._selection = [items];
-        } else if (items.length > 0 && typeof items[0] === 'number') {
-            // single path like [0, 2]
-            let node = this._resolveNode(items);
-            this._selection = node ? [node] : [];
+        } else if (!Array.isArray(paths)) {
+            this._selection = [];
         } else {
-            // array of paths or nodes
-            this._selection = items
-                .map(ref => this._resolveNode(ref))
-                .filter(n => n != null);
+            // Could be a single path or an array of paths.
+            let isSingle = paths.length === 0
+                || (typeof paths[0] === 'string');
+            if (isSingle) {
+                let node = this._nodeAtPath(paths);
+                this._selection = node ? [node] : [];
+            } else {
+                this._selection = paths
+                    .map(p => this._nodeAtPath(p))
+                    .filter(n => n != null);
+            }
         }
         this._updateSelectionDisplay();
         this.make_callback('selected', this.get_selected());
     }
 
-    /**
-     * Select or deselect the node at the given path.
-     * @param {Array} path - Index path.
-     * @param {boolean} state - true to select, false to deselect.
-     */
     select_path(path, state) {
         let node = this._nodeAtPath(path);
         if (!node) return;
@@ -706,11 +683,6 @@ class TreeView extends Widget {
         this.make_callback('selected', this.get_selected());
     }
 
-    /**
-     * Select or deselect multiple nodes by path.
-     * @param {Array} paths - Array of index paths.
-     * @param {boolean} state - true to select, false to deselect.
-     */
     select_paths(paths, state) {
         for (let path of paths) {
             let node = this._nodeAtPath(path);
@@ -726,14 +698,10 @@ class TreeView extends Widget {
         this.make_callback('selected', this.get_selected());
     }
 
-    /**
-     * Select or deselect all nodes.
-     * @param {boolean} state - true to select all, false to deselect all.
-     */
     select_all(state) {
         if (state) {
             this._selection = [];
-            this._walkNodes(this._root, (node) => this._selection.push(node));
+            this._walkNodes(this._root, (n) => this._selection.push(n));
         } else {
             this._selection = [];
         }
@@ -742,56 +710,39 @@ class TreeView extends Widget {
     }
 
     /**
-     * Set the width of a single column.
-     * @param {number} colIndex - Column index (0-based).
-     * @param {number|string} width - Pixel width (number) or CSS value (e.g. '2fr').
+     * Set the width of a column by key.
+     * @param {string} colKey
+     * @param {number|string} width - Pixel width or CSS value.
      */
-    set_column_width(colIndex, width) {
-        if (colIndex < 0 || colIndex >= this._colWidths.length) return;
-        this._colWidths[colIndex] = typeof width === 'number' ? width + 'px' : width;
+    set_column_width(colKey, width) {
+        let i = this._columnIndex(colKey);
+        if (i < 0) return;
+        this._colWidths[i] = typeof width === 'number' ? width + 'px' : width;
         this._applyGridTemplate();
     }
 
-    /**
-     * Auto-size all columns to fit their content.
-     * Measures the widest cell in each column (including the header)
-     * and sets pixel widths accordingly.
-     */
     set_optimal_column_widths() {
-        // Defer if not yet in the DOM — font metrics need inherited styles
         if (!this.element.isConnected) {
             requestAnimationFrame(() => this.set_optimal_column_widths());
             return;
         }
-
         let numCols = this._columns.length;
         if (numCols === 0) return;
 
-        // Create an off-screen measurement container
         let measure = document.createElement('div');
         measure.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font:inherit;';
         this.element.appendChild(measure);
 
         let widths = new Array(numCols).fill(0);
-
-        // Measure header labels
         for (let i = 0; i < numCols; i++) {
             measure.textContent = this._columns[i].label;
-            // header has padding(6px each side) + sort indicator space
             widths[i] = Math.max(widths[i], measure.offsetWidth + 30);
         }
-
-        // Measure all rows
         this._walkNodes(this._root, (node) => {
             for (let i = 0; i < numCols; i++) {
-                let val;
-                if (this._dictMode && i < this._columns.length && this._columns[i].key) {
-                    val = node.values[this._columns[i].key];
-                } else {
-                    val = i < node.values.length ? node.values[i] : '';
-                }
-                if (val === undefined) val = '';
-                let colType = i < this._columns.length ? this._columns[i].type : 'string';
+                let val = this._cellValue(node, i);
+                if (val == null) val = '';
+                let colType = this._columns[i].type;
                 if (colType === 'icon') {
                     let size = this._columns[i].icon_size || 16;
                     widths[i] = Math.max(widths[i], size + 12);
@@ -799,15 +750,12 @@ class TreeView extends Widget {
                     measure.textContent = '✓';
                     widths[i] = Math.max(widths[i], measure.offsetWidth + 12);
                 } else {
-                    measure.textContent = val != null ? String(val) : '';
-                    // cell padding: 6px each side
+                    measure.textContent = String(val);
                     widths[i] = Math.max(widths[i], measure.offsetWidth + 12);
                 }
             }
         });
-
         this.element.removeChild(measure);
-
         for (let i = 0; i < numCols; i++) {
             this._colWidths[i] = widths[i] + 'px';
         }
@@ -815,31 +763,32 @@ class TreeView extends Widget {
     }
 
     /**
-     * Sort all levels by a column.
-     * @param {number} colIndex - Column index to sort by.
+     * Sort all levels by the given column.
+     * @param {string} colKey
      * @param {boolean} [ascending=true]
      */
-    sort_by_column(colIndex, ascending = true) {
-        this._sortColumn = colIndex;
-        this._sortAscending = ascending;
+    sort_by_column(colKey, ascending = true) {
+        if (this._columnByKey(colKey) == null) {
+            this._sortColKey = null;
+        } else {
+            this._sortColKey = colKey;
+            this._sortAscending = !!ascending;
+        }
         this._applySort();
         this._updateSortIndicators();
         this._renderAll();
     }
 
     /**
-     * Scroll so the node at the given path is visible.
-     * Expands ancestor nodes if needed.
-     * @param {Array} path - Index path, e.g. [0, 2, 1].
+     * Scroll to the row at the given path, expanding ancestors.
+     * @param {Array<string>} path
      */
     scroll_to_path(path) {
-        // Expand all ancestors so the target is visible
         let node = this._root;
         for (let i = 0; i < path.length - 1; i++) {
-            let idx = path[i];
-            if (idx < 0 || idx >= node.children.length) return;
-            node = node.children[idx];
-            if (node.children.length > 0) node.expanded = true;
+            if (!node.children.has(path[i])) return;
+            node = node.children.get(path[i]);
+            if (node.children.size > 0) node.expanded = true;
         }
         let target = this._nodeAtPath(path);
         if (!target) return;
@@ -847,7 +796,6 @@ class TreeView extends Widget {
         this._scrollToNode(target);
     }
 
-    /** Scroll to the last visible row. */
     scroll_to_end() {
         let vp = this._viewport;
         vp.scrollTop = this._body.scrollHeight - vp.clientHeight;
@@ -856,23 +804,83 @@ class TreeView extends Widget {
 
     // -- Internal: data loading --
 
-    _addNodeFromData(parent, data) {
-        let values = data.values || [];
-        let node = {
+    /**
+     * Load a dict-shaped tree under *parent*.  Each top-level entry
+     * becomes a child of parent; existing children with the same
+     * key are replaced.
+     * @private
+     */
+    _loadDictTree(parent, tree) {
+        if (tree == null || typeof tree !== 'object') return;
+        for (let [key, data] of Object.entries(tree)) {
+            // Drop existing same-key child first.
+            parent.children.delete(key);
+            this._addNodeFromDict(parent, String(key), data);
+        }
+    }
+
+    /**
+     * Add a single dict-shaped node as a child of *parent* under the
+     * given key.  Distinguishes leaf vs interior:
+     *   - has __values__ → interior with own column data
+     *   - any value is a non-array object → interior, no own values
+     *   - else → leaf (the dict IS the values)
+     * @private
+     */
+    _addNodeFromDict(parent, key, data) {
+        let values, childData;
+        if (data == null) {
+            values = null;
+            childData = null;
+        } else if (typeof data !== 'object' || Array.isArray(data)) {
+            // Primitive or array — treat as a single-column leaf
+            // (uncommon, but tolerated for set_data fallthroughs).
+            values = {};
+            if (this._columns.length > 0) {
+                values[this._columns[0].key] = data;
+            }
+            childData = null;
+        } else if ('__values__' in data) {
+            values = data.__values__ || null;
+            childData = {};
+            for (let [k, v] of Object.entries(data)) {
+                if (k === '__values__') continue;
+                childData[k] = v;
+            }
+        } else if (this._dictHasObjectChildren(data)) {
+            values = null;
+            childData = data;
+        } else {
+            // Leaf
+            values = data;
+            childData = null;
+        }
+
+        let isInterior = childData !== null;
+        let node = this._makeNode({
+            key: key,
             values: values,
-            children: [],
-            expanded: data.expanded !== undefined ? data.expanded : true,
             depth: parent.depth + 1,
-            element: null,
             parent: parent,
-        };
-        parent.children.push(node);
-        if (data.children) {
-            for (let child of data.children) {
-                this._addNodeFromData(node, child);
+            expanded: isInterior,
+        });
+        parent.children.set(key, node);
+
+        if (childData) {
+            for (let [childKey, childValue] of Object.entries(childData)) {
+                this._addNodeFromDict(node, String(childKey), childValue);
             }
         }
         return node;
+    }
+
+    _dictHasObjectChildren(data) {
+        for (let v of Object.values(data)) {
+            if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // -- Internal: rendering --
@@ -890,18 +898,10 @@ class TreeView extends Widget {
         this._syncScrollbars();
     }
 
-    /**
-     * Keep the header's row-number column the same width as the body's
-     * row-number column. The two are separate CSS grids, so we plant a
-     * visibility-hidden placeholder in the header cell whose text width
-     * matches the widest visible row number.
-     * @private
-     */
     _syncRowNumberHeader(rowCount) {
         if (!this._showRowNumbers) return;
         let hdr = this._header.querySelector('.treeview-rownum-header');
         if (!hdr) return;
-        // Use the largest row number (or "1" if empty) as the placeholder.
         let placeholder = String(Math.max(1, rowCount));
         hdr.innerHTML = '';
         let span = document.createElement('span');
@@ -923,7 +923,6 @@ class TreeView extends Widget {
         row.style.gridTemplateColumns = this._gridTemplate();
         row._node = node;
 
-        // Optional row-number cell
         if (this._showRowNumbers) {
             let rn = document.createElement('span');
             rn.className = 'treeview-rownum';
@@ -931,16 +930,14 @@ class TreeView extends Widget {
             row.appendChild(rn);
         }
 
-        // Indent spacer
         let indent = document.createElement('span');
         indent.className = 'treeview-indent';
         indent.style.paddingLeft = (node.depth * 16) + 'px';
         row.appendChild(indent);
 
-        // Expand/collapse toggle
         let toggle = document.createElement('span');
         toggle.className = 'treeview-toggle';
-        if (node.children.length > 0) {
+        if (node.children.size > 0) {
             toggle.textContent = node.expanded ? '▾' : '▸';
             toggle.classList.add('treeview-toggle-active');
             toggle.addEventListener('click', (e) => {
@@ -948,31 +945,30 @@ class TreeView extends Widget {
                 node.expanded = !node.expanded;
                 this._renderAll();
                 if (node.expanded) {
-                    this.make_callback('expanded', node.values, this._pathOfNode(node));
+                    this.make_callback('expanded', node.values,
+                                       this._pathOfNode(node));
                 } else {
-                    this.make_callback('collapsed', node.values, this._pathOfNode(node));
+                    this.make_callback('collapsed', node.values,
+                                       this._pathOfNode(node));
                 }
             });
         }
         row.appendChild(toggle);
 
         // Data cells.  Auto-span: a present cell extends across following
-        // columns whose key is missing (dict mode) or whose value is
-        // null/undefined/out-of-range (positional mode).  Explicit empty
-        // strings still render as their own (empty) cell.
-        let numCols = this._dictMode
-            ? this._columns.length
-            : Math.max(this._columns.length, node.values.length, 1);
+        // columns whose value is missing.  Explicit empty strings are
+        // present and render as their own (empty) cell.
+        let numCols = this._columns.length;
         let i = 0;
         while (i < numCols) {
             let cell = document.createElement('span');
             cell.className = 'treeview-cell';
             cell._colIndex = i;
+            cell._colKey = this._columns[i].key;
             let present = this._cellPresent(node, i);
             let val = this._cellValue(node, i);
             if (val === undefined) val = '';
 
-            // If this cell is present, swallow following missing columns.
             let span = 1;
             if (present) {
                 while (i + span < numCols
@@ -982,20 +978,19 @@ class TreeView extends Widget {
             }
             if (span > 1) cell.style.gridColumn = 'span ' + span;
 
-            let colDef = i < this._columns.length ? this._columns[i] : null;
-            if (colDef && colDef.halign && colDef.halign !== 'left') {
+            let colDef = this._columns[i];
+            if (colDef.halign && colDef.halign !== 'left') {
                 cell.style.textAlign = colDef.halign;
             }
 
-            let colType = i < this._columns.length ? this._columns[i].type : 'string';
-            let editable = i < this._columns.length && this._columns[i].editable
-                           && colType !== 'icon';
+            let colType = colDef.type;
+            let editable = colDef.editable && colType !== 'icon';
 
             if (colType === 'icon' && val) {
                 let img = document.createElement('img');
                 img.className = 'treeview-icon';
                 img.src = val;
-                let size = this._columns[i].icon_size || 16;
+                let size = colDef.icon_size || 16;
                 img.width = size;
                 img.height = size;
                 cell.appendChild(img);
@@ -1010,8 +1005,6 @@ class TreeView extends Widget {
             if (editable) {
                 cell.classList.add('treeview-cell-editable');
                 cell.addEventListener('dblclick', (e) => {
-                    // Editable cells: dblclick starts editing instead of
-                    // firing the row's 'activated' callback.
                     e.stopPropagation();
                     this._startEdit(node, i, cell);
                 });
@@ -1020,22 +1013,21 @@ class TreeView extends Widget {
             i += span;
         }
 
-        // Click to select
         row.addEventListener('click', (e) => this._onRowClick(e, node));
         row.addEventListener('dblclick', (e) => {
-            this.make_callback('activated', node.values);
+            this.make_callback('activated', node.values,
+                               this._pathOfNode(node));
         });
 
         return row;
     }
 
-    // -- Internal: selection --
+    // -- Selection --
 
     _onRowClick(e, node) {
         if (this._selectionMode === 'none') return;
 
         if (this._selectionMode === 'multiple' && (e.ctrlKey || e.metaKey)) {
-            // Toggle this node in selection
             let idx = this._selection.indexOf(node);
             if (idx >= 0) {
                 this._selection.splice(idx, 1);
@@ -1043,7 +1035,6 @@ class TreeView extends Widget {
                 this._selection.push(node);
             }
         } else if (this._selectionMode === 'multiple' && e.shiftKey) {
-            // Range select
             if (this._selection.length > 0) {
                 let visible = this._getVisibleNodes();
                 let anchor = visible.indexOf(this._selection[0]);
@@ -1059,7 +1050,6 @@ class TreeView extends Widget {
         } else {
             this._selection = [node];
         }
-
         this._updateSelectionDisplay();
         this.make_callback('selected', this.get_selected());
     }
@@ -1074,14 +1064,13 @@ class TreeView extends Widget {
         }
     }
 
-    // -- Internal: keyboard --
+    // -- Keyboard --
 
     _onKeyDown(e) {
         if (this._selection.length === 0) return;
         let visible = this._getVisibleNodes();
         let current = visible.indexOf(this._selection[this._selection.length - 1]);
         if (current < 0) return;
-
         let node = visible[current];
 
         switch (e.key) {
@@ -1105,20 +1094,21 @@ class TreeView extends Widget {
             break;
         case 'ArrowRight':
             e.preventDefault();
-            if (node.children.length > 0 && !node.expanded) {
+            if (node.children.size > 0 && !node.expanded) {
                 node.expanded = true;
                 this._renderAll();
-                this.make_callback('expanded', node.values, this._pathOfNode(node));
+                this.make_callback('expanded', node.values,
+                                   this._pathOfNode(node));
             }
             break;
         case 'ArrowLeft':
             e.preventDefault();
-            if (node.children.length > 0 && node.expanded) {
+            if (node.children.size > 0 && node.expanded) {
                 node.expanded = false;
                 this._renderAll();
-                this.make_callback('collapsed', node.values, this._pathOfNode(node));
+                this.make_callback('collapsed', node.values,
+                                   this._pathOfNode(node));
             } else if (node.parent && node.parent !== this._root) {
-                // Navigate to parent
                 this._selection = [node.parent];
                 this._updateSelectionDisplay();
                 this._scrollToNode(node.parent);
@@ -1127,7 +1117,8 @@ class TreeView extends Widget {
             break;
         case 'Enter':
             e.preventDefault();
-            this.make_callback('activated', node.values);
+            this.make_callback('activated', node.values,
+                               this._pathOfNode(node));
             break;
         }
     }
@@ -1145,38 +1136,28 @@ class TreeView extends Widget {
         this._syncFromScroll();
     }
 
-    // -- Internal: scrollbar sync --
+    // -- Scrollbar sync --
 
-    /** Update scrollbar thumb sizes and visibility based on content vs viewport size. */
     _syncScrollbars() {
         let vw = this._viewport.clientWidth;
         let vh = this._viewport.clientHeight;
         let cw = this._body.scrollWidth;
         let ch = this._body.scrollHeight;
-
         let showH = cw > vw + 1;
         let showV = ch > vh + 1;
-
         if (!this._hScrollBar || !this._hScrollBar.get_element()) return;
         this._hScrollBar.get_element().style.display = showH ? '' : 'none';
         this._vScrollBar.get_element().style.display = showV ? '' : 'none';
         this._corner.style.display = (showH && showV) ? '' : 'none';
-
         if (showH) {
             this._hScrollBar.set_thumb_percent(Math.min(1, vw / Math.max(1, cw)));
         }
         if (showV) {
             this._vScrollBar.set_thumb_percent(Math.min(1, vh / Math.max(1, ch)));
         }
-
         this._syncFromScroll();
     }
 
-    /**
-     * Sets the scroll position using percentages (0–1).
-     * @param {number} h_pct - Horizontal scroll percentage.
-     * @param {number} v_pct - Vertical scroll percentage.
-     */
     set_scroll_position(h_pct, v_pct) {
         let maxX = this._body.scrollWidth - this._viewport.clientWidth;
         let maxY = this._body.scrollHeight - this._viewport.clientHeight;
@@ -1187,10 +1168,6 @@ class TreeView extends Widget {
         this._scrollSilent = false;
     }
 
-    /**
-     * Returns the current scroll position as [h_pct, v_pct] (0–1).
-     * @returns {number[]}
-     */
     get_scroll_position() {
         let maxX = this._body.scrollWidth - this._viewport.clientWidth;
         let maxY = this._body.scrollHeight - this._viewport.clientHeight;
@@ -1200,17 +1177,13 @@ class TreeView extends Widget {
         ];
     }
 
-    /** Sync scrollbar positions from the viewport's current scroll offset. */
     _syncFromScroll() {
         let maxScrollX = this._body.scrollWidth - this._viewport.clientWidth;
         let maxScrollY = this._body.scrollHeight - this._viewport.clientHeight;
-
         let hPct = maxScrollX > 0 ? this._viewport.scrollLeft / maxScrollX : 0;
         let vPct = maxScrollY > 0 ? this._viewport.scrollTop / maxScrollY : 0;
-
         if (maxScrollX > 0) this._hScrollBar.set_scroll_percent(hPct);
         if (maxScrollY > 0) this._vScrollBar.set_scroll_percent(vPct);
-
         if (this._scrollTimer) clearTimeout(this._scrollTimer);
         if (this._scrollReady && !this._scrollSilent) {
             this._scrollTimer = setTimeout(() => {
@@ -1220,104 +1193,93 @@ class TreeView extends Widget {
         }
     }
 
-    // -- Internal: path helpers --
+    // -- Path helpers --
 
-    /**
-     * Resolve an index path (e.g. [0, 2, 1]) to the internal node.
-     * Returns null if the path is invalid.
-     */
     _nodeAtPath(path) {
+        if (!Array.isArray(path)) return null;
         let node = this._root;
-        for (let idx of path) {
-            if (idx < 0 || idx >= node.children.length) return null;
-            node = node.children[idx];
+        for (let key of path) {
+            if (!node.children.has(key)) return null;
+            node = node.children.get(key);
         }
         return node === this._root ? null : node;
     }
 
-    /**
-     * Return the index path from root to the given node.
-     */
     _pathOfNode(node) {
         let path = [];
         while (node && node.parent) {
-            let idx = node.parent.children.indexOf(node);
-            if (idx < 0) return null;
-            path.unshift(idx);
+            if (node.key == null) return null;
+            path.unshift(node.key);
             node = node.parent;
         }
         return path;
     }
 
-    /**
-     * Accept either a node object or an index-path array.
-     * Returns the internal node, or null.
-     */
     _resolveNode(ref) {
         if (ref == null) return null;
         if (Array.isArray(ref)) return this._nodeAtPath(ref);
         return ref;
     }
 
-    // -- Internal: tree traversal helpers --
+    // -- Cell value & traversal helpers --
 
     /**
-     * Is column *i* "present" on *node*?  A cell is present if the row
-     * supplied a value for it; absent cells are eligible to be absorbed
-     * by a preceding cell's span.  Missing-key (dict mode) and
-     * null/undefined/out-of-range (positional mode) count as absent;
-     * explicit empty strings count as present.
+     * Is column *i* "present" on *node*?  Auto-spanning treats absent
+     * cells as eligible to be absorbed by a preceding present cell.
      * @private
      */
     _cellPresent(node, i) {
-        if (this._dictMode && i < this._columns.length
-                && this._columns[i].key) {
-            let key = this._columns[i].key;
-            return node.values != null
-                && typeof node.values === 'object'
-                && key in node.values
-                && node.values[key] !== null
-                && node.values[key] !== undefined;
-        }
-        if (Array.isArray(node.values)) {
-            return i < node.values.length
-                && node.values[i] !== null
-                && node.values[i] !== undefined;
-        }
-        return false;
+        let val = this._cellValue(node, i);
+        return val !== undefined && val !== null;
     }
 
-    /** @private Fetch the raw value for column i (or '' if absent). */
+    /**
+     * Fetch the displayed value for column i on node.  Falls back to
+     * the node's dict key for column 0 when the row supplies no value.
+     * Returns undefined when truly absent (eligible for auto-span).
+     * @private
+     */
     _cellValue(node, i) {
-        if (this._dictMode && i < this._columns.length
-                && this._columns[i].key) {
-            let key = this._columns[i].key;
-            if (node.values != null && typeof node.values === 'object'
-                    && key in node.values) {
-                return node.values[key];
-            }
-            return '';
+        if (i < 0 || i >= this._columns.length) return undefined;
+        let colKey = this._columns[i].key;
+        if (node.values != null && typeof node.values === 'object'
+                && !Array.isArray(node.values)
+                && colKey in node.values) {
+            return node.values[colKey];
         }
-        if (Array.isArray(node.values) && i < node.values.length) {
-            return node.values[i];
-        }
-        return '';
+        // First column falls back to the node's dict key.
+        if (i === 0 && node.key != null) return node.key;
+        return undefined;
     }
 
     _walkNodes(node, fn) {
-        if (node !== this._root) fn(node);
-        for (let child of node.children) {
+        // Walk all descendants of *node*, NOT including the root itself.
+        let view = this._childrenView(node);
+        for (let child of view) {
+            fn(child);
             this._walkNodes(child, fn);
+        }
+    }
+
+    _walkNodesIncludingRoot(node, fn) {
+        fn(node);
+        let view = this._childrenView(node);
+        for (let child of view) {
+            this._walkNodesIncludingRoot(child, fn);
         }
     }
 
     _walkVisible(node, fn) {
         if (node !== this._root) fn(node);
         if (node.expanded) {
-            for (let child of node.children) {
+            for (let child of this._childrenView(node)) {
                 this._walkVisible(child, fn);
             }
         }
+    }
+
+    _childrenView(node) {
+        return node.sortedView || [...node.children.values()];
     }
 
     _getVisibleNodes() {
@@ -1326,31 +1288,16 @@ class TreeView extends Widget {
         return nodes;
     }
 
-    // -- Public API: grid, editing, row/column ops --
+    // -- Grid / editing / row & column ops --
 
-    /**
-     * @returns {number} The number of columns.
-     */
     get_column_count() {
         return this._columns.length;
     }
 
-    /**
-     * @returns {number} The number of top-level rows.
-     */
     get_row_count() {
-        return this._root.children.length;
+        return this._root.children.size;
     }
 
-
-    /**
-     * Toggle grid lines between cells and rows.
-     * @param {boolean} tf
-     */
-    /**
-     * Enable or disable sorting by clicking column headers.
-     * @param {boolean} tf
-     */
     set_sortable(tf) {
         this._sortable = !!tf;
     }
@@ -1360,10 +1307,6 @@ class TreeView extends Widget {
         this.element.classList.toggle('treeview-grid', this._showGrid);
     }
 
-    /**
-     * Show or hide the row-number gutter on the left.
-     * @param {boolean} tf
-     */
     set_show_row_numbers(tf) {
         this._showRowNumbers = !!tf;
         this._buildHeader();
@@ -1371,102 +1314,91 @@ class TreeView extends Widget {
     }
 
     /**
-     * Mark a column as editable (or not). Editable cells enter inline-edit
-     * mode when the user double-clicks them.
-     * @param {number} colIndex
+     * Mark a column as editable (or not).
+     * @param {string} colKey
      * @param {boolean} tf
      */
-    set_column_editable(colIndex, tf) {
-        if (colIndex < 0 || colIndex >= this._columns.length) return;
-        this._columns[colIndex].editable = !!tf;
+    set_column_editable(colKey, tf) {
+        let col = this._columnByKey(colKey);
+        if (!col) return;
+        col.editable = !!tf;
         this._renderAll();
     }
 
     /**
-     * Set a single cell's value. Fires no callback.
-     * @param {Object|Array} rowRef - Node, top-level row index, or index path.
-     * @param {number} colIndex
+     * Set a single cell's value.
+     * @param {Array<string>} path - Path of keys to the row.
+     * @param {string} colKey
      * @param {*} value
      */
-    set_cell(rowRef, colIndex, value) {
-        let node;
-        if (typeof rowRef === 'number') {
-            node = this._root.children[rowRef];
-        } else {
-            node = this._resolveNode(rowRef);
-        }
+    set_cell(path, colKey, value) {
+        let node = this._nodeAtPath(path);
         if (!node) return;
-        if (this._dictMode && colIndex < this._columns.length && this._columns[colIndex].key) {
-            node.values[this._columns[colIndex].key] = value;
-        } else {
-            while (node.values.length <= colIndex) node.values.push('');
-            node.values[colIndex] = value;
+        if (node.values == null) node.values = {};
+        node.values[colKey] = value;
+        // Re-sort the parent if the changed column is the active sort.
+        if (this._sortColKey === colKey) {
+            this._applySortToNode(node.parent);
         }
         this._renderAll();
     }
 
     /**
-     * Insert a new column at the given index. Existing rows get an empty
-     * value inserted at that position.
-     * @param {number} index
-     * @param {string|Object} column - Column descriptor (string or object).
+     * Insert a column before the given column key (or append if before
+     * is null).
+     * @param {string|Object} column
+     * @param {string|null} [before=null] - Key of the column to insert
+     *   before.  `null` appends.
      */
-    insert_column(index, column) {
-        if (index < 0) index = 0;
-        if (index > this._columns.length) index = this._columns.length;
-        // Parse the single column the same way _parseColumns does
+    insert_column(column, before = null) {
         let parsed;
+        let autoIdx = this._columns.length;
         if (typeof column === 'string') {
             parsed = { label: column, type: 'string', editable: false,
-                       key: null, halign: 'left' };
+                       key: '_col' + autoIdx, halign: 'left' };
         } else {
             let type = TreeView._normalizeType(column.type);
             parsed = {
                 label: column.label || '',
                 type: type,
                 editable: !!column.editable,
-                key: column.key || null,
+                key: column.key || ('_col' + autoIdx),
                 halign: TreeView._normalizeHalign(column.halign, type),
+                icon_size: column.icon_size,
             };
-            if (parsed.key) this._dictMode = true;
-            if (column.icon_size) parsed.icon_size = column.icon_size;
         }
-        this._columns.splice(index, 0, parsed);
-        this._colWidths.splice(index, 0, '1fr');
-        if (this._sortColumn >= index) this._sortColumn++;
-        this._walkNodes(this._root, (node) => {
-            while (node.values.length < index) node.values.push('');
-            node.values.splice(index, 0, '');
-        });
+        let insertAt = this._columns.length;
+        if (before != null) {
+            let idx = this._columnIndex(before);
+            if (idx >= 0) insertAt = idx;
+        }
+        this._columns.splice(insertAt, 0, parsed);
+        this._colWidths.splice(insertAt, 0, '1fr');
         this._buildHeader();
         this._renderAll();
     }
 
-    /**
-     * Append a column at the end. See insert_column.
-     * @param {string|Object} column
-     */
     append_column(column) {
-        this.insert_column(this._columns.length, column);
+        this.insert_column(column, null);
     }
 
     /**
-     * Delete the column at the given index. Values at that index are
-     * removed from every row.
-     * @param {number} index
+     * Delete a column by key.  Removes that key from every row.
+     * @param {string} colKey
      */
-    delete_column(index) {
-        if (index < 0 || index >= this._columns.length) return;
-        this._columns.splice(index, 1);
-        this._colWidths.splice(index, 1);
-        if (this._sortColumn === index) {
-            this._sortColumn = -1;
-        } else if (this._sortColumn > index) {
-            this._sortColumn--;
+    delete_column(colKey) {
+        let idx = this._columnIndex(colKey);
+        if (idx < 0) return;
+        this._columns.splice(idx, 1);
+        this._colWidths.splice(idx, 1);
+        if (this._sortColKey === colKey) {
+            this._sortColKey = null;
+            this._applySort();
         }
         this._walkNodes(this._root, (node) => {
-            if (index < node.values.length) {
-                node.values.splice(index, 1);
+            if (node.values && typeof node.values === 'object'
+                    && !Array.isArray(node.values)) {
+                delete node.values[colKey];
             }
         });
         this._buildHeader();
@@ -1474,73 +1406,95 @@ class TreeView extends Widget {
     }
 
     /**
-     * Insert a new top-level row at the given index.
-     * @param {number} index
-     * @param {Array} values
-     * @returns {Array} The index path of the new row.
+     * Insert a row at the top level.
+     * @param {Object} values - Dict of column-key → value (or array
+     *   of values matching column order).
+     * @param {string|null} [key=null] - Stable key for the row.
+     *   Auto-generated if null.
+     * @param {string|null} [before=null] - Key of an existing row to
+     *   insert before.  null appends.
+     * @returns {Array<string>} The path of the new row.
      */
-    insert_row(index, values) {
-        if (index < 0) index = 0;
-        if (index > this._root.children.length) index = this._root.children.length;
-        let node = {
-            values: Array.isArray(values) ? values.slice() : [values],
-            children: [],
-            expanded: false,
-            depth: 0,
-            element: null,
-            parent: this._root,
-        };
-        this._root.children.splice(index, 0, node);
+    insert_row(values, key = null, before = null) {
+        if (key == null) {
+            // Find a free auto-key
+            let i = this._root.children.size;
+            do {
+                key = 'row' + i;
+                i++;
+            } while (this._root.children.has(key));
+        }
+        // Coerce array → dict using column order
+        if (Array.isArray(values)) {
+            let dict = {};
+            for (let c = 0; c < this._columns.length && c < values.length; c++) {
+                dict[this._columns[c].key] = values[c];
+            }
+            values = dict;
+        }
+        let node = this._makeNode({
+            key: key, values: values, depth: 0,
+            parent: this._root, expanded: false,
+        });
+        if (before != null && this._root.children.has(before)) {
+            // Rebuild the Map preserving insertion order with insertion
+            // before the named key.
+            let newMap = new Map();
+            for (let [k, v] of this._root.children) {
+                if (k === before) newMap.set(key, node);
+                newMap.set(k, v);
+            }
+            this._root.children = newMap;
+        } else {
+            this._root.children.set(key, node);
+        }
+        this._applySortToNode(this._root);
         this._renderAll();
-        return [index];
+        return [key];
     }
 
     /**
-     * Append a new top-level row.
-     * @param {Array} values
-     * @returns {Array} The index path of the new row.
+     * Append a row at the top level.
+     * @param {Object|Array} values
+     * @returns {Array<string>} The path of the new row.
      */
     append_row(values) {
-        return this.insert_row(this._root.children.length, values);
+        return this.insert_row(values, null, null);
     }
 
     /**
-     * Delete a top-level row.
-     * @param {number} index - Row index, or an index path.
+     * Delete a row.  Accepts either a path (array of keys) for a
+     * deeper node, or a single key for a top-level row.
+     * @param {Array<string>|string} pathOrKey
      */
-    delete_row(index) {
-        let node;
-        if (Array.isArray(index)) {
-            node = this._nodeAtPath(index);
+    delete_row(pathOrKey) {
+        let path;
+        if (Array.isArray(pathOrKey)) {
+            path = pathOrKey;
         } else {
-            node = this._root.children[index];
+            path = [pathOrKey];
         }
-        if (!node) return;
-        this.remove_item(node);
+        this.remove_item(path);
     }
 
-    // -- Internal: inline cell editing --
+    // -- Inline cell editing --
 
-    /** @private */
     _startEdit(node, colIndex, cell) {
         if (this._editor) this._commitEdit();
 
-        let oldValue;
-        if (this._dictMode && colIndex < this._columns.length && this._columns[colIndex].key) {
-            oldValue = node.values[this._columns[colIndex].key];
-        } else {
-            oldValue = colIndex < node.values.length ? node.values[colIndex] : '';
-        }
-        if (oldValue === undefined) oldValue = '';
-        let colType = colIndex < this._columns.length
-            ? this._columns[colIndex].type : 'string';
+        let colKey = this._columns[colIndex].key;
+        let oldValue = (node.values != null
+                        && typeof node.values === 'object'
+                        && !Array.isArray(node.values)
+                        && colKey in node.values)
+            ? node.values[colKey] : '';
+        if (oldValue == null) oldValue = '';
 
         let input = document.createElement('input');
         input.type = 'text';
         input.className = 'treeview-cell-editor';
-        input.value = oldValue != null ? String(oldValue) : '';
+        input.value = String(oldValue);
 
-        // Replace cell contents with the editor
         cell.textContent = '';
         cell.appendChild(input);
         input.focus();
@@ -1557,18 +1511,18 @@ class TreeView extends Widget {
                 e.preventDefault();
                 this._cancelEdit();
             }
-            e.stopPropagation();  // don't let row keys hijack
+            e.stopPropagation();
         });
         input.addEventListener('blur', () => this._commitEdit());
     }
 
-    /** @private */
     _commitEdit() {
         if (!this._editor || !this._editInfo) return;
         let { node, colIndex, oldValue, cell } = this._editInfo;
         let raw = this._editor.value;
-        let colType = colIndex < this._columns.length
-            ? this._columns[colIndex].type : 'string';
+        let colDef = this._columns[colIndex];
+        let colType = colDef.type;
+        let colKey = colDef.key;
         let newValue = raw;
         if (colType === 'integer') {
             let n = parseInt(raw, 10);
@@ -1587,30 +1541,22 @@ class TreeView extends Widget {
                 newValue = oldValue;
             }
         }
-        // Clear first to avoid reentry via blur
         this._editor = null;
         this._editInfo = null;
-        let changed;
-        if (this._dictMode && colIndex < this._columns.length && this._columns[colIndex].key) {
-            let key = this._columns[colIndex].key;
-            changed = node.values[key] !== newValue;
-            node.values[key] = newValue;
-        } else {
-            while (node.values.length <= colIndex) node.values.push('');
-            changed = node.values[colIndex] !== newValue;
-            node.values[colIndex] = newValue;
-        }
-        // Restore the cell in place rather than rebuilding the whole body;
-        // a full _renderAll here disturbs browser state (dblclick tracking)
-        // and discards unrelated scroll/focus context.
+        if (node.values == null) node.values = {};
+        let changed = node.values[colKey] !== newValue;
+        node.values[colKey] = newValue;
         this._restoreCell(cell, newValue);
         if (changed) {
+            // Re-sort the parent if the edited column is active sort
+            if (this._sortColKey === colKey) {
+                this._applySortToNode(node.parent);
+            }
             this.make_callback('cell_edited',
-                this._pathOfNode(node), colIndex, oldValue, newValue);
+                this._pathOfNode(node), colKey, oldValue, newValue);
         }
     }
 
-    /** @private */
     _cancelEdit() {
         if (!this._editor || !this._editInfo) return;
         let { oldValue, cell } = this._editInfo;
@@ -1619,7 +1565,6 @@ class TreeView extends Widget {
         this._restoreCell(cell, oldValue);
     }
 
-    /** @private Replace editor with plain text content in the given cell. */
     _restoreCell(cell, value) {
         if (!cell) return;
         let colIndex = cell._colIndex;
@@ -1632,41 +1577,6 @@ class TreeView extends Widget {
             cell.textContent = value != null ? String(value) : '';
             cell.title = cell.textContent;
         }
-    }
-
-    _sortChildren(node, colIndex, ascending) {
-        let colType = colIndex < this._columns.length
-            ? this._columns[colIndex].type : 'string';
-
-        node.children.sort((a, b) => {
-            let va, vb;
-            if (this._dictMode && colIndex < this._columns.length && this._columns[colIndex].key) {
-                let key = this._columns[colIndex].key;
-                va = a.values[key];
-                vb = b.values[key];
-            } else {
-                va = colIndex < a.values.length ? a.values[colIndex] : '';
-                vb = colIndex < b.values.length ? b.values[colIndex] : '';
-            }
-            if (va == null) va = '';
-            if (vb == null) vb = '';
-            let cmp;
-            if (colType === 'integer' || colType === 'float') {
-                let parse = colType === 'integer' ? parseInt : parseFloat;
-                let na = typeof va === 'number' ? va : parse(va, 10);
-                let nb = typeof vb === 'number' ? vb : parse(vb, 10);
-                // push NaN to the end
-                if (isNaN(na) && isNaN(nb)) cmp = 0;
-                else if (isNaN(na)) cmp = 1;
-                else if (isNaN(nb)) cmp = -1;
-                else cmp = na - nb;
-            } else if (colType === 'boolean') {
-                cmp = (!!va) - (!!vb);
-            } else {
-                cmp = String(va).localeCompare(String(vb), undefined, {sensitivity: 'base'});
-            }
-            return ascending ? cmp : -cmp;
-        });
     }
 }
 
