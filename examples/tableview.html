@@ -23,22 +23,23 @@
     // --- The table ---
     let table = new Widgets.TableView({
         columns: [
-            {label: "Item",  type: "string", editable: true},
-            {label: "Qty",   type: "number", editable: true},
-            {label: "Price", type: "number", editable: true},
-            {label: "Notes", type: "string", editable: true},
+            {label: "Item",  key: "ITEM",  type: "string", editable: true},
+            {label: "Qty",   key: "QTY",   type: "integer", editable: true},
+            {label: "Price", key: "PRICE", type: "float",   editable: true},
+            {label: "Notes", key: "NOTES", type: "string",  editable: true},
         ],
         alternate_row_colors: true,
         show_row_numbers: true,
         selection_mode: "single",
+        sortable: true,
     });
 
-    table.set_rows([
-        ["Apples",  3, 1.25, "red"],
-        ["Pears",   5, 0.90, "green"],
-        ["Plums",   2, 1.50, "purple"],
-        ["Oranges", 4, 0.75, "navel"],
-        ["Bananas", 6, 0.35, ""],
+    table.set_data([
+        {ITEM: "Apples",  QTY: 3, PRICE: 1.25, NOTES: "red"},
+        {ITEM: "Pears",   QTY: 5, PRICE: 0.90, NOTES: "green"},
+        {ITEM: "Plums",   QTY: 2, PRICE: 1.50, NOTES: "purple"},
+        {ITEM: "Oranges", QTY: 4, PRICE: 0.75, NOTES: "navel"},
+        {ITEM: "Bananas", QTY: 6, PRICE: 0.35, NOTES: ""},
     ]);
 
     vbox.add_widget(table, 1);
@@ -53,15 +54,23 @@
 
     let btnAddRow = new Widgets.Button("Append row");
     btnAddRow.add_callback('activated', () => {
-        let n = table.get_selected().length;  // just to vary the value
-        let path = table.append_row(["New item", 1, 0.00, "added"]);
+        let path = table.append_row({
+            ITEM: "New item", QTY: 1, PRICE: 0.00, NOTES: "added"});
         status.set_text("Appended row at " + JSON.stringify(path));
     });
 
     let btnInsertRow = new Widgets.Button("Insert row at top");
     btnInsertRow.add_callback('activated', () => {
-        table.insert_row(0, ["Top", 0, 0.00, "inserted"]);
-        status.set_text("Inserted row at [0]");
+        // Insert before the first existing row.
+        let firstSel = table.get_selected()[0];
+        let beforeKey = null;
+        // Use any row's path to find the first one
+        let first = table._root && table._root.children.size > 0
+            ? table._root.children.keys().next().value : null;
+        let path = table.insert_row(
+            {ITEM: "Top", QTY: 0, PRICE: 0.00, NOTES: "inserted"},
+            null, first);
+        status.set_text("Inserted row at " + JSON.stringify(path));
     });
 
     let btnDeleteRow = new Widgets.Button("Delete selected row");
@@ -80,8 +89,10 @@
     let colCounter = 0;
     btnAddCol.add_callback('activated', () => {
         colCounter++;
-        table.append_column({label: "Extra " + colCounter, editable: true});
-        status.set_text("Appended column 'Extra " + colCounter + "'");
+        let key = "EXTRA" + colCounter;
+        table.append_column({label: "Extra " + colCounter,
+                             key: key, editable: true});
+        status.set_text("Appended column '" + key + "'");
     });
 
     let btnDelCol = new Widgets.Button("Delete last column");
@@ -91,8 +102,9 @@
             status.set_text("Refusing to delete the last column.");
             return;
         }
-        table.delete_column(n - 1);
-        status.set_text("Deleted column " + (n - 1));
+        let lastKey = table._columns[n - 1].key;
+        table.delete_column(lastKey);
+        status.set_text("Deleted column " + lastKey);
     });
 
     let btnToggleGrid = new Widgets.ToggleButton("Grid");
@@ -126,8 +138,9 @@
         if (items.length === 0) return;
         status.set_text("Selected row " + JSON.stringify(items[0].path));
     });
-    table.add_callback('activated', (w, values) => {
-        status.set_text("Activated: " + JSON.stringify(values));
+    table.add_callback('activated', (w, values, path) => {
+        status.set_text("Activated " + JSON.stringify(path)
+                        + ": " + JSON.stringify(values));
     });
 
     top.set_widget(vbox);

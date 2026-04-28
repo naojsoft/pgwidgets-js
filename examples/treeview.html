@@ -21,55 +21,66 @@
 
     let status = new Widgets.Label("Select an item.");
 
-    // -- Tree example --
+    // -- Tree example --  (dict-tree format with stable key paths)
     const folderIcon = "../pgwidgets_js/static/icons/folder.svg";
     const fileIcon = "../pgwidgets_js/static/icons/file.svg";
 
     let tree = new Widgets.TreeView({
         columns: [
-            { label: "", type: "icon", icon_size: 16 },
-            "Name",
-            "Type",
-            { label: "Size (KB)", type: "number" },
+            // First column auto-fills from the node's dict key, so leaves
+            // and interiors don't need to repeat their name in NAME.
+            { label: "Name", key: "NAME", type: "string" },
+            { label: "",     key: "ICON", type: "icon", icon_size: 16 },
+            { label: "Type", key: "TYPE", type: "string" },
+            { label: "Size (KB)", key: "SIZE", type: "integer" },
         ],
         selection_mode: "multiple",
         alternate_row_colors: true,
+        sortable: true,
     });
 
-    tree.set_tree([
-        { values: [folderIcon, "Documents", "Folder", ""], children: [
-            { values: [fileIcon, "report.pdf", "PDF", 2400] },
-            { values: [fileIcon, "notes.txt", "Text", 12] },
-            { values: [folderIcon, "Presentations", "Folder", ""], children: [
-                { values: [fileIcon, "slides.pptx", "PowerPoint", 5100] },
-                { values: [fileIcon, "demo.key", "Keynote", 8300] },
-            ]},
-        ]},
-        { values: [folderIcon, "Pictures", "Folder", ""], children: [
-            { values: [fileIcon, "photo1.jpg", "JPEG", 3200] },
-            { values: [fileIcon, "photo2.png", "PNG", 1800] },
-            { values: [folderIcon, "Vacation", "Folder", ""], children: [
-                { values: [fileIcon, "beach.jpg", "JPEG", 4100] },
-                { values: [fileIcon, "sunset.jpg", "JPEG", 3900] },
-                { values: [fileIcon, "mountains.jpg", "JPEG", 5200] },
-            ]},
-        ]},
-        { values: [folderIcon, "Music", "Folder", ""], children: [
-            { values: [fileIcon, "song1.mp3", "MP3", 4500] },
-            { values: [fileIcon, "song2.flac", "FLAC", 32000] },
-        ]},
-    ]);
+    // Interior nodes use __values__ to attach their folder icon; their
+    // dict key auto-fills the NAME column.  Leaves carry their own
+    // column data; their NAME similarly auto-fills from the key.
+    tree.set_tree({
+        "Documents": {
+            "__values__": { ICON: folderIcon, TYPE: "Folder" },
+            "report.pdf": { ICON: fileIcon, TYPE: "PDF",  SIZE: 2400 },
+            "notes.txt":  { ICON: fileIcon, TYPE: "Text", SIZE: 12 },
+            "Presentations": {
+                "__values__": { ICON: folderIcon, TYPE: "Folder" },
+                "slides.pptx": { ICON: fileIcon, TYPE: "PowerPoint", SIZE: 5100 },
+                "demo.key":    { ICON: fileIcon, TYPE: "Keynote",    SIZE: 8300 },
+            },
+        },
+        "Pictures": {
+            "__values__": { ICON: folderIcon, TYPE: "Folder" },
+            "photo1.jpg": { ICON: fileIcon, TYPE: "JPEG", SIZE: 3200 },
+            "photo2.png": { ICON: fileIcon, TYPE: "PNG",  SIZE: 1800 },
+            "Vacation": {
+                "__values__": { ICON: folderIcon, TYPE: "Folder" },
+                "beach.jpg":     { ICON: fileIcon, TYPE: "JPEG", SIZE: 4100 },
+                "sunset.jpg":    { ICON: fileIcon, TYPE: "JPEG", SIZE: 3900 },
+                "mountains.jpg": { ICON: fileIcon, TYPE: "JPEG", SIZE: 5200 },
+            },
+        },
+        "Music": {
+            "__values__": { ICON: folderIcon, TYPE: "Folder" },
+            "song1.mp3":  { ICON: fileIcon, TYPE: "MP3",  SIZE: 4500 },
+            "song2.flac": { ICON: fileIcon, TYPE: "FLAC", SIZE: 32000 },
+        },
+    });
 
     tree.add_callback('selected', (w, items) => {
         if (items.length === 1) {
-            status.set_text("Selected: " + items[0].values[1]);
+            status.set_text("Selected: " + items[0].path.join(" / "));
         } else {
             status.set_text("Selected: " + items.length + " items");
         }
     });
 
-    tree.add_callback('activated', (w, values) => {
-        status.set_text("Activated: " + values[1]);
+    tree.add_callback('activated', (w, values, path) => {
+        status.set_text("Activated: " + path.join(" / "));
     });
 
     // -- Buttons --

@@ -529,35 +529,45 @@
             content.set_spacing(4);
             let lbl = new Widgets.Label("");
             let table = new Widgets.TableView({
-                columns: ["Name", "Department", {label: "Salary", type: "number"}],
+                columns: [
+                    {label: "Name",       key: "NAME",   type: "string"},
+                    {label: "Department", key: "DEPT",   type: "string"},
+                    {label: "Salary",     key: "SALARY", type: "integer"},
+                ],
                 selection_mode: "multiple",
                 alternate_row_colors: true,
+                sortable: true,
             });
-            table.set_rows([
-                ["Alice", "Engineering", 95000],
-                ["Bob", "Marketing", 72000],
-                ["Carol", "Engineering", 102000],
-                ["Dave", "Sales", 68000],
-                ["Eve", "Engineering", 98000],
-                ["Frank", "Marketing", 75000],
-                ["Grace", "Sales", 71000],
-                ["Heidi", "Engineering", 110000],
+            table.set_data([
+                {NAME: "Alice", DEPT: "Engineering", SALARY: 95000},
+                {NAME: "Bob",   DEPT: "Marketing",   SALARY: 72000},
+                {NAME: "Carol", DEPT: "Engineering", SALARY: 102000},
+                {NAME: "Dave",  DEPT: "Sales",       SALARY: 68000},
+                {NAME: "Eve",   DEPT: "Engineering", SALARY: 98000},
+                {NAME: "Frank", DEPT: "Marketing",   SALARY: 75000},
+                {NAME: "Grace", DEPT: "Sales",       SALARY: 71000},
+                {NAME: "Heidi", DEPT: "Engineering", SALARY: 110000},
             ]);
             table.add_callback('selected', (w, items) => {
-                if (items.length === 1) lbl.set_text("Selected: " + items[0].values[0]);
-                else lbl.set_text("Selected: " + items.length + " rows");
+                if (items.length === 1) {
+                    lbl.set_text("Selected: " + items[0].values.NAME);
+                } else {
+                    lbl.set_text("Selected: " + items.length + " rows");
+                }
             });
-            table.add_callback('activated', (w, vals) => lbl.set_text("Activated: " + vals[0]));
+            table.add_callback('activated', (w, vals, path) =>
+                lbl.set_text("Activated: " + vals.NAME));
             let hbox = new Widgets.HBox();
             hbox.set_spacing(4);
             let rowNum = 8;
             let addBtn = new Widgets.Button("Add Row");
             addBtn.add_callback('activated', () => {
                 rowNum++;
-                table.append_row(["Person " + rowNum, "New", 60000]);
+                table.append_row({NAME: "Person " + rowNum,
+                                  DEPT: "New", SALARY: 60000});
             });
             let sortBtn = new Widgets.Button("Sort by Name");
-            sortBtn.add_callback('activated', () => table.sort_by_column(0));
+            sortBtn.add_callback('activated', () => table.sort_by_column("NAME"));
             hbox.add_widget(addBtn, 0);
             hbox.add_widget(sortBtn, 0);
             hbox.add_widget(lbl, 1);
@@ -685,29 +695,42 @@
             content.set_spacing(4);
             let lbl = new Widgets.Label("");
             let tree = new Widgets.TreeView({
-                columns: [{label: "", type: "icon", icon_size: 16}, "Name", "Type", {label: "Size (KB)", type: "number"}],
+                columns: [
+                    {label: "Name", key: "NAME", type: "string"},
+                    {label: "",     key: "ICON", type: "icon", icon_size: 16},
+                    {label: "Type", key: "TYPE", type: "string"},
+                    {label: "Size (KB)", key: "SIZE", type: "integer"},
+                ],
                 selection_mode: "multiple",
                 alternate_row_colors: true,
+                sortable: true,
             });
-            tree.set_tree([
-                { values: [_fi, "Documents", "Folder", ""], children: [
-                    { values: [_di, "report.pdf", "PDF", 2400] },
-                    { values: [_di, "notes.txt", "Text", 12] },
-                    { values: [_fi, "Slides", "Folder", ""], children: [
-                        { values: [_di, "deck.pptx", "PPTX", 5100] },
-                    ]},
-                ]},
-                { values: [_fi, "Pictures", "Folder", ""], children: [
-                    { values: [_di, "photo1.jpg", "JPEG", 3200] },
-                    { values: [_di, "photo2.png", "PNG", 1800] },
-                ]},
-                { values: [_di, "readme.txt", "Text", 1] },
-            ]);
+            tree.set_tree({
+                "Documents": {
+                    "__values__": {ICON: _fi, TYPE: "Folder"},
+                    "report.pdf": {ICON: _di, TYPE: "PDF",  SIZE: 2400},
+                    "notes.txt":  {ICON: _di, TYPE: "Text", SIZE: 12},
+                    "Slides": {
+                        "__values__": {ICON: _fi, TYPE: "Folder"},
+                        "deck.pptx": {ICON: _di, TYPE: "PPTX", SIZE: 5100},
+                    },
+                },
+                "Pictures": {
+                    "__values__": {ICON: _fi, TYPE: "Folder"},
+                    "photo1.jpg": {ICON: _di, TYPE: "JPEG", SIZE: 3200},
+                    "photo2.png": {ICON: _di, TYPE: "PNG",  SIZE: 1800},
+                },
+                "readme.txt": {ICON: _di, TYPE: "Text", SIZE: 1},
+            });
             tree.add_callback('selected', (w, items) => {
-                if (items.length === 1) lbl.set_text("Selected: " + items[0].values[1]);
-                else lbl.set_text("Selected: " + items.length + " items");
+                if (items.length === 1) {
+                    lbl.set_text("Selected: " + items[0].path.join(" / "));
+                } else {
+                    lbl.set_text("Selected: " + items.length + " items");
+                }
             });
-            tree.add_callback('activated', (w, vals) => lbl.set_text("Activated: " + vals[1]));
+            tree.add_callback('activated', (w, vals, path) =>
+                lbl.set_text("Activated: " + path.join(" / ")));
             content.add_widget(tree, 1);
             content.add_widget(lbl, 0);
             subwin = mdi.add_widget(content, {title: "TreeView", width: 420, height: 280});

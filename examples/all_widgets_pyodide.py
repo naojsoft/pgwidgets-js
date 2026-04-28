@@ -441,35 +441,43 @@ def make_demo(name):
         content = Widgets.VBox(spacing=4)
         lbl = Widgets.Label("")
         tree = Widgets.TreeView(
-            columns=[{"label": "", "type": "icon", "icon_size": 16},
-                     "Name", "Type",
-                     {"label": "Size (KB)", "type": "number"}],
+            columns=[
+                {"label": "Name", "key": "NAME", "type": "string"},
+                {"label": "",     "key": "ICON", "type": "icon",
+                 "icon_size": 16},
+                {"label": "Type", "key": "TYPE", "type": "string"},
+                {"label": "Size (KB)", "key": "SIZE", "type": "integer"},
+            ],
             selection_mode="multiple",
             alternate_row_colors=True,
+            sortable=True,
         )
-        tree.set_tree([
-            {"values": [fi, "Documents", "Folder", ""], "children": [
-                {"values": [di, "report.pdf", "PDF", 2400]},
-                {"values": [di, "notes.txt", "Text", 12]},
-                {"values": [fi, "Slides", "Folder", ""], "children": [
-                    {"values": [di, "deck.pptx", "PPTX", 5100]},
-                ]},
-            ]},
-            {"values": [fi, "Pictures", "Folder", ""], "children": [
-                {"values": [di, "photo1.jpg", "JPEG", 3200]},
-                {"values": [di, "photo2.png", "PNG", 1800]},
-            ]},
-            {"values": [di, "readme.txt", "Text", 1]},
-        ])
+        tree.set_tree({
+            "Documents": {
+                "__values__": {"ICON": fi, "TYPE": "Folder"},
+                "report.pdf": {"ICON": di, "TYPE": "PDF",  "SIZE": 2400},
+                "notes.txt":  {"ICON": di, "TYPE": "Text", "SIZE": 12},
+                "Slides": {
+                    "__values__": {"ICON": fi, "TYPE": "Folder"},
+                    "deck.pptx": {"ICON": di, "TYPE": "PPTX", "SIZE": 5100},
+                },
+            },
+            "Pictures": {
+                "__values__": {"ICON": fi, "TYPE": "Folder"},
+                "photo1.jpg": {"ICON": di, "TYPE": "JPEG", "SIZE": 3200},
+                "photo2.png": {"ICON": di, "TYPE": "PNG",  "SIZE": 1800},
+            },
+            "readme.txt": {"ICON": di, "TYPE": "Text", "SIZE": 1},
+        })
 
         def on_tree_selected(items):
             if len(items) == 1:
-                lbl.set_text(f"Selected: {items[0]['values'][1]}")
+                lbl.set_text(f"Selected: {items[0]['path']}")
             elif len(items) > 1:
                 lbl.set_text(f"Selected: {len(items)} items")
         tree.on("selected", on_tree_selected)
         tree.on("activated",
-                lambda vals: lbl.set_text(f"Activated: {vals[1]}"))
+                lambda vals, path: lbl.set_text(f"Activated: {path}"))
         content.add_widget(tree, 1)
         content.add_widget(lbl, 0)
         subwin = mdi.add_widget(content,
