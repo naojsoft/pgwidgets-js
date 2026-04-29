@@ -661,6 +661,7 @@ WIDGETS = {
             "expand_item": ["path"],
             "collapse_item": ["path"],
             "get_selected": [],
+            "get_subtree": ["status"],
             "set_selected": ["paths"],
             "select_path": ["path", "state"],
             "select_paths": ["paths", "state"],

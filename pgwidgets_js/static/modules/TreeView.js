@@ -163,8 +163,8 @@ class TreeView extends Widget {
             'add_item', 'remove_item', 'remove_items', 'clear',
             'expand_all', 'collapse_all', 'get_expanded', 'get_collapsed',
             'expand_item', 'collapse_item',
-            'get_selected', 'set_selected', 'select_path', 'select_paths',
-            'select_all',
+            'get_selected', 'get_subtree',
+            'set_selected', 'select_path', 'select_paths', 'select_all',
             'set_column_width', 'set_optimal_column_widths',
             'sort_by_column', 'scroll_to_path', 'scroll_to_end',
             'set_scroll_position', 'get_scroll_position',
@@ -469,19 +469,30 @@ class TreeView extends Widget {
     }
 
     /**
-     * Phase 1: simple alias for set_tree.  A future implementation
-     * can compute the diff between current and new trees and apply
-     * minimal updates.
+     * Replace the tree, preserving selection wherever possible.
+     * Selected paths that still resolve in the new tree stay
+     * selected; paths that no longer exist are dropped.
+     *
+     * (Phase 1: structurally a set_tree + selection restore.  A
+     * future implementation can compute the diff between current
+     * and new trees and apply minimal updates.)
+     *
      * @param {Object} tree
      */
     update_tree(tree) {
+        let paths = this._selection.map(n => this._pathOfNode(n));
         this.set_tree(tree);
+        this._restoreSelectionByPaths(paths);
     }
 
     /**
      * Merge a hierarchical dict into the existing tree under *parent*.
      * Keys that already exist are replaced (subtree-deep); new keys
-     * are appended.
+     * are appended.  Selection is preserved by path: selected nodes
+     * whose paths still resolve in the merged tree stay selected;
+     * paths that no longer exist (because the replaced subtree no
+     * longer contains them) are silently dropped.
+     *
      * @param {Object} tree
      * @param {Array<string>|null} [parent=null] - Parent path (array
      *   of keys), or null for root.
@@ -489,9 +500,32 @@ class TreeView extends Widget {
     add_tree(tree, parent = null) {
         let parentNode = parent == null ? this._root : this._nodeAtPath(parent);
         if (!parentNode) return;
+        let paths = this._selection.map(n => this._pathOfNode(n));
         this._loadDictTree(parentNode, tree);
         this._applySort();
         this._renderAll();
+        this._restoreSelectionByPaths(paths);
+    }
+
+    /**
+     * Re-resolve each path against the current tree and rebuild
+     * this._selection from the survivors.  If any selections were
+     * dropped, fire a 'selected' callback so user code can react.
+     * @private
+     */
+    _restoreSelectionByPaths(paths) {
+        let restored = [];
+        for (let p of paths) {
+            if (!p) continue;
+            let n = this._nodeAtPath(p);
+            if (n) restored.push(n);
+        }
+        let dropped = restored.length !== paths.length;
+        this._selection = restored;
+        this._updateSelectionDisplay();
+        if (dropped) {
+            this.make_callback('selected', this.get_selected());
+        }
     }
 
     /**
@@ -646,6 +680,97 @@ class TreeView extends Widget {
             path: this._pathOfNode(n),
             values: n.values,
         }));
+    }
+
+    /**
+     * Return a dict-tree (same shape as accepted by set_tree)
+     * containing a subset of the tree.
+     *
+     * @param {string} [status='all'] - 'all', 'selected', 'expanded',
+     *   or 'collapsed'.
+     *
+     *   'all' returns the whole tree.  Otherwise, the result
+     *   includes every "matching" node plus all of its descendants,
+     *   plus the ancestors needed to keep the tree connected.
+     *
+     *   - 'selected':  matches are the currently selected nodes.
+     *   - 'expanded':  matches are interior nodes with expanded=true.
+     *   - 'collapsed': matches are interior nodes with expanded=false.
+     *
+     *   So 'selected' on an interior brings every leaf under it
+     *   along; 'expanded' on a folder includes the entire subtree
+     *   rooted at that folder.
+     *
+     * @returns {Object} A dict-tree that can be round-tripped back
+     *   through set_tree.
+     */
+    get_subtree(status = 'all') {
+        let included = null;
+        if (status !== 'all') {
+            let matches = new Set();
+            if (status === 'selected') {
+                for (let n of this._selection) matches.add(n);
+            } else if (status === 'expanded') {
+                this._walkNodes(this._root, (n) => {
+                    if (n.children.size > 0 && n.expanded) {
+                        matches.add(n);
+                    }
+                });
+            } else if (status === 'collapsed') {
+                this._walkNodes(this._root, (n) => {
+                    if (n.children.size > 0 && !n.expanded) {
+                        matches.add(n);
+                    }
+                });
+            } else {
+                throw new Error("get_subtree: unknown status '"
+                                + status + "'");
+            }
+            // Include matches and all their descendants...
+            included = new Set();
+            for (let m of matches) {
+                included.add(m);
+                this._walkNodes(m, (n) => included.add(n));
+            }
+            // ...plus ancestors so the result is a connected tree.
+            for (let inc of [...included]) {
+                let p = inc.parent;
+                while (p && p !== this._root) {
+                    included.add(p);
+                    p = p.parent;
+                }
+            }
+        }
+        return this._serializeChildren(this._root, included);
+    }
+
+    /** @private Serialize children of *node* as {key: serializedNode, ...}. */
+    _serializeChildren(node, filter) {
+        let result = {};
+        for (let [key, child] of node.children) {
+            if (filter !== null && !filter.has(child)) continue;
+            result[key] = this._serializeNode(child, filter);
+        }
+        return result;
+    }
+
+    /** @private Serialize one node into the value-form usable in a parent dict. */
+    _serializeNode(node, filter) {
+        let isInterior = node.children.size > 0;
+        if (!isInterior) {
+            // Leaf — values dict (copy so caller can't mutate state).
+            return node.values
+                ? Object.assign({}, node.values)
+                : {};
+        }
+        let childrenOnly = this._serializeChildren(node, filter);
+        if (node.values && Object.keys(node.values).length > 0) {
+            // Interior with own column data — use __values__ sentinel.
+            return Object.assign({__values__:
+                                  Object.assign({}, node.values)},
+                                 childrenOnly);
+        }
+        return childrenOnly;
     }
 
     set_selected(paths) {
