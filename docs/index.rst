@@ -32,6 +32,7 @@ into layout containers, and wire up callbacks.
    :caption: Contents
 
    getting-started
+   WhatsNew
    widgets/index
    callbacks
    external-widgets
