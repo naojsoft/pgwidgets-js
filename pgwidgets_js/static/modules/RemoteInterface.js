@@ -420,22 +420,39 @@ class RemoteInterface {
                     error: "Unknown widget class: " + msg.class};
         }
         let args = this._resolveArgs(msg.args || []);
-        // When the server specifies a wid, the auto-assigned wid from
-        // the constructor may collide with an already-registered widget
-        // (e.g. during reconstruction after _nextId was reset).
-        // Save the occupant so we can restore it after the constructor.
-        let savedWid = null, savedWidget = null;
+        // Save anything currently at msg.wid; an internal sub-widget
+        // from a previous constructor may have grabbed that wid as
+        // its auto-id, and we need to relocate it before assigning
+        // msg.wid to the new widget.
+        let displaced = null;
         if (msg.wid !== undefined) {
-            savedWid = Callback._nextId;
-            savedWidget = Callback._registry.get(savedWid);
+            displaced = Callback._registry.get(msg.wid);
         }
+        let beforeNextId = Callback._nextId;
         let widget = new cls(...args);
+        // console.log("[CREATE] msg.wid=" + msg.wid
+        //             + " class=" + msg.class
+        //             + " auto_wid=" + widget.wid
+        //             + " _nextId before=" + beforeNextId
+        //             + " after=" + Callback._nextId
+        //             + " displaced=" + (displaced
+        //                 ? displaced.constructor.name : "none"));
         if (msg.wid !== undefined) {
             let autoWid = widget.wid;
-            Callback._registry.delete(autoWid);
-            // Restore the widget that was clobbered by the constructor
-            if (savedWidget && savedWidget !== widget) {
-                Callback._registry.set(savedWid, savedWidget);
+            if (autoWid !== msg.wid) {
+                Callback._registry.delete(autoWid);
+            }
+            // Relocate any displaced widget to a fresh auto-wid.
+            if (displaced && displaced !== widget) {
+                console.warn("[_handleCreate] wid=" + msg.wid
+                    + " (" + msg.class + ") displaced "
+                    + displaced.constructor.name
+                    + " (auto-wid=" + msg.wid
+                    + "); relocating displaced to new wid="
+                    + Callback._nextId);
+                let newWid = Callback._nextId++;
+                displaced.wid = newWid;
+                Callback._registry.set(newWid, displaced);
             }
             widget.wid = msg.wid;
             // If we're replacing an existing widget at this wid, drop
@@ -449,7 +466,8 @@ class RemoteInterface {
             }
             Callback._registry.set(msg.wid, widget);
         }
-        return {type: "result", id: msg.id, wid: widget.wid};
+        return {type: "result", id: msg.id, wid: widget.wid,
+                next_wid: Callback._nextId};
     }
 
     /** @private */
@@ -500,6 +518,11 @@ class RemoteInterface {
             if (this._reconstructing || this._syncing) {
                 return;
             }
+            // console.log("[JS-CB] firing wid=" + msg.wid
+            //             + " action=" + msg.action
+            //             + " widget_class=" + (w
+            //                 ? w.constructor.name : "?")
+            //             + " widget.wid=" + (w ? w.wid : "?"));
             // If the payload contains files with data, use chunked
             // transfer (works for drop-end, FileDialog, etc.).
             let payload = args[0];
