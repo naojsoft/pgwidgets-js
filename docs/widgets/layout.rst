@@ -10,14 +10,28 @@ The root-level container widget. Uses absolute positioning and attaches
 to the document body. Typically the outermost widget in a pgwidgets
 application.
 
-**Constructor:** ``new Widgets.TopLevel({title, resizable, moveable, closeable})``
+**Constructor:** ``new Widgets.TopLevel({title, icon, resizable,
+moveable, closeable, minimizable, maximizable, lowerable,
+shadeable})``
 
 **Options:**
 
-- ``title`` -- title bar text (enables the title bar when set)
-- ``resizable`` -- enable corner resize grips
-- ``moveable`` -- allow dragging by the title bar (defaults to ``true`` if title is set)
-- ``closeable`` -- show close button in title bar (defaults to ``true``)
+- ``title`` -- title bar text (enables the title bar when set).
+- ``icon`` -- URL or ``data:`` URI shown at the left edge of the
+  title bar.  Defaults to ``null`` (hidden).
+- ``resizable`` -- enable corner resize grips.
+- ``moveable`` -- allow dragging by the title bar (defaults to
+  ``true`` when ``title`` is set).
+- ``closeable`` -- show close button (default ``true``).
+- ``minimizable`` -- show minimize button (default ``false``).
+  Minimized windows auto-stack along the bottom of the viewport.
+- ``maximizable`` -- show maximize button (default ``false``).
+  Maximize fills the browser viewport (snapshot at click time;
+  doesn't follow viewport resizes).
+- ``lowerable`` -- show send-to-back button (default ``false``).
+- ``shadeable`` -- allow rolling up to just the title bar (default
+  ``true``).  Available from the right-click context menu and via
+  double-click on the title bar.
 
 **Methods:**
 
@@ -33,21 +47,44 @@ application.
      - Set position in pixels.
    * - ``set_title(title)``
      - Set or create the title bar text.
+   * - ``set_icon(url)``
+     - Set or clear the title-bar icon.  Pass ``null`` to hide.
    * - ``set_moveable(tf)``
      - Enable or disable title bar dragging.
-   * - ``raise_()``
-     - Bring to the front (highest z-order).
-   * - ``lower()``
-     - Send to the back (lowest z-order).
+   * - ``raise_()`` / ``lower()``
+     - Bring to the front / send to the back (z-order).
+   * - ``toggle_minimize()`` / ``toggle_maximize()`` / ``toggle_shade()``
+     - Switch the named state on or off.
+   * - ``set_window_state(state)`` / ``get_window_state()``
+     - Canonical state setter / getter.  States are ``"normal"``,
+       ``"shaded"``, ``"minimized"``, ``"maximized"``.
 
 **Callbacks:**
 
 - ``move`` -- fired when the widget is dragged to a new position.
 - ``close`` -- fired when the close button is clicked.
+- ``window-state`` -- fires with the new state name when minimize /
+  maximize / shade transitions occur.  The Python side wraps this
+  in ``WIDGET_CALLBACK_SYNC`` so the state survives reconnect.
+
+**Window controls:**
+
+Title-bar buttons appear only for the options enabled at
+construction.  The right-click context menu lists the applicable
+actions (Raise, Lower, Shade, Minimize, Maximize, Close) and
+supports both click-release and press-drag-release styles, like a
+menubar.  Title-bar drag and corner-grip resize are bound to the
+left mouse button (button 0) so right-click and middle-click are
+free for other gestures.
 
 .. code-block:: javascript
 
-   let top = new Widgets.TopLevel({title: "My App", resizable: true});
+   let top = new Widgets.TopLevel({
+       title: "My App", icon: "/icons/app.svg",
+       resizable: true,
+       minimizable: true, maximizable: true,
+       lowerable: true, shadeable: true,
+   });
    top.resize(800, 600);
 
    let vbox = new Widgets.VBox({spacing: 8});
@@ -55,7 +92,6 @@ application.
    top.set_widget(vbox);
    top.show();
 
-   // Close button handler
    top.add_callback('close', () => top.hide());
 
 .. _widget-vbox:
@@ -416,7 +452,9 @@ Multiple Document Interface workspace with draggable, resizable sub-windows.
    * - Method
      - Description
    * - ``add_widget(child, options)``
-     - Add a sub-window. *options*: ``{title, width, height, icon_url, x, y}``
+     - Add a sub-window.  *options*:
+       ``{title, width, height, icon_url, x, y, shadeable}``.
+       ``shadeable`` defaults to ``true``.
    * - ``cascade_windows()``
      - Arrange sub-windows in a cascade.
    * - ``tile_windows()``
@@ -460,6 +498,24 @@ Multiple Document Interface workspace with draggable, resizable sub-windows.
      - Move the sub-window to the given position.
    * - ``move(x, y)``
      - Alias for set_position.
+   * - ``raise_()`` / ``lower()``
+     - Bring sub-window to front / send to back within the
+       workspace.
+   * - ``toggle_minimize()`` / ``toggle_maximize()``
+     - Switch between normal and minimized / maximized states.
+   * - ``toggle_shade()``
+     - Roll up to just the title bar in place (only effective
+       when ``shadeable`` was passed for this sub-window).
+
+**Active sub-window highlight:** the topmost sub-window's title bar
+is drawn slightly lighter (CSS class ``.mdi-active``), like the
+active tab in a TabWidget.  This updates automatically as
+``raise_()`` / ``lower()`` are called or sub-windows are added /
+removed.
+
+**Right-click context menu:** title-bar right-click pops a menu
+with Raise, Lower, Shade (when ``shadeable``), Minimize, Maximize,
+and Close.  Same press-drag-release semantics as the menubar.
 
 **Callbacks:**
 

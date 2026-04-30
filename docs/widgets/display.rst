@@ -26,6 +26,14 @@ Image display widget with optional interactive pointer/keyboard events.
      - Description
    * - ``set_image(url)``
      - Set image from URL or data URI.
+   * - ``set_binary_image(format, buffer)``
+     - Set image from a raw ``ArrayBuffer`` or ``Uint8Array``
+       received as a binary WebSocket frame.  ``format`` is one
+       of ``"jpeg"``, ``"png"``, ``"webp"``, or ``"gif"``; the
+       buffer is wrapped in a ``Blob`` of the matching MIME type
+       and rendered.  Used by the Python-side
+       ``Image.set_binary_image`` to skip base64 framing for
+       streaming use cases.
    * - ``get_draw_context()``
      - Return a 2D canvas drawing context for overlay drawing.
    * - ``update()``
@@ -255,17 +263,50 @@ TreeView
 --------
 
 Hierarchical tree/table with columns, sorting, icons, and multi-selection.
+Tree data is stored as a hierarchy of dicts keyed by stable string
+identifiers; paths are arrays of those keys, so a path stays valid no
+matter how the visible tree is sorted.
 
-**Constructor:** ``new Widgets.TreeView({columns, show_header, selection_mode, alternate_row_colors, show_grid, show_row_numbers})``
+**Constructor:** ``new Widgets.TreeView({columns, show_header,
+selection_mode, alternate_row_colors, show_grid, show_row_numbers,
+sortable, allow_text_selection})``
 
-**Options:**
+**Column descriptors:** each column is a string (label only) or an
+object with the following keys:
 
-- ``columns`` -- array of column definitions
-- ``show_header`` -- show column headers
-- ``selection_mode`` -- ``"single"``, ``"multiple"``, or ``"none"``
-- ``alternate_row_colors`` -- zebra striping
-- ``show_grid`` -- show grid lines
-- ``show_row_numbers`` -- show row numbers
+- ``label`` -- header text.
+- ``key`` -- stable string identifier for the column.  All
+  per-column methods take a key.  Auto-generated if omitted
+  (``_col0``, ``_col1``, ...).
+- ``type`` -- one of ``"string"`` (alias ``"str"``), ``"integer"``
+  (alias ``"int"``), ``"float"`` (alias ``"number"``), ``"boolean"``
+  (renders ✓ when truthy), or ``"icon"`` (cell value is a URL or
+  ``data:`` URL used as the image source).
+- ``halign`` -- ``"left"`` / ``"center"`` / ``"right"``.  Default
+  depends on type: numeric → right, boolean / icon → center,
+  otherwise left.
+- ``editable`` -- whether cells in the column can be edited via
+  double-click.
+- ``icon_size`` -- pixel size for icon columns (default 16).
+
+**Tree shape (set_tree):**
+
+The tree is a JS object keyed by stable string identifiers.  Each
+sub-object is detected as either:
+
+- a **leaf** -- all values primitive; the dict IS the row's
+  column-key → value mapping;
+- an **interior** -- any value is a nested object; the entries
+  become children, keyed by their dict key.  Primitive entries in
+  the same dict are taken as the interior's own column values;
+- an **interior with explicit values** -- when ambiguity could
+  arise, an ``__values__`` sentinel can hold the interior's column
+  values explicitly;
+- an **empty interior** -- ``{}`` (a folder with no contents).
+
+The first column auto-displays the node's dict key when the row
+supplies no value for it, so most interiors need no
+``__values__`` at all.
 
 **Methods:**
 
@@ -277,100 +318,149 @@ Hierarchical tree/table with columns, sorting, icons, and multi-selection.
      - Description
    * - ``set_columns(columns)``
      - Set column definitions.
-   * - ``set_tree(data)``
-     - Set hierarchical tree data.
+   * - ``set_tree(tree)``
+     - Replace the tree with a dict-shaped hierarchy.  Selection is
+       cleared.
+   * - ``add_tree(tree, parent=null)``
+     - Merge a dict-tree under the given parent path.  Existing
+       same-key children are replaced subtree-deep.  Selections
+       whose paths still resolve survive; vanished paths are
+       dropped.
+   * - ``update_tree(tree)``
+     - Replace the tree but preserve selections by path.
    * - ``set_data(data)``
-     - Set flat data.
-   * - ``add_item(parent, values)``
-     - Add an item under *parent*.
-   * - ``remove_item(node)``
-     - Remove an item.
-   * - ``update_tree(items)``
-     - Batch update items.
-   * - ``remove_items(paths)``
-     - Batch remove by paths.
+     - Flat-table data.  Each row is a dict (preferred) or an
+       array; arrays are mapped to column keys in order.  Synthetic
+       row keys (``row0``, ``row1``, ...) are generated internally.
+   * - ``add_item(parent, key, values)``
+     - Add a single child under a parent path.
+   * - ``remove_item(path)`` / ``remove_items(paths)``
+     - Remove by path (array of keys) or in batch.
    * - ``clear()``
-     - Remove all items.
+     - Remove all rows (preserves columns).
    * - ``expand_all()`` / ``collapse_all()``
      - Expand or collapse the entire tree.
-   * - ``get_selected()`` / ``set_selected(items)``
-     - Get or set selection.
-   * - ``select_path(path, state)``
-     - Select/deselect by path.
-   * - ``sort_by_column(col_index, ascending)``
-     - Sort by column.
+   * - ``expand_item(path)`` / ``collapse_item(path)``
+     - Expand or collapse a single node by key path.
+   * - ``get_selected()`` / ``set_selected(paths)``
+     - Get or set selection.  ``set_selected`` accepts a single
+       path or an array of paths.
+   * - ``clear_selection()``
+     - Drop all selection.  Fires the ``selected`` callback with
+       an empty list.
+   * - ``select_path(path, state)`` / ``select_paths(paths, state)``
+     - Select or deselect by key path(s).
+   * - ``select_all(state)``
+     - Select or deselect all nodes.
+   * - ``get_subtree(status='all')``
+     - Return a dict-tree containing a subset.  ``status`` is
+       ``"all"``, ``"selected"``, ``"expanded"``, or ``"collapsed"``.
+       Each match brings its descendants along; ancestors are
+       included so the result is a connected tree.
+       Round-trippable through ``set_tree``.
+   * - ``sort_by_column(col_key, ascending)``
+     - Sort by column key.  The underlying tree retains insertion
+       order; only the displayed view is sorted.
    * - ``scroll_to_path(path)`` / ``scroll_to_end()``
      - Scroll to a row.
-   * - ``set_cell(row, col_index, value)``
+   * - ``set_cell(path, col_key, value)``
      - Update a single cell.
-   * - ``insert_row(index, values)`` / ``append_row(values)`` / ``delete_row(index)``
+   * - ``insert_row(values, key=null, before=null)``
+     - Top-level row insert with optional explicit key and
+       optional sibling-key for placement.
+   * - ``append_row(values)`` / ``delete_row(path_or_key)``
      - Row manipulation.
-   * - ``insert_column(index, column)`` / ``append_column(column)`` / ``delete_column(index)``
-     - Column manipulation.
-   * - ``set_column_width(col_index, width)``
+   * - ``insert_column(column, before=null)`` / ``append_column(column)`` / ``delete_column(col_key)``
+     - Column manipulation.  ``before`` is a column key.
+   * - ``set_column_width(col_key, width)``
      - Set column width.
    * - ``set_optimal_column_widths()``
      - Auto-size all columns.
-   * - ``set_show_grid(tf)`` / ``set_show_row_numbers(tf)``
-     - Toggle grid/row numbers.
-   * - ``set_column_editable(col_index, tf)``
+   * - ``set_show_grid(tf)`` / ``set_show_row_numbers(tf)`` / ``set_sortable(tf)``
+     - Toggle grid lines, row numbers, and click-to-sort.
+   * - ``set_column_editable(col_key, tf)``
      - Make a column editable.
+
+**Auto-spanning:** within a row, a column whose key is missing is
+"absent" and the preceding present cell extends across it via CSS
+grid spans.  Explicit empty strings render as their own (empty)
+cell.  This lets parent rows be terse: ``{NAME: "Documents"}``
+(with the rest of the columns omitted) renders as a single cell
+across the row.
 
 **Callbacks:**
 
-- ``activated`` -- row double-clicked or Enter pressed.
-- ``selected`` -- selection changed.
-- ``expanded`` / ``collapsed`` -- tree node expanded or collapsed.
-- ``cell_edited`` -- a cell value was edited.
+- ``activated`` -- handler signature ``(widget, values, path)``;
+  fires on row double-click or Enter.
+- ``selected`` -- selection changed; handler receives an array of
+  ``{path, values}`` objects.
+- ``expanded`` / ``collapsed`` -- handler ``(widget, values, path)``.
+- ``cell_edited`` -- ``(widget, path, col_key, oldValue, newValue)``.
+- ``sorted`` -- ``(widget, col_key, ascending)``.
+- ``scrolled`` -- ``(widget, h_pct, v_pct)``.
+
+.. code-block:: javascript
+
+   let tree = new Widgets.TreeView({
+       columns: [
+           {label: "Name", key: "NAME", type: "string"},
+           {label: "Type", key: "TYPE", type: "string"},
+           {label: "Size", key: "SIZE", type: "integer"},
+       ],
+       sortable: true,
+   });
+   tree.set_tree({
+       "Documents": {
+           "report.pdf": {TYPE: "PDF",  SIZE: 2400},
+           "notes.txt":  {TYPE: "Text", SIZE: 12},
+       },
+       "Pictures": {
+           "__values__": {TYPE: "Folder"},
+           "photo.jpg":  {TYPE: "JPEG", SIZE: 3200},
+       },
+   });
+   tree.add_callback('activated',
+       (w, values, path) => console.log("opened", path, values));
 
 .. _widget-tableview:
 
 TableView
 ---------
 
-Flat table (no hierarchy) with columns, sorting, and multi-selection.
-Shares the same column/row API as TreeView but without tree-specific
-methods.
+Flat table (no hierarchy).  Subclass of TreeView with table-style
+defaults (header on, grid lines on).  Shares the full TreeView API
+including key-based per-column / per-row methods, sortable toggling,
+and the same column descriptors.
 
-**Constructor:** ``new Widgets.TableView({columns, show_header, selection_mode, alternate_row_colors, show_grid, show_row_numbers})``
+**Constructor:** ``new Widgets.TableView({columns, show_header,
+selection_mode, alternate_row_colors, show_grid, show_row_numbers,
+sortable, allow_text_selection})``
 
-**Options:** Same as TreeView.
+``set_data`` (or its alias ``set_rows``) accepts either a list of
+dicts (preferred) or a list of positional arrays:
 
-**Methods:**
+.. code-block:: javascript
 
-.. list-table::
-   :header-rows: 1
-   :widths: 45 55
-
-   * - Method
-     - Description
-   * - ``set_columns(columns)``
-     - Set column definitions.
-   * - ``set_rows(rows)``
-     - Set row data.
-   * - ``set_data(data)``
-     - Set data.
-   * - ``clear()``
-     - Remove all rows.
-   * - ``get_selected()`` / ``set_selected(items)``
-     - Get or set selection.
-   * - ``sort_by_column(col_index, ascending)``
-     - Sort by column.
-   * - ``set_cell(row, col_index, value)``
-     - Update a single cell.
-   * - ``insert_row(index, values)`` / ``append_row(values)`` / ``delete_row(index)``
-     - Row manipulation.
-   * - ``insert_column(index, column)`` / ``append_column(column)`` / ``delete_column(index)``
-     - Column manipulation.
-   * - ``set_column_width(col_index, width)``
-     - Set column width.
-   * - ``set_optimal_column_widths()``
-     - Auto-size all columns.
-   * - ``set_column_editable(col_index, tf)``
-     - Make a column editable.
+   let table = new Widgets.TableView({
+       columns: [
+           {label: "Name",       key: "NAME",   type: "string"},
+           {label: "Department", key: "DEPT",   type: "string"},
+           {label: "Salary",     key: "SALARY", type: "integer"},
+       ],
+       sortable: true,
+   });
+   table.set_data([
+       {NAME: "Alice", DEPT: "Engineering", SALARY: 95000},
+       {NAME: "Bob",   DEPT: "Marketing",   SALARY: 72000},
+   ]);
+   table.append_row({NAME: "Carol", DEPT: "Sales", SALARY: 71000});
+   table.sort_by_column("SALARY", false);  // descending
 
 **Callbacks:**
 
-- ``activated`` -- row double-clicked or Enter pressed.
-- ``selected`` -- selection changed.
-- ``cell_edited`` -- a cell value was edited.
+- ``activated`` -- ``(widget, values, path)``; fires on row
+  double-click or Enter.
+- ``selected`` -- ``(widget, items)`` where each item is
+  ``{path, values}``.
+- ``cell_edited`` -- ``(widget, path, col_key, oldValue, newValue)``.
+- ``sorted``, ``scrolled`` -- as for TreeView.

@@ -108,7 +108,10 @@ A single action item inside a Menu.
 
 **Callbacks:**
 
-- ``activated`` -- fired when the action is clicked.
+- ``activated`` -- fired when the action is clicked.  Handler
+  signature is ``handler(widget)`` for non-checkable actions and
+  ``handler(widget, checked)`` for checkable ones (the boolean is
+  the new checked state).
 
 .. _widget-toolbar:
 

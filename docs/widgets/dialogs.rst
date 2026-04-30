@@ -81,11 +81,18 @@ Color picker dialog with SV plane, hue strip, and RGB/HSV/hex inputs.
      - Return selected color as hex string.
    * - ``set_color(hex_string)``
      - Set the current color.
+   * - ``popup(x, y)``
+     - Show the dialog (optionally at a specific position).
+       Inherited from Dialog.
+   * - ``set_position(x, y)`` / ``set_modal(tf)``
+     - Inherited from Dialog.
 
 **Callbacks:**
 
-- ``activated`` -- fired when OK/Cancel is pressed.
-- ``pick`` -- fired when the color changes interactively.
+- ``activated`` -- fires with the chosen colour when OK is clicked.
+- ``pick`` -- fires interactively as the user drags inside the
+  picker.
+- ``move`` / ``close`` -- inherited from Dialog.
 
 .. code-block:: javascript
 

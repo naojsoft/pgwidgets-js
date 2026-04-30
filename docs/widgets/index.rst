@@ -49,6 +49,11 @@ All visual widgets support these methods from the ``Widget`` base class:
      - Set internal padding
    * - ``set_focus()``
      - Give keyboard focus to this widget
+   * - ``set_allow_text_selection(tf)``
+     - Allow or disallow browser text-select (drag-to-highlight)
+       inside this widget.  Off by default for most widgets.
+       Form controls (``TextEntry``, ``TextArea``, etc.) and the
+       ``treeview`` cell editor always allow selection regardless.
    * - ``add_cursor(name, url, hotspot_x, hotspot_y, size)``
      - Register a custom cursor
    * - ``set_cursor(name)``
