@@ -269,7 +269,7 @@ WIDGETS = {
     "MDISubWindow": {
         "base": "widget",
         "args": [],
-        "options": [],
+        "options": ["shadeable"],
         "methods": {
             "set_position": ["x", "y"],
             "move": ["x", "y"],
@@ -279,6 +279,7 @@ WIDGETS = {
             "lower": [],
             "toggle_minimize": [],
             "toggle_maximize": [],
+            "toggle_shade": [],
             "close": [],
             "get_child": [],
         },
@@ -290,16 +291,23 @@ WIDGETS = {
     "TopLevel": {
         "base": "widget",
         "args": [],
-        "options": ["resizable", "title", "moveable", "closeable"],
+        "options": ["resizable", "title", "icon", "moveable", "closeable",
+                    "minimizable", "maximizable", "lowerable", "shadeable"],
         "methods": {
             "set_position": ["x", "y"],
             "set_widget": ["child"],
             "set_title": ["title"],
+            "set_icon": ["url"],
             "set_moveable": ["tf"],
             "raise_": [],
             "lower": [],
+            "toggle_minimize": [],
+            "toggle_maximize": [],
+            "toggle_shade": [],
+            "set_window_state": ["state"],
+            "get_window_state": [],
         },
-        "callbacks": ["move", "close"],
+        "callbacks": ["move", "close", "window-state"],
     },
 
     "Page": {

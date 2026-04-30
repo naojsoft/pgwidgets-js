@@ -2,6 +2,7 @@
 
 import {ContainerWidget} from "./Widget.js";
 import {ScrollBar} from "./ScrollBar.js";
+import {showWindowMenu} from "./WindowMenu.js";
 
 const default_icon_url = new URL("../icons/pgicon.svg", import.meta.url).href;
 
@@ -21,13 +22,17 @@ class MDISubWindow extends ContainerWidget {
      * @param {number} width - Initial width in pixels.
      * @param {number} height - Initial height in pixels.
      * @param {string} icon_url - URL of the title bar icon.
+     * @param {Object} [opts] - Optional flags.
+     * @param {boolean} [opts.shadeable=false] - If true, the right-click
+     *   context menu offers Shade/Unshade (collapse to title bar in place).
      */
-    constructor(mdi_widget, child, title, width, height, icon_url) {
+    constructor(mdi_widget, child, title, width, height, icon_url,
+                opts={}) {
         super();
         // the MDI window we belong to
         this.mdi_widget = mdi_widget
         //this.mdi_widget = null;
-        
+
         // JavaScript hack to bind "this" correctly for our methods
         this.update_state = this.update_state.bind(this);
         this.get_state = this.get_state.bind(this);
@@ -36,12 +41,18 @@ class MDISubWindow extends ContainerWidget {
         this.makeResizable = this.makeResizable.bind(this);
         this.toggle_minimize = this.toggle_minimize.bind(this);
         this.toggle_maximize = this.toggle_maximize.bind(this);
+        this.toggle_shade = this.toggle_shade.bind(this);
         this.raise_ = this.raise_.bind(this);
         this.lower_ = this.lower.bind(this);
         this.signal_close = this.signal_close.bind(this);
         this.close = this.close.bind(this);
         this.set_title = this.set_title.bind(this);
         this.move = this.move.bind(this);
+
+        // shadeable defaults to true; pass shadeable: false to disable.
+        this._shadeable = (opts && opts.shadeable !== undefined)
+            ? !!opts.shadeable : true;
+        this._savedHeight = null;  // set when shaded
 
         this.enable_callback('move');
 
@@ -138,6 +149,31 @@ class MDISubWindow extends ContainerWidget {
         // title bar is clicked
         this.titleBar.addEventListener('mousedown', () => this.raise_());
 
+        // Right-press on the title bar opens the context menu.  Use
+        // mousedown so press-drag-release behaves like the menubar.
+        this.titleBar.addEventListener('mousedown', (e) => {
+            if (e.button !== 2) return;
+            e.preventDefault();
+            e.stopPropagation();
+            this._showContextMenu(e.clientX, e.clientY, e);
+        });
+        // Suppress the browser's native context menu (which would
+        // otherwise pop on the matching mouseup).
+        this.titleBar.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+
+        // Double-click to shade/unshade.  Skip if shadeable is off, or
+        // if the click landed on one of the title bar buttons.
+        this.titleBar.addEventListener('dblclick', (e) => {
+            if (e.button !== 0) return;
+            if (!this._shadeable) return;
+            if (e.target.closest('.mdi-button')) return;
+            e.preventDefault();
+            e.stopPropagation();
+            this.toggle_shade();
+        });
+
         this.update_state(this.get_state());
     }
 
@@ -224,6 +260,7 @@ class MDISubWindow extends ContainerWidget {
         let rec = this.get_state();
 
         handle.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return;  // left button only
             e.preventDefault();
             let wsRect = this.mdi_widget.workspace.getBoundingClientRect();
             baseX = Math.floor(wsRect.left);
@@ -341,6 +378,7 @@ class MDISubWindow extends ContainerWidget {
         };
 
         grip.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return;  // left button only
             e.preventDefault();
             e.stopPropagation();
             startX = e.clientX;
@@ -427,9 +465,10 @@ class MDISubWindow extends ContainerWidget {
             }
         }
 
+        this.mdi_widget._refreshActiveSubWindow();
         this.mdi_widget.make_callback('page-switch', this.get_child());
     }
-    
+
     /** Lowers the sub-window to the bottom of the z-order. */
     lower() {
         this.element.style.zIndex = 1;
@@ -442,10 +481,69 @@ class MDISubWindow extends ContainerWidget {
             }
         }
 
+        this.mdi_widget._refreshActiveSubWindow();
         // TODO: some child should get the page-switch callback
         //this.mdi_widget.make_callback('page-switch', ??);
     }
     
+    /**
+     * Toggle "shaded" (rolled-up) state: collapse to just the title bar
+     * in place, preserving the current x/y/width.  Different from
+     * minimize, which auto-stacks at the bottom of the workspace.
+     */
+    toggle_shade() {
+        if (this.element.classList.contains('mdi-shaded')) {
+            this.element.classList.remove('mdi-shaded');
+            if (this._savedHeight != null) {
+                this.element.style.height = this._savedHeight;
+                this._savedHeight = null;
+            }
+        } else {
+            // Save current height so we can restore.
+            this._savedHeight = this.element.style.height
+                || (this.element.offsetHeight + 'px');
+            this.element.classList.add('mdi-shaded');
+            this.element.style.height = 'auto';
+        }
+        this.raise_();
+    }
+
+    /** @private Build and show the right-click context menu.
+     *  @param x mouse clientX
+     *  @param y mouse clientY
+     *  @param openEvent the originating mousedown event (for press-drag
+     *    mode), or undefined for click-release callers.
+     */
+    _showContextMenu(x, y, openEvent) {
+        // Lazy-import to avoid pulling WindowMenu into modules that
+        // don't use it.  showWindowMenu lives at top-level scope of
+        // this module file via the import below.
+        let items = [];
+        items.push({label: 'Raise', action: () => this.raise_()});
+        items.push({label: 'Lower', action: () => this.lower()});
+        items.push(null);
+        if (this._shadeable) {
+            items.push({
+                label: this.element.classList.contains('mdi-shaded')
+                    ? 'Unshade' : 'Shade',
+                action: () => this.toggle_shade(),
+            });
+        }
+        const rec = this.get_state();
+        items.push({
+            label: rec.state === 'minimized' ? 'Unminimize' : 'Minimize',
+            action: () => this.toggle_minimize(),
+        });
+        items.push({
+            label: rec.state === 'maximized' ? 'Unmaximize' : 'Maximize',
+            action: () => this.toggle_maximize(),
+        });
+        items.push(null);
+        items.push({label: 'Close', action: () => this.signal_close()});
+        showWindowMenu(x, y, items, {armed: !!openEvent,
+                                     openEvent: openEvent});
+    }
+
     /** Fires the 'page-close' callback and closes this sub-window. */
     signal_close() {
         this.mdi_widget.make_callback('page-close', this.get_child());
@@ -598,8 +696,11 @@ class MDIWidget extends ContainerWidget {
         const icon_url = this.get_option(options, 'icon_url', default_icon_url);
         const x = this.get_option(options, 'x', null);
         const y = this.get_option(options, 'y', null);
+        // shadeable defaults to true; pass shadeable: false to disable.
+        const shadeable = this.get_option(options, 'shadeable', true);
 
-        const subwin = new MDISubWindow(this, child, title, width, height, icon_url);
+        const subwin = new MDISubWindow(this, child, title, width, height,
+                                        icon_url, {shadeable: shadeable});
         this.children.push(subwin);
         this.workspace.appendChild(subwin.get_element());
 
@@ -936,6 +1037,25 @@ class MDIWidget extends ContainerWidget {
     }
 
     /**
+     * Tag the topmost (active) sub-window with the `mdi-active` class
+     * so its title bar can be styled distinctly, and clear it on the
+     * others.  Called from raise_/lower (on MDISubWindow) and after
+     * adding/removing children.
+     * @private
+     */
+    _refreshActiveSubWindow() {
+        let activeIdx = this.get_index();
+        for (let i = 0; i < this.children.length; i++) {
+            let el = this.children[i].get_element();
+            if (i === activeIdx) {
+                el.classList.add('mdi-active');
+            } else {
+                el.classList.remove('mdi-active');
+            }
+        }
+    }
+
+    /**
      * Raises the sub-window at the given index to the top (makes it active).
      * @param {number} index - 0-based index into the children list.
      */
@@ -999,6 +1119,7 @@ class MDIWidget extends ContainerWidget {
         if (idx > -1) {
             this.children.splice(idx, 1);
         }
+        this._refreshActiveSubWindow();
         return idx;
     }
 

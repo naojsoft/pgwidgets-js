@@ -1,0 +1,43 @@
+/*
+ * Right-click context menu shown over title bars of TopLevel and
+ * MDISubWindow.  Built by modules/WindowMenu.js.
+ */
+.window-context-menu {
+    background: #fff;
+    border: 1px solid #888;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    border-radius: 3px;
+    padding: 2px 0;
+    font-family: sans-serif;
+    font-size: 13px;
+    min-width: 120px;
+    user-select: none;
+}
+
+.window-context-item {
+    padding: 4px 16px;
+    cursor: pointer;
+    white-space: nowrap;
+    color: #222;
+}
+
+.window-context-item:hover {
+    background: #e8e8e8;
+}
+
+.window-context-separator {
+    height: 1px;
+    background: #ccc;
+    margin: 2px 0;
+}
+
+/* When a TopLevel or MDISubWindow is shaded, hide its content body
+   so only the title bar remains visible.  The toplevel-grip elements
+   stay hidden via the same mechanism. */
+.toplevel-widget.toplevel-shaded > *:not(.toplevel-title-bar) {
+    display: none !important;
+}
+
+.mdi-window.mdi-shaded > .mdi-child-container {
+    display: none !important;
+}

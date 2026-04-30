@@ -22,15 +22,34 @@
     align-items: center;
     flex-shrink: 0;
     user-select: none;
+    /* Anchor for the absolutely-positioned, centered title text. */
+    position: relative;
+}
+
+.toplevel-title-icon {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    margin-left: 4px;
+    margin-right: 2px;
+    flex-shrink: 0;
 }
 
 .toplevel-title-text {
-    margin-left: 16px;
+    /* Centered in the title bar regardless of icon / button widths. */
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
     font-family: sans-serif;
     font-size: 0.9em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    /* Stay clear of side elements when the title is long. */
+    max-width: 60%;
+    /* Don't intercept clicks: the title bar handles drag/dblclick/etc. */
+    pointer-events: none;
 }
 
 /* Corner resize grips */

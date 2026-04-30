@@ -81,6 +81,12 @@
     font-family: sans-serif;
 }
 
+/* Highlight the active (topmost) sub-window's title bar so the
+   focused window is visually distinct, like an active tab. */
+.mdi-window.mdi-active > .mdi-title-bar {
+    background-color: #d8d8d8;
+}
+
 .mdi-title-bar img {
     object-fit: contain;
     margin-left: 16px;
