@@ -34,6 +34,7 @@ WIDGET_METHODS = {
     "get_enabled": [],
     "set_tooltip": ["msg"],
     "get_tooltip": [],
+    "set_allow_text_selection": ["tf"],
     "show": [],
     "hide": [],
     "is_visible": [],
@@ -345,8 +346,13 @@ WIDGETS = {
         "methods": {
             "get_color": [],
             "set_color": ["hex_string"],
+            # Inherited from Dialog on the JS side; redeclare so the
+            # Python wrapper exposes them.
+            "popup": ["x", "y"],
+            "set_position": ["x", "y"],
+            "set_modal": ["tf"],
         },
-        "callbacks": ["activated", "pick"],
+        "callbacks": ["activated", "pick", "move", "close"],
     },
 
     # -- Buttons --
@@ -643,7 +649,7 @@ WIDGETS = {
         "args": [],
         "options": ["columns", "show_header", "selection_mode",
                     "alternate_row_colors", "show_grid", "show_row_numbers",
-                    "sortable"],
+                    "sortable", "allow_text_selection"],
         "methods": {
             "set_columns": ["columns"],
             "set_tree": ["tree"],
@@ -663,6 +669,7 @@ WIDGETS = {
             "get_selected": [],
             "get_subtree": ["status"],
             "set_selected": ["paths"],
+            "clear_selection": [],
             "select_path": ["path", "state"],
             "select_paths": ["paths", "state"],
             "select_all": ["state"],
@@ -696,7 +703,7 @@ WIDGETS = {
         "args": [],
         "options": ["columns", "show_header", "selection_mode",
                     "alternate_row_colors", "show_grid", "show_row_numbers",
-                    "sortable"],
+                    "sortable", "allow_text_selection"],
         "methods": {
             "set_columns": ["columns"],
             "set_rows": ["rows"],

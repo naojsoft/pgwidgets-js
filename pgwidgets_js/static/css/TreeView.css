@@ -13,6 +13,9 @@
     border: 1px solid #ccc;
     background: #fff;
     outline: none;
+    /* user-select: none is provided by the .pgwidgets-widget rule
+       in Widget.css — opt in per-instance via the standard
+       allow_text_selection option / set_allow_text_selection method. */
 }
 
 /* ── Header ─────────────────────────────────────────── */

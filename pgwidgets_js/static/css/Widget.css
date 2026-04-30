@@ -2,3 +2,25 @@
     opacity: 0.5;
     pointer-events: none;
 }
+
+/* All widgets default to no browser text selection.  Drag-to-highlight
+   inside a button label or row would interfere with click/drag, range
+   select, etc.  Override per-instance with `pgwidgets-text-select` on
+   the widget element (via the set_allow_text_selection() method or
+   the allow_text_selection constructor option). */
+.pgwidgets-widget {
+    user-select: none;
+}
+
+.pgwidgets-widget.pgwidgets-text-select,
+.pgwidgets-widget.pgwidgets-text-select * {
+    user-select: text;
+}
+
+/* Form controls (text inputs, textareas, contenteditable) always
+   allow selection regardless of any wrapping widget's setting. */
+.pgwidgets-widget input,
+.pgwidgets-widget textarea,
+.pgwidgets-widget [contenteditable="true"] {
+    user-select: text;
+}

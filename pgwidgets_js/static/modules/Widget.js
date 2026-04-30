@@ -33,6 +33,7 @@ class Widget extends Callback {
         this.get_tooltip = this.get_tooltip.bind(this);
         this.show = this.show.bind(this);
         this.hide = this.hide.bind(this);
+        this.set_allow_text_selection = this.set_allow_text_selection.bind(this);
 
         this._cursors = {};        // name -> CSS cursor value
         this._currentCursor = null; // name of active custom cursor, or null
@@ -46,7 +47,34 @@ class Widget extends Callback {
         // 'resize' callback whenever the widget changes size. The
         // subclass constructor sets this.element AFTER super() returns,
         // so defer to a microtask so it's available.
-        queueMicrotask(() => this._installResizeObserver());
+        queueMicrotask(() => {
+            // Tag every widget element with a common class so the
+            // user-select: none default in Widget.css applies.
+            // Subclasses set this.element in their own constructor.
+            if (this.element) {
+                this.element.classList.add('pgwidgets-widget');
+            }
+            this._installResizeObserver();
+        });
+    }
+
+    /**
+     * Allow or disallow browser text selection (drag-to-highlight)
+     * inside this widget.  Off by default for all widgets; widgets
+     * that exist to display text (TextEntry, TextArea, TextSource,
+     * TextEntrySet) opt in via the same class so the user can copy
+     * their content.  Form controls (input/textarea) ignore this and
+     * always allow selection.
+     *
+     * @param {boolean} tf
+     */
+    set_allow_text_selection(tf) {
+        if (!this.element) return;
+        if (tf) {
+            this.element.classList.add('pgwidgets-text-select');
+        } else {
+            this.element.classList.remove('pgwidgets-text-select');
+        }
     }
 
     /** @private */
