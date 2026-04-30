@@ -83,12 +83,17 @@ class MenuAction extends Widget {
      * Activates this menu action: toggles check state if checkable,
      * fires the 'activated' callback, and dispatches a bubbling
      * 'menuaction-select' event so parent menus can close.
+     *
+     * Callback signature: handler(widget) for non-checkable actions,
+     * handler(widget, checked) for checkable ones.
      */
     _activate() {
         if (this.checkable) {
             this.set_checked(!this.checked);
+            this.make_callback('activated', this.checked);
+        } else {
+            this.make_callback('activated');
         }
-        this.make_callback('activated', this.get_text(), this.checked);
         this.element.dispatchEvent(
             new CustomEvent('menuaction-select', { bubbles: true }));
     }
