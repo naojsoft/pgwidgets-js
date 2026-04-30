@@ -100,13 +100,22 @@ class Button extends Widget {
     }
 
     /**
-     * Sets the background and/or foreground color.
-     * @param {string|null} [bg=null] - Background CSS color, or null to leave unchanged.
-     * @param {string|null} [fg=null] - Foreground (text) CSS color, or null to leave unchanged.
+     * Sets the background and/or foreground color.  Setting bg uses
+     * the `background` shorthand, which clears the default sculpted
+     * gradient (and overrides the :hover/:active gradients).  Pass
+     * an empty string to revert to the default look.
+     *
+     * @param {string|null} [bg=null] - Background CSS color, null to
+     *   leave unchanged, or "" to revert to the CSS default gradient.
+     * @param {string|null} [fg=null] - Foreground (text) CSS color,
+     *   null to leave unchanged.
      */
     set_color(bg=null, fg=null) {
         if (bg !== null) {
-            this.element.style.backgroundColor = bg;
+            // Use the shorthand so the inline rule blanks out
+            // background-image (the gradient) and overrides :hover/
+            // :active gradient rules from CSS.
+            this.element.style.background = bg;
         }
         if (fg !== null) {
             this.element.style.color = fg;
