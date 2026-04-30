@@ -20,6 +20,7 @@ JS_INFRASTRUCTURE = {
     "TextWidget",   # internal base for text widgets
     "RemoteInterface",
     "ComboBoxNative",
+    "WindowMenu",   # right-click context menu helper for title bars
 }
 
 # Widgets in defs.py whose JS is provided by a shared module file
@@ -121,11 +122,16 @@ def _widgets_js_imports():
 
 
 def test_all_js_modules_imported_in_widgets_js():
-    """Every .js module file should be imported by Widgets.js."""
+    """Every public widget .js module file should be imported by
+    Widgets.js.  Helper / infrastructure modules (used internally by
+    other widget modules but not exposed at the Widgets.* level) are
+    exempt — they're listed in JS_INFRASTRUCTURE."""
     js_names = _js_module_names()
     imported = _widgets_js_imports()
     for name in js_names:
         if name.endswith("~"):
+            continue
+        if name in JS_INFRASTRUCTURE:
             continue
         assert name in imported, (
             f"modules/{name}.js exists but is not imported "
