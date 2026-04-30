@@ -44,6 +44,10 @@ class TreeView extends Widget {
      * @param {boolean} [options.sortable=false]
      * @param {boolean} [options.show_grid=false]
      * @param {boolean} [options.show_row_numbers=false]
+     * @param {boolean} [options.allow_text_selection=false] - When
+     *   false (default), drag-to-highlight text inside cells is
+     *   disabled.  Set to true to allow normal browser text
+     *   selection (useful when users need to copy cell text).
      * @param {HTMLElement} [options.element=null]
      */
     constructor(options = {}) {
@@ -65,6 +69,13 @@ class TreeView extends Widget {
         }
         this._showRowNumbers = this.get_option(options, 'show_row_numbers', false);
         this._sortable = this.get_option(options, 'sortable', false);
+        // Text selection (drag-to-highlight inside cells) is off by
+        // default for all widgets via the Widget base class.  Opt in
+        // via the standard set_allow_text_selection() method, or pass
+        // allow_text_selection: true at construction.
+        if (this.get_option(options, 'allow_text_selection', false)) {
+            this.set_allow_text_selection(true);
+        }
 
         this._colWidths = this._columns.map(() => '1fr');
 
@@ -164,7 +175,8 @@ class TreeView extends Widget {
             'expand_all', 'collapse_all', 'get_expanded', 'get_collapsed',
             'expand_item', 'collapse_item',
             'get_selected', 'get_subtree',
-            'set_selected', 'select_path', 'select_paths', 'select_all',
+            'set_selected', 'clear_selection',
+            'select_path', 'select_paths', 'select_all',
             'set_column_width', 'set_optimal_column_widths',
             'sort_by_column', 'scroll_to_path', 'scroll_to_end',
             'set_scroll_position', 'get_scroll_position',
@@ -771,6 +783,16 @@ class TreeView extends Widget {
                                  childrenOnly);
         }
         return childrenOnly;
+    }
+
+    /**
+     * Clear all selection.  Fires the 'selected' callback with an
+     * empty list.
+     */
+    clear_selection() {
+        this._selection = [];
+        this._updateSelectionDisplay();
+        this.make_callback('selected', this.get_selected());
     }
 
     set_selected(paths) {
