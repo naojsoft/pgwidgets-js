@@ -1,6 +1,6 @@
 {
   "name": "pgwidgets",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A native JavaScript widget library with Qt/GTK-style layout and controls",
   "type": "module",
   "main": "Widgets.js",
@@ -9,7 +9,8 @@
     ".": "./Widgets.js",
     "./Widgets.css": "./Widgets.css",
     "./css/*": "./pgwidgets_js/static/css/*",
-    "./modules/*": "./pgwidgets_js/static/modules/*"
+    "./modules/*": "./pgwidgets_js/static/modules/*",
+    "./icons/*": "./pgwidgets_js/static/icons/*"
   },
   "files": [
     "Widgets.js",

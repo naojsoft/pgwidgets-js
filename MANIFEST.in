@@ -1,7 +1,9 @@
 include Widgets.js
 include Widgets.css
 include LICENSE.md
-recursive-include modules *.js
-recursive-include css *.css
-recursive-include icons *.svg
-recursive-include pgwidgets_js *.py *.html
+include README.md
+include package.json
+# All static assets live under pgwidgets_js/static/{modules,css,icons}.
+# Wheel inclusion is handled by [tool.setuptools.package-data] in
+# pyproject.toml; this rule is for the sdist (source tarball).
+recursive-include pgwidgets_js *.py *.html *.js *.css *.svg
