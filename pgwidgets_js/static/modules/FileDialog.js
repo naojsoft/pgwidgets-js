@@ -50,6 +50,14 @@ class FileDialog extends Callback {
     show() { this.open(); }
 
     /**
+     * Alias for open() with the same signature as Dialog.popup so
+     * calling code can treat all dialogs uniformly.  The x/y
+     * arguments are ignored — the browser's native file picker is
+     * positioned by the OS.
+     */
+    popup(x, y) { this.open(); }
+
+    /**
      * Open the native file picker (file/files mode).
      * Selected files are read as data URIs and delivered via the
      * `activated` callback.
