@@ -1,5 +1,6 @@
-[files]
-"../pgwidgets_js/__init__.py" = "/pgwidgets_js/__init__.py"
-"../pgwidgets_js/defs.py" = "/pgwidgets_js/defs.py"
-"../pgwidgets_js/pyodide/__init__.py" = "/pgwidgets_js/pyodide/__init__.py"
-"../pgwidgets_js/pyodide/widget.py" = "/pgwidgets_js/pyodide/widget.py"
+# PyScript configuration.
+#
+# Pull pgwidgets-js from PyPI via micropip instead of mapping the
+# repo's source files in.  Bumps the install once — afterwards
+# the wheel is cached by the browser.
+packages = ["pgwidgets-js>=0.2.0"]
