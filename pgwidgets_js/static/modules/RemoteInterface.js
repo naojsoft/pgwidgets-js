@@ -197,8 +197,11 @@ class RemoteInterface {
                          + " is not a function on " + widget.constructor.name);
             return;
         }
-        // Args are followed by the binary payload as the last argument.
-        let args = (header.args || []).concat([payload]);
+        // The binary payload is the FIRST argument, followed by any
+        // additional args from the JSON header.  Putting the binary
+        // first lets JS method signatures match their Python
+        // counterparts (data first, metadata after).
+        let args = [payload].concat(header.args || []);
         try {
             method.apply(widget, args);
         } catch (e) {

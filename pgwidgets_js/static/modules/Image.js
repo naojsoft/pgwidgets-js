@@ -110,12 +110,13 @@ class Image extends Widget {
     /**
      * Set the image from a raw ArrayBuffer received over a binary
      * WebSocket frame.  Used by the Python side's set_binary_image
-     * to avoid base64 framing.
+     * to avoid base64 framing.  Argument order matches the Python
+     * API: data first, format second.
      *
+     * @param {ArrayBuffer|Uint8Array|Blob} buffer - Raw image bytes.
      * @param {string} format - Image format ('jpeg', 'png', 'webp', 'gif').
-     * @param {ArrayBuffer} buffer - Raw image bytes.
      */
-    set_binary_image(format, buffer) {
+    set_binary_image(buffer, format) {
         let blob = new Blob([buffer], {type: 'image/' + format});
         let url = URL.createObjectURL(blob);
 

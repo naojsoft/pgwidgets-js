@@ -6,7 +6,8 @@ running in the same browser context.
 from pyodide.ffi import create_proxy, to_js
 from js import Object, Widgets
 
-from pgwidgets_js.defs import WIDGETS
+from pgwidgets_js.defs import (WIDGETS, WIDGET_METHODS, CONTAINER_METHODS,
+                                CALLBACK_METHODS)
 
 
 def _to_js_val(val):
@@ -169,13 +170,52 @@ def _make_method(method_name):
     return method
 
 
+# Pyodide-specific overrides for methods whose Python-friendly
+# signature differs from the underlying JS method, or that need
+# special argument conversion.  Maps (js_class, method_name)
+# -> python_function.  Currently empty: every method's args match
+# directly between Python and JS.
+CUSTOM_METHODS = {}
+
+
 def build_widget_class(js_class, defn):
     """Build a Widget subclass from a definition."""
     attrs = {}
 
-    # Add specific methods from the definition
+    # Pick the base-method set for this widget, mirroring how the
+    # sync pgwidgets-python side does it: container widgets get the
+    # full container API; callback-only widgets (Timer, FileDialog)
+    # get a smaller set; everything else gets the standard Widget
+    # API.  Without this, base methods like set_focus / set_tooltip
+    # / set_min_size / set_allow_text_selection are missing on
+    # subclasses.
+    base = defn.get("base")
+    if base == "container":
+        base_methods = CONTAINER_METHODS
+    elif base == "callback":
+        base_methods = CALLBACK_METHODS
+    else:
+        base_methods = WIDGET_METHODS
+
+    # Generate wrappers for every base method that isn't already
+    # explicitly defined on Widget.  Per-widget entries override.
+    for method_name in base_methods:
+        if method_name in attrs:
+            continue
+        # Skip names already defined as real methods on Widget.
+        if hasattr(Widget, method_name) and not method_name.startswith("_"):
+            continue
+        attrs[method_name] = _make_method(method_name)
+
+    # Add per-widget methods (override any base entries with same name).
     for method_name in defn.get("methods", {}):
         attrs[method_name] = _make_method(method_name)
+
+    # Apply pyodide-specific custom overrides last (e.g. methods whose
+    # Python signature differs from the underlying JS signature).
+    for (wc, mn), func in CUSTOM_METHODS.items():
+        if wc == js_class:
+            attrs[mn] = func
 
     # Custom __init__ that passes the class name
     def __init__(self, *args, **kwargs):
