@@ -698,8 +698,9 @@ class TreeView extends Widget {
      * Return a dict-tree (same shape as accepted by set_tree)
      * containing a subset of the tree.
      *
-     * @param {string} [status='all'] - 'all', 'selected', 'expanded',
-     *   or 'collapsed'.
+     * @param {string|Array<string>} [status='all'] - selector.
+     *
+     *   If a string: 'all', 'selected', 'expanded', or 'collapsed'.
      *
      *   'all' returns the whole tree.  Otherwise, the result
      *   includes every "matching" node plus all of its descendants,
@@ -713,6 +714,12 @@ class TreeView extends Widget {
      *   along; 'expanded' on a folder includes the entire subtree
      *   rooted at that folder.
      *
+     *   If an array: a key path.  The match is the single node at
+     *   that path; the result includes that node, all its
+     *   descendants down to leaf nodes, and the ancestors needed to
+     *   keep the result rooted at the tree root — same shape as the
+     *   string-status cases.  Throws if the path does not resolve.
+     *
      * @returns {Object} A dict-tree that can be round-tripped back
      *   through set_tree.
      */
@@ -720,7 +727,14 @@ class TreeView extends Widget {
         let included = null;
         if (status !== 'all') {
             let matches = new Set();
-            if (status === 'selected') {
+            if (Array.isArray(status)) {
+                let node = this._nodeAtPath(status);
+                if (!node) {
+                    throw new Error("get_subtree: path does not resolve: "
+                                    + JSON.stringify(status));
+                }
+                matches.add(node);
+            } else if (status === 'selected') {
                 for (let n of this._selection) matches.add(n);
             } else if (status === 'expanded') {
                 this._walkNodes(this._root, (n) => {
