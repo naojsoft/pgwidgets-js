@@ -347,28 +347,46 @@ class Widget extends Callback {
      *   pixels to resize the cursor image.
      */
     add_cursor(name, url, hotspot_x, hotspot_y, size = null) {
-        if (size) {
-            // Rasterize at the requested size via an offscreen canvas.
-            let img = new window.Image();
-            img.onload = () => {
-                let canvas = document.createElement('canvas');
-                canvas.width = size[0];
-                canvas.height = size[1];
-                let ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, size[0], size[1]);
-                let dataUrl = canvas.toDataURL('image/png');
-                this._cursors[name] =
-                    `url('${dataUrl}') ${hotspot_x} ${hotspot_y}, auto`;
-                // If this cursor is already active, apply the now-ready value.
-                if (this._currentCursor === name) {
-                    this.element.style.cursor = this._cursors[name];
-                }
-            };
-            img.src = url;
-        } else {
+        if (!size) {
+            // No raster step — register the cursor synchronously
+            // using the URL as-is.  Caller is responsible for
+            // ensuring the source image is at a sensible cursor
+            // size (browsers reject anything > 128px in most cases).
             this._cursors[name] =
                 `url('${url}') ${hotspot_x} ${hotspot_y}, auto`;
+            return;
         }
+        // size requested: register the name *now* (so set_cursor
+        // called in the same tick under Pyodide can record intent)
+        // but mark the value as pending.  The actual CSS value is
+        // filled in by the onload handler below, after rasterizing.
+        // This avoids applying the raw SVG URL — its intrinsic size
+        // may exceed the browser's cursor limit and trigger a CSS
+        // parse error before the rasterised version is ready.
+        this._cursors[name] = null;
+        let img = new window.Image();
+        img.onload = () => {
+            let canvas = document.createElement('canvas');
+            canvas.width = size[0];
+            canvas.height = size[1];
+            let ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, size[0], size[1]);
+            let dataUrl = canvas.toDataURL('image/png');
+            this._cursors[name] =
+                `url('${dataUrl}') ${hotspot_x} ${hotspot_y}, auto`;
+            // If this cursor was selected while pending, apply it now.
+            if (this._currentCursor === name) {
+                this.element.style.cursor = this._cursors[name];
+            }
+        };
+        img.onerror = () => {
+            console.warn("add_cursor: failed to load image for '"
+                         + name + "'");
+            // Drop the pending entry so set_cursor falls through to
+            // the CSS-keyword branch instead of waiting forever.
+            delete this._cursors[name];
+        };
+        img.src = url;
     }
 
     /**
@@ -384,8 +402,14 @@ class Widget extends Callback {
             this._currentCursor = null;
             this.element.style.cursor = '';
         } else if (name in this._cursors) {
+            // Record intent.  If the cursor is still rasterizing
+            // (value is null) it will be applied by add_cursor's
+            // onload handler when ready.
             this._currentCursor = name;
-            this.element.style.cursor = this._cursors[name];
+            const value = this._cursors[name];
+            if (value !== null) {
+                this.element.style.cursor = value;
+            }
         } else {
             // Assume it's a standard CSS cursor keyword.
             this._currentCursor = null;
