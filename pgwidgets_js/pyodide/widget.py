@@ -15,6 +15,13 @@ def _to_js_val(val):
     Widgets are unwrapped to their JS object, dicts/lists are deeply converted."""
     if isinstance(val, Widget):
         return val._js
+    if isinstance(val, (bytes, bytearray, memoryview)):
+        # Buffer-protocol types: convert to a real JS Uint8Array.
+        # Without this, the value crosses the boundary as a PyProxy,
+        # which breaks consumers like ``new Blob([buffer], …)`` in
+        # Image.set_binary_image — the proxy gets stringified instead
+        # of treated as bytes, producing a corrupt blob.
+        return to_js(val)
     if isinstance(val, dict):
         converted = {k: _to_js_val(v) for k, v in val.items()}
         return to_js(converted, dict_converter=Object.fromEntries)
@@ -161,10 +168,44 @@ class Widget:
         return f"<{self._js_class_name}>"
 
 
-def _make_method(method_name):
-    """Create a method that calls through to the JS widget."""
-    def method(self, *args):
-        return self._call(method_name, *args)
+def _make_method(method_name, param_names=()):
+    """Create a method that calls through to the JS widget.
+
+    Accepts either positional or keyword arguments — keyword args
+    are bound by name using *param_names* (from defs.py) and
+    appended in declared order.  This lets users write either
+    ``box.add_widget(w, stretch=1)`` or ``box.add_widget(w, 1)``.
+    """
+    pnames = tuple(param_names)
+
+    def method(self, *args, **kwargs):
+        if not kwargs:
+            return self._call(method_name, *args)
+        # Map kwargs to positional slots by name.  Unknown kwargs
+        # are an error (matches Python's normal call semantics).
+        if not pnames:
+            raise TypeError(
+                f"{method_name}() takes no keyword arguments "
+                f"(got {sorted(kwargs)!r})")
+        result = list(args)
+        used = set()
+        for i, pname in enumerate(pnames):
+            if i < len(args):
+                if pname in kwargs:
+                    raise TypeError(
+                        f"{method_name}() got multiple values for "
+                        f"argument {pname!r}")
+                continue
+            if pname in kwargs:
+                result.append(kwargs[pname])
+                used.add(pname)
+        leftover = set(kwargs) - used
+        if leftover:
+            raise TypeError(
+                f"{method_name}() got unexpected keyword "
+                f"argument(s) {sorted(leftover)!r}")
+        return self._call(method_name, *result)
+
     method.__name__ = method_name
     method.__qualname__ = f"Widget.{method_name}"
     return method
@@ -199,17 +240,17 @@ def build_widget_class(js_class, defn):
 
     # Generate wrappers for every base method that isn't already
     # explicitly defined on Widget.  Per-widget entries override.
-    for method_name in base_methods:
+    for method_name, param_names in base_methods.items():
         if method_name in attrs:
             continue
         # Skip names already defined as real methods on Widget.
         if hasattr(Widget, method_name) and not method_name.startswith("_"):
             continue
-        attrs[method_name] = _make_method(method_name)
+        attrs[method_name] = _make_method(method_name, param_names)
 
     # Add per-widget methods (override any base entries with same name).
-    for method_name in defn.get("methods", {}):
-        attrs[method_name] = _make_method(method_name)
+    for method_name, param_names in defn.get("methods", {}).items():
+        attrs[method_name] = _make_method(method_name, param_names)
 
     # Apply pyodide-specific custom overrides last (e.g. methods whose
     # Python signature differs from the underlying JS signature).
