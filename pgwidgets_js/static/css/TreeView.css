@@ -20,12 +20,25 @@
 
 /* ── Header ─────────────────────────────────────────── */
 
+/* Clipping wrapper: matches the visible widget width and hides any
+   header content that has been translated past its left edge by
+   horizontal scroll. */
+.treeview-header-clip {
+    flex-shrink: 0;
+    overflow: hidden;
+    width: 100%;
+}
+
+/* The header itself is allowed to grow to the natural width of its
+   columns so its grid template matches the body's. */
 .treeview-header {
     display: grid;
-    flex-shrink: 0;
+    width: max-content;
+    min-width: 100%;
     background: #f0f0f0;
     border-bottom: 1px solid #ccc;
     user-select: none;
+    will-change: transform;
 }
 
 .treeview-header-spacer {

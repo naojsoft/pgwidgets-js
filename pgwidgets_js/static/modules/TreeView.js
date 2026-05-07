@@ -105,12 +105,20 @@ class TreeView extends Widget {
         this._selection = [];
 
         // -- Header --
+        // The header lives inside a clipping wrapper so it can be
+        // wider than the visible widget (matching the body's
+        // max-content width) and translated horizontally to track
+        // body scroll.  Hide via the wrapper so the inner header's
+        // grid template is unaffected.
+        this._headerClip = document.createElement('div');
+        this._headerClip.className = 'treeview-header-clip';
         this._header = document.createElement('div');
         this._header.className = 'treeview-header';
         if (!this._showHeader || this._columns.length === 0) {
-            this._header.style.display = 'none';
+            this._headerClip.style.display = 'none';
         }
-        this.element.appendChild(this._header);
+        this._headerClip.appendChild(this._header);
+        this.element.appendChild(this._headerClip);
         this._buildHeader();
 
         // -- Scrollable body area (grid: viewport + scrollbars) --
@@ -462,7 +470,7 @@ class TreeView extends Widget {
         this._colWidths = this._columns.map(() => '1fr');
         this._sortColKey = null;
         if (this._showHeader && this._columns.length > 0) {
-            this._header.style.display = '';
+            this._headerClip.style.display = '';
         }
         this._buildHeader();
         this._renderAll();
@@ -1359,6 +1367,11 @@ class TreeView extends Widget {
         let vPct = maxScrollY > 0 ? this._viewport.scrollTop / maxScrollY : 0;
         if (maxScrollX > 0) this._hScrollBar.set_scroll_percent(hPct);
         if (maxScrollY > 0) this._vScrollBar.set_scroll_percent(vPct);
+        // Mirror horizontal scroll to the header so columns stay
+        // aligned with their data.  Using transform is compositor-
+        // cheap and skips a layout pass on every scroll tick.
+        this._header.style.transform =
+            `translateX(${-this._viewport.scrollLeft}px)`;
         if (this._scrollTimer) clearTimeout(this._scrollTimer);
         if (this._scrollReady && !this._scrollSilent) {
             this._scrollTimer = setTimeout(() => {
