@@ -71,6 +71,21 @@
     flex: 1;
 }
 
+/* Header alignment.  Default is left (no override).  For 'right',
+   swap layout direction so the label fills the right side of the
+   cell flush with the cell's right padding — matching the data
+   column's right edge — and the sort indicator appears to its left.
+   For 'center', the label fills the cell with centered text. */
+.treeview-header-cell.treeview-halign-center .treeview-header-label {
+    text-align: center;
+}
+.treeview-header-cell.treeview-halign-right {
+    flex-direction: row-reverse;
+}
+.treeview-header-cell.treeview-halign-right .treeview-header-label {
+    text-align: right;
+}
+
 .treeview-sort-indicator {
     flex-shrink: 0;
     font-size: 10px;

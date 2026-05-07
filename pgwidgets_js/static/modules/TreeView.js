@@ -324,13 +324,18 @@ class TreeView extends Widget {
             cell._colKey = this._columns[i].key;
             this._headerCells.push(cell);
 
+            // Mirror the column's resolved halign on the header so its
+            // label aligns the same way as the data cells below it.
+            // The halign is whatever _normalizeHalign produced — the
+            // user's explicit choice if given, otherwise the type
+            // default (right for numeric, center for boolean/icon,
+            // left otherwise).  CSS handles the per-halign layout.
+            let halign = this._columns[i].halign || 'left';
+            cell.classList.add('treeview-halign-' + halign);
+
             let labelSpan = document.createElement('span');
             labelSpan.className = 'treeview-header-label';
             labelSpan.textContent = this._columns[i].label;
-            let halign = this._columns[i].halign;
-            if (halign && halign !== 'left') {
-                labelSpan.style.textAlign = halign;
-            }
             cell.appendChild(labelSpan);
 
             let indicator = document.createElement('span');
