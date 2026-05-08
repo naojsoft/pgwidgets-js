@@ -31,6 +31,7 @@ SHARED_JS_MODULE = {
     "ButtonBox": "Box",
     "StackWidget": "TabWidget",
     "MDISubWindow": "MDIWidget",
+    "TextBufferRef": "TextSource",
 }
 
 

@@ -1,5 +1,6 @@
 "use_strict";
 
+import {Callback} from "./Callback.js";
 import {Widget} from "./Widget.js";
 import {ScrollBar} from "./ScrollBar.js";
 
@@ -17,12 +18,25 @@ import {ScrollBar} from "./ScrollBar.js";
  * If a delete range covers the ref's position, the ref snaps to the
  * start of the deleted range.
  */
-class TextBufferRef {
+class TextBufferRef extends Callback {
     constructor(buffer, offset, gravity = 'right') {
+        super();
         this._buffer = buffer;
-        this._offset = offset;
+        this._offset = buffer._clampOffset(offset);
         this._gravity = gravity;
         this._valid = true;
+        this.enable_callback('invalidated');
+        // Auto-track in the buffer's weak ref set.  Doing this in the
+        // constructor (rather than only in buffer.create_ref) means
+        // refs minted via the remote-interface ``create`` message —
+        // which calls ``new TextBufferRef(...)`` directly — also get
+        // tracked.  The WeakRef wrapper does not pin the ref alive;
+        // a FinalizationRegistry on the buffer prunes dead WeakRef
+        // shells once the underlying ref is GC'd.
+        let weakRef = new WeakRef(this);
+        this._weakRef = weakRef;
+        buffer._refs.add(weakRef);
+        buffer._refRegistry.register(this, weakRef, this);
     }
 
     // -----------------------------------------------------------------
@@ -202,6 +216,32 @@ class TextBufferRef {
      */
     _offsetOfLineStart(lineno) {
         return this._buffer._offsetOfLineStart(lineno);
+    }
+
+    /**
+     * Mark the ref invalid and fire ``'invalidated'``.  Called by
+     * the owning buffer's removal / reset paths; not part of the
+     * public API.
+     * @private
+     */
+    _invalidate() {
+        if (!this._valid) return;
+        this._valid = false;
+        this.make_callback('invalidated');
+    }
+
+    /**
+     * Tear down the ref: detach from the buffer's tracking sets and
+     * unregister from the Callback registry.  After ``destroy()``
+     * the ref is unusable; this is the entry point that the
+     * remote-interface uses when a Python wrapper goes away.
+     */
+    destroy() {
+        if (this._destroyed) return;
+        if (this._buffer && this._valid) {
+            this._buffer.remove_ref(this);
+        }
+        super.destroy();
     }
 }
 
@@ -454,10 +494,10 @@ class TextSource extends Widget {
             let ref = weakRef.deref();
             if (ref == null) continue;
             ref._offset = 0;
-            ref._valid = false;
             // Drop the registry entry so the finalizer doesn't fire
             // later and try to delete an already-cleared bucket.
             this._refRegistry.unregister(ref);
+            ref._invalidate();
         }
         this._refs.clear();
         // Drop named-ref bindings; the underlying refs were just
@@ -1339,24 +1379,15 @@ class TextSource extends Widget {
      * @returns {TextBufferRef}
      */
     create_ref(offset, gravity = 'right') {
-        offset = this._clampOffset(offset);
-        let ref = new TextBufferRef(this, offset, gravity);
-        // Keep the WeakRef around on the ref itself so remove_ref
-        // can find and delete it from _refs in O(1) without scanning.
-        // The WeakRef object is small and held strongly only by the
-        // ref it wraps — it doesn't pin the ref alive, so this
-        // doesn't defeat the WeakRef purpose.
-        let weakRef = new WeakRef(ref);
-        ref._weakRef = weakRef;
-        this._refs.add(weakRef);
-        // Use the ref itself as the unregister token so remove_ref
-        // can drop the registration without looking up the WeakRef.
-        this._refRegistry.register(ref, weakRef, ref);
-        return ref;
+        // Registration with this._refs / _refRegistry happens in the
+        // TextBufferRef constructor so refs minted via the remote-
+        // interface ``create`` path are tracked the same way.
+        return new TextBufferRef(this, offset, gravity);
     }
 
-    /** Stop tracking a ref. */
+    /** Stop tracking a ref.  Fires ``'invalidated'`` on the ref. */
     remove_ref(ref) {
+        if (!ref._valid) return;
         if (ref._weakRef) {
             this._refs.delete(ref._weakRef);
             this._refRegistry.unregister(ref);
@@ -1373,7 +1404,7 @@ class TextSource extends Widget {
                 }
             }
         }
-        ref._valid = false;
+        ref._invalidate();
     }
 
     /**
@@ -1424,14 +1455,12 @@ class TextSource extends Widget {
         let ref = this._namedRefs.get(name);
         if (ref == null) return;
         this._namedRefs.delete(name);
-        // We already dropped the named binding above, so remove_ref's
-        // name-cleanup loop is a no-op.  Calling it for the WeakRef
-        // / registry teardown keeps that path in one place.
+        // Drop the WeakRef bookkeeping then fire 'invalidated'.
         if (ref._weakRef) {
             this._refs.delete(ref._weakRef);
             this._refRegistry.unregister(ref);
         }
-        ref._valid = false;
+        ref._invalidate();
     }
 
     /** Returns a fresh live ref pointing at offset 0. */
@@ -1574,6 +1603,55 @@ class TextSource extends Widget {
 
     _addTagInterval(name, start, end) {
         this._tags.push({ name, start, end, seq: ++this._tagSeq });
+    }
+
+    /**
+     * Replace the entire applied-tag interval list with *intervals*
+     * (an array of ``{name, start, end}``).  Used by the remote-
+     * interface reconstruction path: rather than mint throwaway
+     * refs and call ``apply_tag`` per interval, the Python side
+     * pushes the full list once.  Each interval gets a fresh
+     * ``seq``.  Existing intervals are dropped.  Tag *definitions*
+     * are unaffected — call ``create_tag`` for those first.
+     * @private
+     * @param {Array<{name: string, start: number, end: number}>} intervals
+     */
+    _restoreTagIntervals(intervals) {
+        this._tags = [];
+        for (let it of intervals) {
+            if (!this._tagDefs.has(it.name)) continue;
+            let s = this._clampOffset(it.start);
+            let e = this._clampOffset(it.end);
+            if (s >= e) continue;
+            this._tags.push({name: it.name, start: s, end: e,
+                             seq: ++this._tagSeq});
+        }
+        this._render();
+    }
+
+    /**
+     * Bind *name* to an existing tracked ref, without minting a new
+     * one.  Used by the reconstruction path so a ref recreated via
+     * the ``create`` handshake (which preserves its original wid)
+     * can be re-attached to its name.  Mirrors what the second half
+     * of ``create_named_ref`` does.  No-op for a ref that doesn't
+     * belong to this buffer.
+     * @private
+     * @param {string} name
+     * @param {TextBufferRef} ref
+     */
+    _bindNamedRef(name, ref) {
+        if (!(ref instanceof TextBufferRef)) return;
+        if (ref._buffer !== this) return;
+        if (!ref._valid) return;
+        // Drop any pre-existing ref with this name (the
+        // reconstruction caller is responsible for not re-using a
+        // name they're also rebinding to a different ref).
+        let existing = this._namedRefs.get(name);
+        if (existing != null && existing !== ref) {
+            this.remove_ref(existing);
+        }
+        this._namedRefs.set(name, ref);
     }
 
     /**

@@ -541,6 +541,11 @@ WIDGETS = {
             "create_named_ref": ["name", "offset", "gravity"],
             "get_named_ref": ["name"],
             "remove_named_ref": ["name"],
+            # Private reconstruction helpers (used by pgwidgets-python
+            # to restore tag intervals and re-bind named refs after a
+            # browser reconnect).  Not part of the user-facing API.
+            "_restoreTagIntervals": ["intervals"],
+            "_bindNamedRef": ["name", "ref"],
             "get_ref_start": [],
             "get_ref_end": [],
             "get_ref_bounds": [],
@@ -563,6 +568,37 @@ WIDGETS = {
         },
         "callbacks": ["changed", "cursor_moved", "line_clicked",
                       "icon_clicked", "scrolled"],
+    },
+
+    # A live position handle into a TextSource buffer.  Extends the
+    # Callback base (non-visual), so it gets a wid and can be passed
+    # by reference across the wire.  Refs are normally minted via
+    # methods on TextSource (create_ref, create_named_ref, etc.) but
+    # the constructor signature is listed here so the remote-interface
+    # ``create`` handshake can recreate them with a pre-allocated wid
+    # during reconstruction.
+    "TextBufferRef": {
+        "base": "callback",
+        "args": ["buffer", "offset", "gravity"],
+        "options": [],
+        "methods": {
+            "get_offset": [],
+            "get_gravity": [],
+            "is_valid": [],
+            "get_line_column": [],
+            "get_line": [],
+            "set_offset": ["offset"],
+            "set_line": ["lineno"],
+            "to_ref": ["other"],
+            "copy": [],
+            "to_line_start": [],
+            "to_line_end": [],
+            "to_next_line": [],
+            "to_prev_line": [],
+            "to_next_char": [],
+            "to_prev_char": [],
+        },
+        "callbacks": ["invalidated"],
     },
 
     # -- Value widgets --
