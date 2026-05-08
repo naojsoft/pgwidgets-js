@@ -112,6 +112,16 @@ WIDGETS = {
         "callbacks": [*CONTAINER_CALLBACKS],
     },
 
+    "FixedLayout": {
+        "base": "container",
+        "args": [],
+        "options": [],
+        "methods": {
+            "add_widget": ["child", "x", "y"],
+        },
+        "callbacks": [*CONTAINER_CALLBACKS],
+    },
+
     "GridBox": {
         "base": "container",
         "args": [],

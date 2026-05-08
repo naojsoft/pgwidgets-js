@@ -213,6 +213,48 @@ Grid layout with row/column placement.
    grid.add_widget(label, 0, 0);
    grid.add_widget(entry, 0, 1);
 
+.. _widget-fixedlayout:
+
+FixedLayout
+-----------
+
+Simple absolute-positioning container.  Children are placed at fixed
+``(x, y)`` pixel offsets within the container and rendered at their
+natural size unless ``resize()`` has been called on them, in which
+case the explicit size sticks.  Useful for static panels with
+hand-laid widgets — HUDs, calibration overlays, fixed-position forms.
+
+**Constructor:** ``new Widgets.FixedLayout()``
+
+**Options:** *(none)*
+
+**Methods:**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 45 55
+
+   * - Method
+     - Description
+   * - ``add_widget(child, x, y)``
+     - Add *child* at the given pixel offset from the container's
+       content edge.
+   * - ``remove(child, destroy=false)``
+     - Remove *child*; optionally destroy it.  Inherited from
+       ``ContainerWidget``.
+   * - ``remove_all(destroy=false)``
+     - Remove every child.
+
+**Callbacks:** ``child-added``, ``child-removed``.
+
+.. code-block:: javascript
+
+   let panel = new Widgets.FixedLayout();
+   panel.add_widget(new Widgets.Label("Status"), 8, 8);
+   let ok = new Widgets.Button("OK");
+   ok.resize(80, 28);             // explicit size — overrides natural
+   panel.add_widget(ok, 8, 40);
+
 .. _widget-splitter:
 
 Splitter

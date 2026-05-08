@@ -33,6 +33,7 @@ import {ToggleButton} from "./modules/ToggleButton.js";
 import {RadioButton} from "./modules/RadioButton.js";
 import {ProgressBar} from "./modules/ProgressBar.js";
 import {Frame} from "./modules/Frame.js";
+import {FixedLayout} from "./modules/FixedLayout.js";
 import {GridBox} from "./modules/GridBox.js";
 import {Image} from "./modules/Image.js";
 import {Dial} from "./modules/Dial.js";
@@ -59,7 +60,7 @@ import {VideoWidget} from "./modules/VideoWidget.js";
 const Widgets = {Callback, Widget, ContainerWidget, Box, VBox, HBox, ButtonBox,
                  TopLevel, AbstractScrollArea, ScrollArea, MDIWidget, Splitter, TabWidget,
                  StackWidget, Expander, Page, Text, Label, StatusBar, TextArea, TextSource,
-                 Frame, GridBox, Button, ToggleButton, CheckBox,
+                 Frame, FixedLayout, GridBox, Button, ToggleButton, CheckBox,
                  RadioButton, ComboBox, ComboBoxNative, TextEntry,
                  Slider, Canvas, SpinBox, ProgressBar, Image, Dial,
                  MenuBar, Menu, MenuAction, ToolBar, ToolBarAction,

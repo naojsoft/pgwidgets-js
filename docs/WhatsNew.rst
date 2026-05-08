@@ -170,6 +170,9 @@ Other notable additions
 - ``ComboBox`` auto-selects the first item; dropdown raised above
   modal dialogs.
 - ``StatusBar`` widget added; ``Label`` interactive + context menu.
+- ``FixedLayout`` container added: places children at fixed
+  ``(x, y)`` offsets at their natural size (or whatever
+  ``resize()`` set).  See :ref:`widget-fixedlayout`.
 
 Bug fixes
 ---------

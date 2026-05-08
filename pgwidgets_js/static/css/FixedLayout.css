@@ -1,0 +1,15 @@
+/*
+ * FixedLayout widget styles
+ *
+ * Children are absolutely positioned within the container.  The
+ * container itself sets position: relative inline so the children's
+ * (left, top) are relative to it — no styling needed beyond the
+ * child marker class.
+ */
+.fixed-layout-widget {
+    box-sizing: border-box;
+}
+
+.fixed-layout-child {
+    box-sizing: border-box;
+}

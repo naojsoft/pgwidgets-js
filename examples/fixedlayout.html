@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FixedLayout Demo</title>
+  <style>
+    body { margin: 0; }
+  </style>
+  <link rel="stylesheet" href="../Widgets.css" type="text/css" />
+</head>
+<body>
+  <script type="module">
+    import { Widgets } from "../Widgets.js";
+
+    // Outer window holds a Frame that contains the FixedLayout panel.
+    let top = new Widgets.TopLevel({title: "FixedLayout Demo",
+                                    resizable: true});
+    top.resize(420, 300);
+
+    let frame = new Widgets.Frame({title: "Hand-laid panel"});
+    let panel = new Widgets.FixedLayout();
+    // Give the panel an explicit size so its visual bounds are
+    // obvious — without it the panel collapses to its natural
+    // (zero) size since absolute children don't contribute to it.
+    panel.resize(380, 220);
+
+    // Children at natural size — left-aligned column of labels.
+    panel.add_widget(new Widgets.Label("Top-left at (8, 8)"), 8, 8);
+    panel.add_widget(new Widgets.Label("(8, 32)"), 8, 32);
+    panel.add_widget(new Widgets.Label("(8, 56)"), 8, 56);
+
+    // A natural-size button at an arbitrary x.
+    let natural = new Widgets.Button("Natural size");
+    panel.add_widget(natural, 180, 8);
+
+    // An explicitly resized button — the explicit size sticks.
+    let sized = new Widgets.Button("100x40");
+    sized.resize(100, 40);
+    panel.add_widget(sized, 180, 50);
+
+    // A status label whose text we'll change as we add/remove.
+    let status = new Widgets.Label("3 labels + 2 buttons placed");
+    panel.add_widget(status, 8, 100);
+
+    // Buttons that mutate the panel at runtime to exercise
+    // add_widget / remove / remove_all.
+    let counter = 0;
+    let addOne = new Widgets.Button("Add a label");
+    addOne.add_callback("activated", () => {
+        counter++;
+        let lbl = new Widgets.Label("dynamic " + counter);
+        panel.add_widget(lbl, 8 + (counter % 5) * 60, 130 + Math.floor(counter / 5) * 20);
+        status.set_text("children: " + panel.num_children());
+    });
+    panel.add_widget(addOne, 180, 100);
+
+    let clear = new Widgets.Button("Remove all");
+    clear.add_callback("activated", () => {
+        // Re-add the static items afterwards so the demo keeps the
+        // controls — easiest is remove_all(true) then rebuild.
+        panel.remove_all(true);
+        counter = 0;
+        // Rebuild the static items.
+        panel.add_widget(new Widgets.Label("Top-left at (8, 8)"), 8, 8);
+        panel.add_widget(new Widgets.Label("(8, 32)"), 8, 32);
+        panel.add_widget(new Widgets.Label("(8, 56)"), 8, 56);
+        let n2 = new Widgets.Button("Natural size");
+        panel.add_widget(n2, 180, 8);
+        let s2 = new Widgets.Button("100x40");
+        s2.resize(100, 40);
+        panel.add_widget(s2, 180, 50);
+        status = new Widgets.Label("Cleared and rebuilt");
+        panel.add_widget(status, 8, 100);
+        // Re-attach the same control buttons so they keep working.
+        panel.add_widget(addOne, 180, 100);
+        panel.add_widget(clear, 280, 100);
+    });
+    panel.add_widget(clear, 280, 100);
+
+    frame.set_widget(panel);
+    top.set_widget(frame);
+    top.show();
+  </script>
+</body>
+</html>

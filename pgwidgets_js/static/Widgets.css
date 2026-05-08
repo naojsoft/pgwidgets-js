@@ -14,6 +14,7 @@
 @import "css/AbstractScrollArea.css";
 @import "css/ScrollArea.css";
 @import "css/Expander.css";
+@import "css/FixedLayout.css";
 
 /* regular widgets */
 @import "css/Label.css";
