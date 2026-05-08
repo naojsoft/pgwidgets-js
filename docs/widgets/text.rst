@@ -323,3 +323,95 @@ position-returning method on the public API uses refs.
    });
    editor.create_tag("keyword", {color: "blue", fontWeight: "bold"});
    editor.add_callback('changed', (w) => console.log("Modified"));
+
+TextBufferRef
+~~~~~~~~~~~~~
+
+A live reference to a position in a :ref:`widget-textsource` buffer.
+Created via ``editor.create_ref(offset, gravity)``.  As the buffer
+is edited the ref's offset auto-tracks insertions and deletions, so
+a ref keeps pointing at the same logical position even when text
+shifts before it.
+
+**Gravity** controls behaviour when text is inserted exactly *at*
+the ref's position:
+
+- ``'right'`` (default) -- the ref moves with the inserted text and
+  ends up after it.
+- ``'left'`` -- the ref stays before the inserted text.
+
+If a delete range covers the ref's position, the ref snaps to the
+start of the deleted range.
+
+**Inspection:**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Method
+     - Description
+   * - ``get_offset()``
+     - Return the current character offset.
+   * - ``get_gravity()``
+     - Return ``'left'`` or ``'right'``.
+   * - ``is_valid()``
+     - Whether the ref is still tracked (false after
+       ``editor.remove_ref(ref)`` or after ``set_text`` on the
+       owning buffer).
+   * - ``get_line()``
+     - Return the 0-based line number this ref is on.
+   * - ``get_line_column()``
+     - Return ``[line, column]`` (both 0-based).
+
+**Mutation -- absolute position:**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Method
+     - Description
+   * - ``set_offset(offset)``
+     - Move to *offset*; clamped to ``[0, length]``.
+   * - ``set_line(lineno)``
+     - Move to the start of line *lineno*; clamped to the last line.
+   * - ``to_ref(other)``
+     - Move to the same offset as *other* (must belong to the same
+       buffer).
+   * - ``copy()``
+     - Return a new live ref at the same offset and gravity.
+
+**Mutation -- relative movement:**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Method
+     - Description
+   * - ``to_line_start()`` / ``to_line_end()``
+     - Move to the start / end of the current line.
+   * - ``to_next_line()`` / ``to_prev_line()``
+     - Move to the start of the adjacent line; no-op at the buffer
+       boundaries.
+   * - ``to_next_char()`` / ``to_prev_char()``
+     - Move forward / backward one character; clamped at the buffer
+       boundaries.
+
+If the ref carries an icon (registered via ``editor.set_icon(ref,
+url)``), moving the ref re-renders the icon gutter so the icon
+follows.
+
+Mutating methods on an invalidated ref throw.  Inspection methods
+on an invalidated ref still return the last known state.
+
+.. code-block:: javascript
+
+   let ref = editor.create_ref(0);
+   ref.set_line(10);            // jump to line 10
+   ref.to_line_end();           // end of line 10
+   let endOfLine10 = ref.copy();
+   ref.to_next_line();          // start of line 11
+   editor.apply_tag("hilite", ref, endOfLine10);  // wrong order:
+   // apply_tag swaps internally if start > end.

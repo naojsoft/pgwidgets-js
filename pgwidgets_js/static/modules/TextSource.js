@@ -24,10 +24,16 @@ class TextBufferRef {
         this._gravity = gravity;
         this._valid = true;
     }
+
+    // -----------------------------------------------------------------
+    // Inspection
+    // -----------------------------------------------------------------
+
     /** Current character offset of this ref. */
     get_offset() { return this._offset; }
     get_gravity() { return this._gravity; }
     is_valid() { return this._valid; }
+
     /** Returns [line, column] (both 0-based) of this ref's offset. */
     get_line_column() {
         let text = this._buffer.get_text();
@@ -40,6 +46,170 @@ class TextBufferRef {
             }
         }
         return [line, this._offset - lastNl - 1];
+    }
+
+    /** Returns the 0-based line number this ref is on. */
+    get_line() {
+        return this._buffer._lineOfOffset(this._offset);
+    }
+
+    // -----------------------------------------------------------------
+    // Mutation — position
+    // -----------------------------------------------------------------
+
+    /**
+     * Set this ref to *offset* in the buffer.  Out-of-range values
+     * are clamped to ``[0, length]``.
+     * @param {number} offset
+     */
+    set_offset(offset) {
+        this._checkValid();
+        this._setOffset(offset);
+    }
+
+    /**
+     * Set this ref to the start of line *lineno* (0-based).  Past
+     * the last line clamps to the end of the buffer; negative
+     * values clamp to 0.
+     * @param {number} lineno
+     */
+    set_line(lineno) {
+        this._checkValid();
+        this._setOffset(this._offsetOfLineStart(lineno));
+    }
+
+    /**
+     * Move this ref to the same offset as *other*.  Both refs must
+     * belong to the same buffer.
+     * @param {TextBufferRef} other
+     */
+    to_ref(other) {
+        this._checkValid();
+        if (!(other instanceof TextBufferRef)) {
+            throw new TypeError("to_ref requires a TextBufferRef");
+        }
+        if (other._buffer !== this._buffer) {
+            throw new Error(
+                "TextBufferRef belongs to a different TextSource");
+        }
+        if (!other._valid) {
+            throw new Error(
+                "Source TextBufferRef has been invalidated");
+        }
+        this._setOffset(other._offset);
+    }
+
+    /**
+     * Returns a new live ref pointing at this ref's current offset
+     * with the same gravity.  The new ref is tracked by the buffer
+     * — caller should ``remove_ref(...)`` it when done.
+     * @returns {TextBufferRef}
+     */
+    copy() {
+        this._checkValid();
+        return this._buffer.create_ref(this._offset, this._gravity);
+    }
+
+    // -----------------------------------------------------------------
+    // Mutation — relative movement
+    // -----------------------------------------------------------------
+
+    /** Move to the start of the line this ref is on. */
+    to_line_start() {
+        this._checkValid();
+        this._setOffset(this._offsetOfLineStart(this.get_line()));
+    }
+
+    /**
+     * Move to the end of the line this ref is on (the offset of the
+     * trailing ``\n``, or the buffer length on the last line).
+     */
+    to_line_end() {
+        this._checkValid();
+        let text = this._buffer.get_text();
+        let i = text.indexOf('\n', this._offset);
+        if (i === -1) i = text.length;
+        this._setOffset(i);
+    }
+
+    /**
+     * Move to the start of the next line.  No-op if already on the
+     * last line.
+     */
+    to_next_line() {
+        this._checkValid();
+        let text = this._buffer.get_text();
+        let i = text.indexOf('\n', this._offset);
+        if (i === -1) return;
+        this._setOffset(i + 1);
+    }
+
+    /**
+     * Move to the start of the previous line.  No-op if already on
+     * the first line.
+     */
+    to_prev_line() {
+        this._checkValid();
+        let line = this.get_line();
+        if (line === 0) return;
+        this._setOffset(this._offsetOfLineStart(line - 1));
+    }
+
+    /** Move forward one character.  Clamped at the buffer end. */
+    to_next_char() {
+        this._checkValid();
+        this._setOffset(this._offset + 1);
+    }
+
+    /** Move backward one character.  Clamped at 0. */
+    to_prev_char() {
+        this._checkValid();
+        this._setOffset(this._offset - 1);
+    }
+
+    // -----------------------------------------------------------------
+    // Internals
+    // -----------------------------------------------------------------
+
+    /** @private */
+    _checkValid() {
+        if (!this._valid) {
+            throw new Error("TextBufferRef has been invalidated");
+        }
+    }
+
+    /**
+     * Update offset (clamped to [0, length]).  If this ref carries
+     * an icon, re-render the gutter so the icon follows.
+     * @private
+     */
+    _setOffset(newOffset) {
+        let len = this._buffer.get_length();
+        if (newOffset < 0) newOffset = 0;
+        if (newOffset > len) newOffset = len;
+        if (newOffset === this._offset) return;
+        this._offset = newOffset;
+        if (this._buffer._iconRefs.has(this)) {
+            this._buffer._renderIconGutter();
+        }
+    }
+
+    /**
+     * Returns the absolute offset of the start of line *lineno*
+     * (0-based).  Past the last line returns the buffer length;
+     * negative values return 0.
+     * @private
+     */
+    _offsetOfLineStart(lineno) {
+        if (lineno <= 0) return 0;
+        let text = this._buffer.get_text();
+        let off = 0;
+        for (let i = 0; i < lineno; i++) {
+            let nl = text.indexOf('\n', off);
+            if (nl === -1) return text.length;
+            off = nl + 1;
+        }
+        return off;
     }
 }
 
