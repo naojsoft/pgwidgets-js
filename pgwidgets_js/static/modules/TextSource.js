@@ -95,8 +95,8 @@ class TextSource extends Widget {
         this.set_icon = this.set_icon.bind(this);
         this.get_cursor = this.get_cursor.bind(this);
         this.set_cursor = this.set_cursor.bind(this);
-        this.get_selection = this.get_selection.bind(this);
-        this.set_selection = this.set_selection.bind(this);
+        this.get_selection_range = this.get_selection_range.bind(this);
+        this.set_selection_range = this.set_selection_range.bind(this);
         this._render = this._render.bind(this);
         this.set_scroll_position = this.set_scroll_position.bind(this);
         this._syncScrollbars = this._syncScrollbars.bind(this);
@@ -123,8 +123,10 @@ class TextSource extends Widget {
 
         // Canonical text model: a plain string. Lines are '\n'-separated.
         this._text = '';
-        // Per-line icon URLs: index -> url (or undefined)
-        this._lineIcons = {};
+        // Icon registrations: Map<TextBufferRef, url>.  A ref's
+        // current offset → line drives the displayed icon, so icons
+        // follow their ref as text is inserted/deleted before them.
+        this._iconRefs = new Map();
         // Cursor offset and selection (offsets into _text)
         this._cursor = 0;
         this._selStart = 0;
@@ -276,6 +278,10 @@ class TextSource extends Widget {
             ref._valid = false;
         }
         this._refs.clear();
+        // Drop icon registrations along with the refs that anchored
+        // them; the user must re-register icons against fresh refs
+        // after a destructive set_text.
+        this._iconRefs.clear();
         this._render();
         this.make_callback('changed');
     }
@@ -291,24 +297,54 @@ class TextSource extends Widget {
     }
 
     /**
-     * Inserts text at the given offset.
-     * @param {number} offset - Character offset (0..length).
-     * @param {string} text - The text to insert.
+     * Resolve a TextBufferRef to its current offset.  Throws if
+     * *ref* is not a TextBufferRef belonging to this buffer or has
+     * been invalidated.  Internal entry point for every ref-taking
+     * method on the public API.
+     * @private
+     * @param {TextBufferRef} ref
+     * @returns {number}
      */
-    insert_text(offset, text, tags = null) {
+    _offsetOf(ref) {
+        if (!(ref instanceof TextBufferRef)) {
+            throw new TypeError(
+                "TextSource API requires a TextBufferRef "
+                + "(got " + typeof ref + ")");
+        }
+        if (ref._buffer !== this) {
+            throw new Error(
+                "TextBufferRef belongs to a different TextSource");
+        }
+        if (!ref._valid) {
+            throw new Error("TextBufferRef has been invalidated");
+        }
+        return this._clampOffset(ref._offset);
+    }
+
+    /**
+     * Inserts text at the given ref position.  The ref's own offset
+     * may shift after the call according to its gravity (right-
+     * gravity refs end up after the inserted text).
+     * @param {TextBufferRef} ref - Position at which to insert.
+     * @param {string} text - The text to insert.
+     * @param {string[]} [tags] - Tag names to apply to the inserted
+     *   range.
+     */
+    insert_text(ref, text, tags = null) {
         if (text == null || text === '') return;
-        offset = this._clampOffset(offset);
+        let offset = this._offsetOf(ref);
         this._replaceRange(offset, offset, text, { tags });
     }
 
     /**
-     * Deletes a range of text.
-     * @param {number} start - Start offset (inclusive).
-     * @param {number} end - End offset (exclusive).
+     * Deletes the text between *startRef* and *endRef* (the smaller
+     * offset becomes the start, the larger the end).
+     * @param {TextBufferRef} startRef
+     * @param {TextBufferRef} endRef
      */
-    delete_range(start, end) {
-        start = this._clampOffset(start);
-        end = this._clampOffset(end);
+    delete_range(startRef, endRef) {
+        let start = this._offsetOf(startRef);
+        let end = this._offsetOf(endRef);
         if (start > end) [start, end] = [end, start];
         if (start === end) return;
         this._replaceRange(start, end, '');
@@ -419,16 +455,35 @@ class TextSource extends Widget {
     // -----------------------------------------------------------------
 
     /**
-     * Find `query` in the buffer.
+     * Find ``query`` in the buffer.
      * @param {string} query
      * @param {Object} [opts]
-     * @param {number} [opts.start=0] - Offset to start searching from.
+     * @param {TextBufferRef} [opts.start] - Position to start
+     *   searching from.  Defaults to the start of the buffer.
      * @param {boolean} [opts.case_insensitive=false]
-     * @returns {?[number, number]} [start, end] match, or null.
+     * @returns {?[TextBufferRef, TextBufferRef]} ``[startRef, endRef]``
+     *   for the match, or ``null`` if no match was found.  The
+     *   returned refs are live and tracked by this buffer.
      */
     find(query, opts = {}) {
         if (!query) return null;
-        let start = opts.start != null ? opts.start : 0;
+        let m = this._findOffset(query, opts);
+        if (m === null) return null;
+        return [this.create_ref(m[0], 'right'),
+                this.create_ref(m[1], 'right')];
+    }
+
+    /**
+     * Internal find that returns offsets — used by replace() and as
+     * the building block for find()/find_all().  Avoids the cost of
+     * minting refs for matches that callers will only consume as
+     * offsets (replace operates on offsets).
+     * @private
+     */
+    _findOffset(query, opts = {}) {
+        if (!query) return null;
+        let start = 0;
+        if (opts.start != null) start = this._offsetOf(opts.start);
         let hay = this._text, needle = query;
         if (opts.case_insensitive) {
             hay = hay.toLowerCase();
@@ -438,35 +493,54 @@ class TextSource extends Widget {
         return i === -1 ? null : [i, i + query.length];
     }
 
-    /** Return all non-overlapping match ranges for query. */
+    /**
+     * Return all non-overlapping matches for ``query`` as ref pairs.
+     * @returns {Array<[TextBufferRef, TextBufferRef]>}
+     */
     find_all(query, opts = {}) {
+        let offsets = this._findAllOffsets(query, opts);
+        return offsets.map(([s, e]) =>
+            [this.create_ref(s, 'right'), this.create_ref(e, 'right')]);
+    }
+
+    /** @private */
+    _findAllOffsets(query, opts = {}) {
         let out = [];
         let from = 0;
+        if (opts.start != null) from = this._offsetOf(opts.start);
+        let hay = this._text, needle = query;
+        let ci = !!opts.case_insensitive;
+        if (ci) {
+            hay = hay.toLowerCase();
+            needle = needle.toLowerCase();
+        }
         while (true) {
-            let m = this.find(query, { ...opts, start: from });
-            if (!m) break;
-            out.push(m);
-            from = m[1] > m[0] ? m[1] : m[0] + 1;
+            if (!needle) break;
+            let i = hay.indexOf(needle, from);
+            if (i === -1) break;
+            out.push([i, i + query.length]);
+            from = i + query.length > i ? i + query.length : i + 1;
         }
         return out;
     }
 
     /**
-     * Replace occurrences of `query` with `replacement`.
+     * Replace occurrences of ``query`` with ``replacement``.
      * @param {string} query
      * @param {string} replacement
      * @param {Object} [opts]
      * @param {boolean} [opts.all=false] - Replace all (else first from start).
      * @param {boolean} [opts.case_insensitive=false]
-     * @param {number} [opts.start=0]
+     * @param {TextBufferRef} [opts.start] - Position to start
+     *   searching from.  Defaults to the start of the buffer.
      * @returns {number} Number of replacements performed.
      */
     replace(query, replacement, opts = {}) {
         if (!query) return 0;
         let matches = opts.all
-            ? this.find_all(query, opts)
+            ? this._findAllOffsets(query, opts)
             : (() => {
-                let m = this.find(query, opts);
+                let m = this._findOffset(query, opts);
                 return m ? [m] : [];
             })();
         // Apply from the end so earlier offsets stay valid.
@@ -486,29 +560,51 @@ class TextSource extends Widget {
     // Public API - cursor and selection
     // -----------------------------------------------------------------
 
+    /**
+     * Return a fresh, live ref to the current cursor position.
+     * @returns {TextBufferRef}
+     */
     get_cursor() {
-        return this._cursor;
+        return this.create_ref(this._cursor, 'right');
     }
 
-    set_cursor(offset) {
-        offset = this._clampOffset(offset);
+    /**
+     * Move the cursor (and clear any selection) to the position of
+     * *ref*.
+     * @param {TextBufferRef} ref
+     */
+    set_cursor(ref) {
+        let offset = this._offsetOf(ref);
         this._cursor = offset;
         this._selStart = offset;
         this._selEnd = offset;
         this._applySelectionToDOM();
-        this.make_callback('cursor_moved', offset);
+        this.make_callback('cursor_moved', this.create_ref(offset, 'right'));
     }
 
-    /** Returns [start, end] or null if no selection. */
-    get_selection() {
+    /**
+     * Returns ``[startRef, endRef]`` for the current selection (smaller
+     * offset first), or ``null`` if there is no selection.  Both refs
+     * are fresh and tracked.
+     * @returns {?[TextBufferRef, TextBufferRef]}
+     */
+    get_selection_range() {
         if (this._selStart === this._selEnd) return null;
-        return [Math.min(this._selStart, this._selEnd),
-                Math.max(this._selStart, this._selEnd)];
+        let s = Math.min(this._selStart, this._selEnd);
+        let e = Math.max(this._selStart, this._selEnd);
+        return [this.create_ref(s, 'right'),
+                this.create_ref(e, 'right')];
     }
 
-    set_selection(start, end) {
-        start = this._clampOffset(start);
-        end = this._clampOffset(end);
+    /**
+     * Set the selection to span ``[startRef, endRef]``.  The cursor
+     * lands at *endRef*'s position.
+     * @param {TextBufferRef} startRef
+     * @param {TextBufferRef} endRef
+     */
+    set_selection_range(startRef, endRef) {
+        let start = this._offsetOf(startRef);
+        let end = this._offsetOf(endRef);
         this._selStart = start;
         this._selEnd = end;
         this._cursor = end;
@@ -546,15 +642,30 @@ class TextSource extends Widget {
     }
 
     /**
-     * Set (or clear) the icon for a given 0-based line index.
-     * @param {number} line - Line index.
-     * @param {string|null} iconUrl - URL of the icon, or null to clear.
+     * Set (or clear) the icon associated with a TextBufferRef.  The
+     * icon is displayed on the line that contains the ref's current
+     * offset, so it follows the ref as text is inserted or deleted
+     * before it.  Pass ``iconUrl = null`` to remove the icon for a
+     * previously-registered ref.
+     *
+     * Multiple refs may map to the same line; the most recently
+     * registered ref's icon wins for that line.
+     *
+     * @param {TextBufferRef} ref
+     * @param {string|null} iconUrl
      */
-    set_icon(line, iconUrl) {
+    set_icon(ref, iconUrl) {
+        if (!(ref instanceof TextBufferRef)) {
+            throw new TypeError("set_icon requires a TextBufferRef");
+        }
+        if (ref._buffer !== this) {
+            throw new Error(
+                "TextBufferRef belongs to a different TextSource");
+        }
         if (iconUrl == null) {
-            delete this._lineIcons[line];
+            this._iconRefs.delete(ref);
         } else {
-            this._lineIcons[line] = iconUrl;
+            this._iconRefs.set(ref, iconUrl);
         }
         this._renderIconGutter();
     }
@@ -649,21 +760,49 @@ class TextSource extends Widget {
     _renderIconGutter() {
         if (!this._showIconGutter) return;
         this._iconGutter.innerHTML = '';
+        // Resolve each registered ref to a (line, url) pair.  Refs
+        // are visited in insertion order; later registrations on the
+        // same line replace earlier ones, so the most recent ref
+        // wins.  We also track which ref is "active" on each line so
+        // the click callback can pass it to the user.
+        let urlPerLine = {};
+        let refPerLine = {};
+        for (let [ref, url] of this._iconRefs) {
+            if (!ref._valid) continue;
+            let line = this._lineOfOffset(ref._offset);
+            urlPerLine[line] = url;
+            refPerLine[line] = ref;
+        }
         let numLines = this._text.split('\n').length;
         for (let i = 0; i < numLines; i++) {
             let cell = document.createElement('div');
             cell.className = 'textsource-icon-cell';
-            if (this._lineIcons[i]) {
+            if (urlPerLine[i] != null) {
                 let img = document.createElement('img');
-                img.src = this._lineIcons[i];
+                img.src = urlPerLine[i];
                 img.className = 'textsource-line-icon';
                 cell.appendChild(img);
             }
+            // Capture the current line index in a closure variable so
+            // the click handler reports the line at click time, not
+            // re-render time.
+            let line = i;
             cell.addEventListener('click', () => {
-                this.make_callback('icon_clicked', i);
+                let activeRef = refPerLine[line] || null;
+                this.make_callback('icon_clicked', line, activeRef);
             });
             this._iconGutter.appendChild(cell);
         }
+    }
+
+    /** @private Compute the 0-based line number of a buffer offset. */
+    _lineOfOffset(offset) {
+        let line = 0;
+        let n = Math.min(offset, this._text.length);
+        for (let i = 0; i < n; i++) {
+            if (this._text[i] === '\n') line++;
+        }
+        return line;
     }
 
     // -----------------------------------------------------------------
@@ -738,9 +877,22 @@ class TextSource extends Widget {
         }
     }
 
+    /**
+     * Internal helper: return the current selection as an offset
+     * pair [start, end] (smaller offset first), or null if there's
+     * no selection.  The public ``get_selection_range`` returns refs
+     * — internal callers (input handlers, copy/cut) want raw offsets.
+     * @private
+     */
+    _selectionOffsets() {
+        if (this._selStart === this._selEnd) return null;
+        return [Math.min(this._selStart, this._selEnd),
+                Math.max(this._selStart, this._selEnd)];
+    }
+
     _onCopy(e) {
         this._captureSelection();
-        let sel = this.get_selection();
+        let sel = this._selectionOffsets();
         if (!sel) return;
         e.preventDefault();
         let data = this._text.slice(sel[0], sel[1]);
@@ -749,7 +901,7 @@ class TextSource extends Widget {
 
     _onCut(e) {
         this._captureSelection();
-        let sel = this.get_selection();
+        let sel = this._selectionOffsets();
         if (!sel) return;
         e.preventDefault();
         let data = this._text.slice(sel[0], sel[1]);
@@ -1041,13 +1193,18 @@ class TextSource extends Widget {
         this._render();
     }
 
-    /** Apply a previously-defined tag to a range. */
-    apply_tag(name, start, end) {
+    /**
+     * Apply a previously-defined tag to the range [startRef, endRef).
+     * @param {string} name
+     * @param {TextBufferRef} startRef
+     * @param {TextBufferRef} endRef
+     */
+    apply_tag(name, startRef, endRef) {
         if (!this._tagDefs.has(name)) {
             throw new Error(`Unknown tag: ${name}`);
         }
-        start = this._clampOffset(start);
-        end = this._clampOffset(end);
+        let start = this._offsetOf(startRef);
+        let end = this._offsetOf(endRef);
         if (start > end) [start, end] = [end, start];
         if (start === end) return;
         this._addTagInterval(name, start, end);
@@ -1058,10 +1215,15 @@ class TextSource extends Widget {
         this._tags.push({ name, start, end, seq: ++this._tagSeq });
     }
 
-    /** Remove (clip out) a tag from the given range. */
-    remove_tag(name, start, end) {
-        start = this._clampOffset(start);
-        end = this._clampOffset(end);
+    /**
+     * Remove (clip out) a tag from the range [startRef, endRef).
+     * @param {string} name
+     * @param {TextBufferRef} startRef
+     * @param {TextBufferRef} endRef
+     */
+    remove_tag(name, startRef, endRef) {
+        let start = this._offsetOf(startRef);
+        let end = this._offsetOf(endRef);
         if (start > end) [start, end] = [end, start];
         let next = [];
         for (let t of this._tags) {
@@ -1080,11 +1242,36 @@ class TextSource extends Widget {
         this._render();
     }
 
-    /** Returns an array of tag names active at the given offset. */
-    get_tags_at(offset) {
+    /**
+     * Returns an array of tag names active at the position of *ref*.
+     * @param {TextBufferRef} ref
+     * @returns {string[]}
+     */
+    get_tags_at(ref) {
+        let offset = this._offsetOf(ref);
         let names = new Set();
         for (let t of this._tags) {
             if (t.start <= offset && offset < t.end) names.add(t.name);
+        }
+        return Array.from(names);
+    }
+
+    /**
+     * Returns an array of tag names that are active at any offset
+     * within [startRef, endRef).  A tag is included if its interval
+     * overlaps the queried range at all.
+     * @param {TextBufferRef} startRef
+     * @param {TextBufferRef} endRef
+     * @returns {string[]}
+     */
+    get_tags_range(startRef, endRef) {
+        let start = this._offsetOf(startRef);
+        let end = this._offsetOf(endRef);
+        if (start > end) [start, end] = [end, start];
+        let names = new Set();
+        for (let t of this._tags) {
+            if (t.end <= start || t.start >= end) continue;
+            names.add(t.name);
         }
         return Array.from(names);
     }
@@ -1182,16 +1369,13 @@ class TextSource extends Widget {
     // Scroll-to helpers
     // -----------------------------------------------------------------
 
-    /** Scroll the view so that the given ref (or offset) is visible. */
-    scroll_to(refOrOffset) {
-        let offset = (refOrOffset && typeof refOrOffset.get_offset === 'function')
-            ? refOrOffset.get_offset() : refOrOffset;
-        offset = this._clampOffset(offset);
-        // Determine line index of offset
-        let line = 0;
-        for (let i = 0; i < offset; i++) {
-            if (this._text[i] === '\n') line++;
-        }
+    /**
+     * Scroll the view so that the line containing *ref* is visible.
+     * @param {TextBufferRef} ref
+     */
+    scroll_to_ref(ref) {
+        let offset = this._offsetOf(ref);
+        let line = this._lineOfOffset(offset);
         let lineDiv = this._edit.children[line];
         if (lineDiv && lineDiv.scrollIntoView) {
             lineDiv.scrollIntoView({ block: 'nearest' });
@@ -1201,7 +1385,12 @@ class TextSource extends Widget {
 
     /** Scroll so the cursor is visible. */
     scroll_to_cursor() {
-        this.scroll_to(this._cursor);
+        let line = this._lineOfOffset(this._cursor);
+        let lineDiv = this._edit.children[line];
+        if (lineDiv && lineDiv.scrollIntoView) {
+            lineDiv.scrollIntoView({ block: 'nearest' });
+            this._syncFromScroll();
+        }
     }
 
     _clampOffset(offset) {

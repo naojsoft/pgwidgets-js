@@ -399,18 +399,23 @@ def make_demo(name):
         src.create_tag("keyword", {"foreground": "#0066cc", "bold": True})
         src.create_tag("string",  {"foreground": "#a31515"})
         text = src.get_text()
+        # apply_tag now takes TextBufferRefs; build a small helper.
+        def tag_range(name, start, end):
+            src.apply_tag(name,
+                          src.create_ref(start),
+                          src.create_ref(end))
         line_start = 0
         for line in text.split("\n"):
             if line.startswith("//"):
-                src.apply_tag("comment", line_start, line_start + len(line))
+                tag_range("comment", line_start, line_start + len(line))
             line_start += len(line) + 1
         fn = text.find("function")
         if fn >= 0:
-            src.apply_tag("keyword", fn, fn + len("function"))
+            tag_range("keyword", fn, fn + len("function"))
         for s in ("'Hello, '", "'!'", "'world'"):
             i = text.find(s)
             if i >= 0:
-                src.apply_tag("string", i, i + len(s))
+                tag_range("string", i, i + len(s))
         subwin = mdi.add_widget(src,
                                 {"title": "TextSource",
                                  "width": 420, "height": 260})

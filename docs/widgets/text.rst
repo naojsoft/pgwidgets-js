@@ -227,6 +227,12 @@ undo/redo, and find/replace.
 - ``font_family`` -- font family name
 - ``font_size`` -- font size
 
+Positions in the buffer are expressed as ``TextBufferRef`` instances —
+live references that automatically track edits.  The only place a
+caller deals in raw integer offsets is when minting a ref via
+``create_ref(offset, gravity)``.  Every other position-taking or
+position-returning method on the public API uses refs.
+
 **Methods:**
 
 .. list-table::
@@ -236,13 +242,14 @@ undo/redo, and find/replace.
    * - Method
      - Description
    * - ``set_text(text)`` / ``get_text()``
-     - Set or get text content.
+     - Set or get text content.  ``set_text`` invalidates all
+       outstanding refs.
    * - ``get_length()``
-     - Return text length.
-   * - ``insert_text(offset, text, tags)``
-     - Insert text at offset with optional tags.
-   * - ``delete_range(start, end)``
-     - Delete text between offsets.
+     - Return text length (characters).
+   * - ``insert_text(ref, text, tags)``
+     - Insert text at the position of *ref* with optional tag names.
+   * - ``delete_range(start_ref, end_ref)``
+     - Delete the text between two refs.
    * - ``clear()``
      - Clear all text.
    * - ``set_editable(tf)``
@@ -253,47 +260,58 @@ undo/redo, and find/replace.
      - Show/hide line numbers.
    * - ``set_icon_gutter(tf)``
      - Show/hide icon gutter.
-   * - ``set_icon(line, icon_url)``
-     - Set an icon on a line.
-   * - ``get_cursor()`` / ``set_cursor(offset)``
-     - Get or set cursor position.
-   * - ``get_selection()`` / ``set_selection(start, end)``
-     - Get or set selection range.
+   * - ``set_icon(ref, icon_url)``
+     - Anchor an icon to *ref*; it follows the ref's line as the
+       buffer is edited.  ``icon_url = null`` removes the icon for
+       that ref.
+   * - ``get_cursor()`` → ref / ``set_cursor(ref)``
+     - Get a live ref at the cursor, or move the cursor to a ref.
+   * - ``get_selection_range()`` → ``[start_ref, end_ref]`` or null
+       / ``set_selection_range(start_ref, end_ref)``
+     - Get or set the selection range as a pair of live refs.
    * - ``create_tag(name, attrs)``
      - Create a named style tag.
    * - ``remove_tag_def(name)``
      - Remove a tag definition.
-   * - ``apply_tag(name, start, end)``
-     - Apply a tag to a text range.
-   * - ``remove_tag(name, start, end)``
+   * - ``apply_tag(name, start_ref, end_ref)``
+     - Apply a tag to a range.
+   * - ``remove_tag(name, start_ref, end_ref)``
      - Remove a tag from a range.
-   * - ``get_tags_at(offset)``
-     - Return tags at offset.
+   * - ``get_tags_at(ref)``
+     - Return tag names active at the position of *ref*.
+   * - ``get_tags_range(start_ref, end_ref)``
+     - Return tag names active anywhere in the range.
    * - ``create_ref(offset, gravity)``
-     - Create a live reference at offset.
+     - Create a live ``TextBufferRef`` at *offset*.  ``gravity`` is
+       ``'left'`` or ``'right'`` (default ``'right'``).  This is the
+       only API that takes a raw integer offset.
    * - ``remove_ref(ref)``
-     - Remove a live reference.
+     - Stop tracking *ref*.
    * - ``undo()`` / ``redo()``
      - Undo or redo.
    * - ``can_undo()`` / ``can_redo()``
      - Check undo/redo availability.
-   * - ``find(query, opts)``
-     - Find next match.
-   * - ``find_all(query, opts)``
-     - Find all matches.
-   * - ``replace(query, replacement, opts)``
-     - Find and replace.
-   * - ``scroll_to(ref_or_offset)``
-     - Scroll to a position.
+   * - ``find(query, {start_ref, case_insensitive})``
+     - Find next match; returns ``[start_ref, end_ref]`` or null.
+   * - ``find_all(query, {start_ref, case_insensitive})``
+     - Find all non-overlapping matches; returns an array of ref pairs.
+   * - ``replace(query, replacement, {all, start_ref, case_insensitive})``
+     - Find and replace; returns the number of replacements.
+   * - ``scroll_to_ref(ref)``
+     - Scroll the view so the line containing *ref* is visible.
    * - ``scroll_to_cursor()``
      - Scroll to cursor position.
 
 **Callbacks:**
 
 - ``changed`` -- text content changed.
-- ``cursor_moved`` -- cursor position changed.
-- ``line_clicked`` -- a line number was clicked.
-- ``icon_clicked`` -- a gutter icon was clicked.
+- ``cursor_moved`` -- cursor position changed; fires with a fresh
+  ``TextBufferRef`` at the new cursor position.
+- ``line_clicked`` -- a line number was clicked; fires with the line
+  index.
+- ``icon_clicked`` -- a gutter icon was clicked; fires with
+  ``(line, ref)``, where ``ref`` is the registered ref that owns the
+  icon (or ``null`` if the click was on a line with no icon).
 
 .. code-block:: javascript
 

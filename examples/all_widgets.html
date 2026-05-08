@@ -641,18 +641,21 @@
             src.create_tag("keyword", { foreground: "#0066cc", bold: true });
             src.create_tag("string",  { foreground: "#a31515" });
             let text = src.get_text();
+            // apply_tag now takes refs; helper builds them inline.
+            let tagRange = (name, start, end) =>
+                src.apply_tag(name, src.create_ref(start), src.create_ref(end));
             let lineStart = 0;
             text.split('\n').forEach((line) => {
                 if (line.startsWith("//")) {
-                    src.apply_tag("comment", lineStart, lineStart + line.length);
+                    tagRange("comment", lineStart, lineStart + line.length);
                 }
                 lineStart += line.length + 1;
             });
             let fn = text.indexOf("function");
-            if (fn >= 0) src.apply_tag("keyword", fn, fn + "function".length);
+            if (fn >= 0) tagRange("keyword", fn, fn + "function".length);
             for (let s of ["'Hello, '", "'!'", "'world'"]) {
                 let i = text.indexOf(s);
-                if (i >= 0) src.apply_tag("string", i, i + s.length);
+                if (i >= 0) tagRange("string", i, i + s.length);
             }
             subwin = mdi.add_widget(src, {title: "TextSource", width: 420, height: 260});
             break;
