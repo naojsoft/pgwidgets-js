@@ -511,6 +511,7 @@ WIDGETS = {
             "set_text": ["text"],
             "get_text": [],
             "get_length": [],
+            "get_text_range": ["start_ref", "end_ref"],
             # Public API takes TextBufferRefs (created via create_ref).
             # Live refs auto-track edits, so a ref keeps pointing at
             # the same logical position across insert/delete calls.
@@ -529,6 +530,7 @@ WIDGETS = {
             # Tags
             "create_tag": ["name", "attrs"],
             "remove_tag_def": ["name"],
+            "has_tag": ["name"],
             "apply_tag": ["name", "start_ref", "end_ref"],
             "remove_tag": ["name", "start_ref", "end_ref"],
             "get_tags_at": ["ref"],
@@ -536,6 +538,14 @@ WIDGETS = {
             # Live refs
             "create_ref": ["offset", "gravity"],
             "remove_ref": ["ref"],
+            "create_named_ref": ["name", "offset", "gravity"],
+            "get_named_ref": ["name"],
+            "remove_named_ref": ["name"],
+            "get_ref_start": [],
+            "get_ref_end": [],
+            "get_ref_bounds": [],
+            "get_ref_line_start": ["lineno"],
+            "get_ref_line_end": ["lineno"],
             # Undo/redo
             "undo": [],
             "redo": [],

@@ -196,20 +196,12 @@ class TextBufferRef {
 
     /**
      * Returns the absolute offset of the start of line *lineno*
-     * (0-based).  Past the last line returns the buffer length;
-     * negative values return 0.
+     * (0-based).  Delegates to the buffer's helper so the two
+     * implementations stay in sync.
      * @private
      */
     _offsetOfLineStart(lineno) {
-        if (lineno <= 0) return 0;
-        let text = this._buffer.get_text();
-        let off = 0;
-        for (let i = 0; i < lineno; i++) {
-            let nl = text.indexOf('\n', off);
-            if (nl === -1) return text.length;
-            off = nl + 1;
-        }
-        return off;
+        return this._buffer._offsetOfLineStart(lineno);
     }
 }
 
@@ -303,8 +295,23 @@ class TextSource extends Widget {
         this._selEnd = 0;
 
         // -- live refs and tags --
-        // Set of TextBufferRef instances we are tracking
+        // Universal tracking set for TextBufferRef instances.  Each
+        // entry is a WeakRef wrapper so refs the user no longer
+        // holds (and that nothing else in the buffer is anchoring,
+        // such as _namedRefs or _iconRefs) become eligible for GC
+        // without an explicit remove_ref call.  A
+        // FinalizationRegistry callback prunes dead WeakRef shells
+        // after the underlying ref is collected.
         this._refs = new Set();
+        this._refRegistry = new FinalizationRegistry((weakRef) => {
+            this._refs.delete(weakRef);
+        });
+        // Named refs: name -> TextBufferRef.  Each named ref is also
+        // a member of _refs (so it participates in edit tracking).
+        // The Map holds its values strongly, so a named ref stays
+        // alive until remove_named_ref / set_text drops the binding
+        // — even if the user no longer has their own reference to it.
+        this._namedRefs = new Map();
         // name -> attribute object (background, foreground, bold, etc.)
         this._tagDefs = new Map();
         // Active tag intervals: { name, start, end, seq }
@@ -443,11 +450,20 @@ class TextSource extends Widget {
         this._selEnd = 0;
         // Reset tags and invalidate refs - this is a destructive replace.
         this._tags = [];
-        for (let ref of this._refs) {
+        for (let weakRef of this._refs) {
+            let ref = weakRef.deref();
+            if (ref == null) continue;
             ref._offset = 0;
             ref._valid = false;
+            // Drop the registry entry so the finalizer doesn't fire
+            // later and try to delete an already-cleared bucket.
+            this._refRegistry.unregister(ref);
         }
         this._refs.clear();
+        // Drop named-ref bindings; the underlying refs were just
+        // invalidated above.  Caller must re-create any named refs
+        // they need after a destructive set_text.
+        this._namedRefs.clear();
         // Drop icon registrations along with the refs that anchored
         // them; the user must re-register icons against fresh refs
         // after a destructive set_text.
@@ -464,6 +480,21 @@ class TextSource extends Widget {
     /** Returns the number of characters in the buffer. */
     get_length() {
         return this._text.length;
+    }
+
+    /**
+     * Returns the buffer text between *startRef* and *endRef* as a
+     * plain string.  The smaller offset becomes the start, the
+     * larger the end.
+     * @param {TextBufferRef} startRef
+     * @param {TextBufferRef} endRef
+     * @returns {string}
+     */
+    get_text_range(startRef, endRef) {
+        let start = this._offsetOf(startRef);
+        let end = this._offsetOf(endRef);
+        if (start > end) [start, end] = [end, start];
+        return this._text.slice(start, end);
     }
 
     /**
@@ -1310,18 +1341,164 @@ class TextSource extends Widget {
     create_ref(offset, gravity = 'right') {
         offset = this._clampOffset(offset);
         let ref = new TextBufferRef(this, offset, gravity);
-        this._refs.add(ref);
+        // Keep the WeakRef around on the ref itself so remove_ref
+        // can find and delete it from _refs in O(1) without scanning.
+        // The WeakRef object is small and held strongly only by the
+        // ref it wraps — it doesn't pin the ref alive, so this
+        // doesn't defeat the WeakRef purpose.
+        let weakRef = new WeakRef(ref);
+        ref._weakRef = weakRef;
+        this._refs.add(weakRef);
+        // Use the ref itself as the unregister token so remove_ref
+        // can drop the registration without looking up the WeakRef.
+        this._refRegistry.register(ref, weakRef, ref);
         return ref;
     }
 
     /** Stop tracking a ref. */
     remove_ref(ref) {
-        this._refs.delete(ref);
+        if (ref._weakRef) {
+            this._refs.delete(ref._weakRef);
+            this._refRegistry.unregister(ref);
+        }
+        // If this ref happens to be a named ref, drop the binding so
+        // get_named_ref doesn't return an invalidated handle.  The
+        // common case (no named refs) skips the loop after the first
+        // bucket check.
+        if (this._namedRefs.size > 0) {
+            for (let [name, r] of this._namedRefs) {
+                if (r === ref) {
+                    this._namedRefs.delete(name);
+                    break;
+                }
+            }
+        }
         ref._valid = false;
     }
 
+    /**
+     * Create a tracked ref bound to *name*.  If a ref with that name
+     * already exists, it is removed (and invalidated) first so the
+     * binding always resolves to the new position.
+     *
+     * Named refs participate in edit tracking exactly like anonymous
+     * refs from ``create_ref``; the only difference is that the
+     * buffer remembers them by name and you can look them up later
+     * with ``get_named_ref(name)``.
+     *
+     * @param {string} name
+     * @param {number} offset
+     * @param {string} [gravity='right']
+     * @returns {TextBufferRef}
+     */
+    create_named_ref(name, offset, gravity = 'right') {
+        // Replace any existing binding so the name always resolves
+        // to the new ref.  Use remove_ref so the old ref is also
+        // invalidated, preventing dangling handles in user code.
+        let existing = this._namedRefs.get(name);
+        if (existing != null) {
+            this.remove_ref(existing);
+        }
+        let ref = this.create_ref(offset, gravity);
+        this._namedRefs.set(name, ref);
+        return ref;
+    }
+
+    /**
+     * Look up a previously-named ref.
+     * @param {string} name
+     * @returns {?TextBufferRef} The ref, or ``null`` if none is
+     *   bound to *name*.
+     */
+    get_named_ref(name) {
+        let ref = this._namedRefs.get(name);
+        return ref == null ? null : ref;
+    }
+
+    /**
+     * Remove the named binding (if any) and invalidate the ref it
+     * points at.  No-op if no ref is bound to *name*.
+     * @param {string} name
+     */
+    remove_named_ref(name) {
+        let ref = this._namedRefs.get(name);
+        if (ref == null) return;
+        this._namedRefs.delete(name);
+        // We already dropped the named binding above, so remove_ref's
+        // name-cleanup loop is a no-op.  Calling it for the WeakRef
+        // / registry teardown keeps that path in one place.
+        if (ref._weakRef) {
+            this._refs.delete(ref._weakRef);
+            this._refRegistry.unregister(ref);
+        }
+        ref._valid = false;
+    }
+
+    /** Returns a fresh live ref pointing at offset 0. */
+    get_ref_start() {
+        return this.create_ref(0, 'right');
+    }
+
+    /** Returns a fresh live ref pointing at the end of the buffer. */
+    get_ref_end() {
+        return this.create_ref(this._text.length, 'right');
+    }
+
+    /**
+     * Returns ``[startRef, endRef]`` covering the entire buffer.
+     * Both refs are fresh and tracked.
+     * @returns {[TextBufferRef, TextBufferRef]}
+     */
+    get_ref_bounds() {
+        return [this.get_ref_start(), this.get_ref_end()];
+    }
+
+    /**
+     * Returns a fresh live ref at the start of line *lineno*
+     * (0-based).  Past the last line the ref is clamped to the end
+     * of the buffer; negative *lineno* clamps to 0.
+     * @param {number} lineno
+     * @returns {TextBufferRef}
+     */
+    get_ref_line_start(lineno) {
+        return this.create_ref(this._offsetOfLineStart(lineno), 'right');
+    }
+
+    /**
+     * Returns a fresh live ref at the end of line *lineno* (the
+     * offset of the trailing newline, or the buffer length on the
+     * last line).
+     * @param {number} lineno
+     * @returns {TextBufferRef}
+     */
+    get_ref_line_end(lineno) {
+        let start = this._offsetOfLineStart(lineno);
+        let nl = this._text.indexOf('\n', start);
+        let end = nl === -1 ? this._text.length : nl;
+        return this.create_ref(end, 'right');
+    }
+
+    /**
+     * @private Offset of the start of line *lineno* (0-based).
+     * Past the last line returns the buffer length; negative
+     * values return 0.  Used by get_ref_line_start/end and by
+     * TextBufferRef navigation helpers.
+     */
+    _offsetOfLineStart(lineno) {
+        if (lineno <= 0) return 0;
+        let off = 0;
+        for (let i = 0; i < lineno; i++) {
+            let nl = this._text.indexOf('\n', off);
+            if (nl === -1) return this._text.length;
+            off = nl + 1;
+        }
+        return off;
+    }
+
     _updateRefsOnInsert(offset, n) {
-        for (let ref of this._refs) {
+        for (let weakRef of this._refs) {
+            let ref = weakRef.deref();
+            if (ref == null) continue;
             if (ref._offset > offset ||
                 (ref._offset === offset && ref._gravity === 'right')) {
                 ref._offset += n;
@@ -1331,7 +1508,9 @@ class TextSource extends Widget {
 
     _updateRefsOnDelete(start, end) {
         let n = end - start;
-        for (let ref of this._refs) {
+        for (let weakRef of this._refs) {
+            let ref = weakRef.deref();
+            if (ref == null) continue;
             if (ref._offset <= start) continue;
             if (ref._offset >= end) {
                 ref._offset -= n;
@@ -1361,6 +1540,18 @@ class TextSource extends Widget {
         this._tagDefs.delete(name);
         this._tags = this._tags.filter(t => t.name !== name);
         this._render();
+    }
+
+    /**
+     * Returns true if any interval of *name* is currently applied
+     * anywhere in the buffer.  This is an O(n) scan of the tag-
+     * interval list, not a search of the buffer text — fast even
+     * on large documents.
+     * @param {string} name
+     * @returns {boolean}
+     */
+    has_tag(name) {
+        return this._tags.some(t => t.name === name);
     }
 
     /**

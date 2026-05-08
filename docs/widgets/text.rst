@@ -246,6 +246,9 @@ position-returning method on the public API uses refs.
        outstanding refs.
    * - ``get_length()``
      - Return text length (characters).
+   * - ``get_text_range(start_ref, end_ref)``
+     - Return the text between two refs as a plain string.  Smaller
+       offset becomes the start.
    * - ``insert_text(ref, text, tags)``
      - Insert text at the position of *ref* with optional tag names.
    * - ``delete_range(start_ref, end_ref)``
@@ -281,12 +284,31 @@ position-returning method on the public API uses refs.
      - Return tag names active at the position of *ref*.
    * - ``get_tags_range(start_ref, end_ref)``
      - Return tag names active anywhere in the range.
+   * - ``has_tag(name)``
+     - True if any interval of *name* is currently applied anywhere
+       in the buffer.  Cheap (scans the tag-interval list, not the
+       buffer text).
    * - ``create_ref(offset, gravity)``
      - Create a live ``TextBufferRef`` at *offset*.  ``gravity`` is
        ``'left'`` or ``'right'`` (default ``'right'``).  This is the
        only API that takes a raw integer offset.
    * - ``remove_ref(ref)``
      - Stop tracking *ref*.
+   * - ``create_named_ref(name, offset, gravity)``
+     - Like ``create_ref`` but also binds *name* to the new ref.
+       If *name* was already bound, the previous ref is removed and
+       invalidated first.
+   * - ``get_named_ref(name)``
+     - Return the ref bound to *name*, or ``null`` if none.
+   * - ``remove_named_ref(name)``
+     - Drop the binding for *name* and invalidate the ref.  No-op if
+       *name* is not bound.
+   * - ``get_ref_start()`` / ``get_ref_end()``
+     - Fresh refs at the start / end of the buffer.
+   * - ``get_ref_bounds()``
+     - Returns ``[start_ref, end_ref]`` covering the whole buffer.
+   * - ``get_ref_line_start(lineno)`` / ``get_ref_line_end(lineno)``
+     - Fresh refs at the start / end of line *lineno*.
    * - ``undo()`` / ``redo()``
      - Undo or redo.
    * - ``can_undo()`` / ``can_redo()``
@@ -342,6 +364,15 @@ the ref's position:
 
 If a delete range covers the ref's position, the ref snaps to the
 start of the deleted range.
+
+**Lifecycle.**  Anonymous refs created via ``create_ref`` are tracked
+weakly by the buffer — once you drop your last reference they
+become eligible for garbage collection without an explicit
+``remove_ref(ref)`` call.  Refs anchored by the buffer (named refs
+from ``create_named_ref``, icon refs registered via ``set_icon(ref,
+url)``) are held strongly and live until you explicitly drop the
+binding (``remove_named_ref(name)``, ``set_icon(ref, null)``) or
+until ``set_text`` invalidates everything.
 
 **Inspection:**
 
