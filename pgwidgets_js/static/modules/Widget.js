@@ -54,7 +54,7 @@ class Widget extends Callback {
             if (this.element) {
                 this.element.classList.add('pgwidgets-widget');
             }
-            this._installResizeObserver();
+            this._installLayoutObservers();
         });
     }
 
@@ -78,9 +78,49 @@ class Widget extends Callback {
     }
 
     /** @private */
-    _installResizeObserver() {
+    _installLayoutObservers() {
         if (!this.element || this._widgetResizeObserver) return;
+
+        // 'map' fires once, the first time the widget has BOTH a
+        // non-zero size AND has actually intersected the viewport.
+        // ResizeObserver alone misses cases where the element is laid
+        // out (size > 0) but not yet on screen — e.g. inside a hidden
+        // tab, an unscrolled-into-view container, or constructed off-
+        // screen.  IntersectionObserver fills that gap.  The two
+        // observers track their state independently; whichever fires
+        // second triggers 'map'.
         let prevW = -1, prevH = -1;
+        let lastW = 0, lastH = 0;
+        let hasIntersected = false;
+
+        let tryFireMap = () => {
+            if (this._mapped) return;
+            if (!hasIntersected) return;
+            if (lastW <= 0 && lastH <= 0) return;
+            this._mapped = true;
+            let box = this.element.getBoundingClientRect();
+            let parentBox = this.element.parentElement
+                ? this.element.parentElement.getBoundingClientRect()
+                : {left: 0, top: 0};
+            this.make_callback('map', {
+                x: Math.round(box.left - parentBox.left),
+                y: Math.round(box.top - parentBox.top),
+                viewport_x: Math.round(box.left),
+                viewport_y: Math.round(box.top),
+                width: lastW,
+                height: lastH,
+            });
+            // The IntersectionObserver is single-shot — drop it.  The
+            // ResizeObserver stays installed because 'resize' callbacks
+            // continue to fire for subsequent layout changes.  On
+            // reconstruction a fresh Widget is constructed, so this
+            // path runs again and 'map' fires again naturally.
+            if (this._widgetIntersectionObserver) {
+                this._widgetIntersectionObserver.disconnect();
+                this._widgetIntersectionObserver = null;
+            }
+        };
+
         this._widgetResizeObserver = new ResizeObserver((entries) => {
             let rect = entries[0].contentRect;
             let w = Math.round(rect.width);
@@ -88,25 +128,21 @@ class Widget extends Callback {
             if (w === prevW && h === prevH) return;
             prevW = w;
             prevH = h;
-            // Fire 'map' once on first non-zero layout.
-            if (!this._mapped && (w > 0 || h > 0)) {
-                this._mapped = true;
-                let box = this.element.getBoundingClientRect();
-                let parentBox = this.element.parentElement
-                    ? this.element.parentElement.getBoundingClientRect()
-                    : {left: 0, top: 0};
-                this.make_callback('map', {
-                    x: Math.round(box.left - parentBox.left),
-                    y: Math.round(box.top - parentBox.top),
-                    viewport_x: Math.round(box.left),
-                    viewport_y: Math.round(box.top),
-                    width: w,
-                    height: h,
-                });
-            }
+            lastW = w;
+            lastH = h;
+            tryFireMap();
             this.make_callback('resize', {width: w, height: h});
         });
         this._widgetResizeObserver.observe(this.element);
+
+        this._widgetIntersectionObserver = new IntersectionObserver(
+            (entries) => {
+                if (entries.some(e => e.isIntersecting)) {
+                    hasIntersected = true;
+                    tryFireMap();
+                }
+            });
+        this._widgetIntersectionObserver.observe(this.element);
     }
 
     /**
@@ -431,6 +467,10 @@ class Widget extends Callback {
         if (this._widgetResizeObserver) {
             this._widgetResizeObserver.disconnect();
             this._widgetResizeObserver = null;
+        }
+        if (this._widgetIntersectionObserver) {
+            this._widgetIntersectionObserver.disconnect();
+            this._widgetIntersectionObserver = null;
         }
 
         if (this.element && this.element.parentNode) {
