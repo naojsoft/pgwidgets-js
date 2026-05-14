@@ -184,33 +184,7 @@ class Image extends Widget {
         });
     }
 
-    /**
-     * In animation-frame mode the canvas's intrinsic size is the bitmap,
-     * which creates a flex feedback loop when CSS min-* is non-zero.
-     * Skip the CSS min-* application in that mode and warn.  In plain
-     * <img> mode min-size works fine, so fall through to the base class.
-     */
-    set_min_size(width, height) {
-        if (this._useAnimationFrame) {
-            console.warn("Image.set_min_size: ignored in use_animation_frame mode " +
-                         "to avoid flex feedback. Wrap in a container and apply " +
-                         "set_min_size to the wrapper.");
-            return;
-        }
-        super.set_min_size(width, height);
-    }
-
-    set_max_size(width, height) {
-        if (this._useAnimationFrame) {
-            console.warn("Image.set_max_size: ignored in use_animation_frame mode " +
-                         "to avoid flex feedback. Wrap in a container and apply " +
-                         "set_max_size to the wrapper.");
-            return;
-        }
-        super.set_max_size(width, height);
-    }
-
-    /**
+/**
      * Cancel any pending animation-frame flip and drop the offscreen
      * buffer before the base class tears down the visible element.
      */

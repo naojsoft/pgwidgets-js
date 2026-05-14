@@ -1,17 +1,23 @@
+/* min-width/height: 0 is needed on BOTH the <img> and <canvas>
+   variants: both are replaced elements with an intrinsic size (img =
+   the loaded picture, canvas = its bitmap width/height attributes),
+   and a flex item's default min-size is "auto" = content-min, which
+   resolves to that intrinsic size.  Without overriding it, flex
+   refuses to shrink the element below its bitmap dimensions, so a
+   600px-tall canvas inside a 36px-tall HBox stays at 600 instead of
+   stretching to the container's cross-axis.  The Image's resize
+   callback then syncs the canvas's drawing-buffer attrs to the CSS
+   box, so the bitmap matches the displayed pixel size. */
 .image-widget {
     display: block;
     max-width: 100%;
     max-height: 100%;
-}
-
-/* <img> mode (use_animation_frame=false): let flex (align-items:
-   stretch + flex-grow) drive the element box size so the image fills
-   its container in both axes.  object-fit: fill stretches the image
-   content to fill the element box (may distort aspect ratio).
-   In animation-frame mode the element is a <canvas> whose size is
-   driven by its width/height attrs, so we only set this on img. */
-img.image-widget {
-    object-fit: fill;
     min-width: 0;
     min-height: 0;
+}
+
+/* <img> only: object-fit: fill stretches the image content to fill
+   the element box (may distort aspect ratio). */
+img.image-widget {
+    object-fit: fill;
 }
