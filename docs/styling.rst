@@ -144,6 +144,9 @@ override CSS when called:
      - ``min-width``, ``min-height`` (``None`` clears that side)
    * - ``set_max_size(w, h)``
      - ``max-width``, ``max-height`` (``None`` clears that side)
+   * - ``set_expanding(h, v)``
+     - ``flex``, ``align-self``, ``width``/``height`` on the
+       requested axes (see :ref:`expanding-size-policy`)
    * - ``set_padding(p)``
      - ``padding``
    * - ``show()`` / ``hide()``

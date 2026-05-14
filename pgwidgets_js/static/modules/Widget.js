@@ -25,6 +25,8 @@ class Widget extends Callback {
         this.set_border_color = this.set_border_color.bind(this);
         this.set_min_size = this.set_min_size.bind(this);
         this.set_max_size = this.set_max_size.bind(this);
+        this.set_expanding = this.set_expanding.bind(this);
+        this._expanding = {horizontal: false, vertical: false};
         this.init_style = this.init_style.bind(this);
         this.resize = this.resize.bind(this);
         this.set_enabled = this.set_enabled.bind(this);
@@ -248,6 +250,63 @@ class Widget extends Callback {
             (width === null || width === undefined) ? '' : width + 'px';
         this.element.style.maxHeight =
             (height === null || height === undefined) ? '' : height + 'px';
+    }
+
+    /**
+     * Declare that this widget should expand to fill available space
+     * along the given axis/axes.  Analogous to Qt's
+     * QSizePolicy.Expanding: in a flex parent (every pgwidgets
+     * container) the widget grabs whatever room is left over.
+     *
+     * Setting expanding writes inline CSS immediately AND stores the
+     * flags on the widget, so it can be called either before or
+     * after the widget is added to its parent and end up at the same
+     * styles.  When a Box's ``add_widget(child, stretch=N)`` is
+     * called with N>0, that explicit per-container stretch takes
+     * precedence over a set_expanding flag on the same main axis
+     * (set_expanding still wins for the cross axis and for non-Box
+     * parents).
+     *
+     * @param {boolean} [horizontal=false] - Grow to fill width.
+     * @param {boolean} [vertical=false]   - Grow to fill height.
+     */
+    set_expanding(horizontal=false, vertical=false) {
+        this._expanding = {
+            horizontal: !!horizontal,
+            vertical:   !!vertical,
+        };
+        if (!this.element) return;
+        let s = this.element.style;
+        if (horizontal || vertical) {
+            // flex-grow:1 on the main axis fills it; align-self:
+            // stretch ensures the cross axis fills too even when an
+            // ancestor has changed align-items.  min-*:0 lets the
+            // item shrink below intrinsic content if the parent is
+            // tight (matches the Box.js stretch>0 path).
+            s.flex = '1 1 auto';
+            s.alignSelf = 'stretch';
+        }
+        // width/height: 100% are the fallback for non-flex parents
+        // (e.g. an Image inside a TabWidget content area that lays
+        // out children with block flow).  They're harmless in flex
+        // parents because flex layout takes precedence over the
+        // computed width/height.
+        if (horizontal) {
+            s.width = '100%';
+            s.minWidth = '0';
+        }
+        if (vertical) {
+            s.height = '100%';
+            s.minHeight = '0';
+        }
+    }
+
+    /**
+     * Returns the current expanding policy as ``{horizontal, vertical}``.
+     * Containers read this to size newly-added children.
+     */
+    get_expanding() {
+        return {...this._expanding};
     }
 
     /**

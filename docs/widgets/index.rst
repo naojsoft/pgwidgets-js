@@ -25,12 +25,16 @@ All visual widgets support these methods from the ``Widget`` base class:
      - Return current ``[width, height]``
    * - ``set_min_size(width, height)``
      - Set minimum size in pixels.  Pass ``None`` for either
-       dimension to leave that constraint unset.  No-op for
-       ``Canvas`` and ``Image(use_animation_frame=True)``.
+       dimension to leave that constraint unset.
    * - ``set_max_size(width, height)``
      - Set maximum size in pixels.  Pass ``None`` for either
-       dimension to leave that constraint unset.  No-op for
-       ``Canvas`` and ``Image(use_animation_frame=True)``.
+       dimension to leave that constraint unset.
+   * - ``set_expanding(horizontal, vertical)``
+     - Declare that this widget should expand into available space
+       along the given axis/axes (analogous to Qt's
+       ``QSizePolicy.Expanding``).  Both default to ``False``.  See
+       :ref:`expanding-size-policy` for details and interaction with
+       ``Box``'s ``stretch`` parameter.
    * - ``show()`` / ``hide()``
      - Show or hide the widget
    * - ``is_visible()``

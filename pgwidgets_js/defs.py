@@ -25,6 +25,8 @@ WIDGET_METHODS = {
     "set_border_color": ["color"],
     "set_min_size": ["width", "height"],
     "set_max_size": ["width", "height"],
+    "set_expanding": ["horizontal", "vertical"],
+    "get_expanding": [],
     "resize": ["width", "height"],
     "get_size": [],
     "get_position": [],

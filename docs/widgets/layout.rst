@@ -157,6 +157,64 @@ Horizontal box layout. Children are placed left to right.
    hbox.add_widget(button1, 0);
    hbox.add_widget(button2, 0);
 
+.. _expanding-size-policy:
+
+Expanding size policy
+---------------------
+
+Beyond ``Box``'s per-child ``stretch`` argument, every widget carries
+an *expanding* policy that any container respects.  This mirrors Qt's
+``QSizePolicy.Expanding`` and is the simplest way to say "this widget
+should fill the space it's given" without caring which container it
+ends up in.
+
+**Signature:** ``widget.set_expanding(horizontal=false, vertical=false)``
+
+Both flags default to ``False``.  Each one asks the widget to grow
+into the available space along that axis.  Concretely, on the
+requested axes the call writes ``flex: 1 1 auto``, ``align-self:
+stretch``, ``min-{width,height}: 0`` and ``{width,height}: 100%``,
+which works inside any flex parent (``Box``, ``Splitter``, ``TabWidget``
+content, ``ScrollArea``, ``Frame``, …) and also inside a non-flex
+parent.
+
+Typical patterns:
+
+.. code-block:: javascript
+
+   // Image fills its tab page in both directions
+   img.set_expanding(true, true);
+   tab.add_tab(img, "Frames");
+
+   // Status label stretches horizontally but stays its natural height
+   label.set_expanding(true, false);
+   hbox.add_widget(label);  // stretch=0; expanding still wins
+
+   // Vertical sidebar fills the column but keeps its natural width
+   sidebar.set_expanding(false, true);
+
+**Order independence.** ``set_expanding`` may be called either before
+or after the widget is added to its parent.  The flags are stored on
+the widget and ``Box.add_widget`` consults them as a fallback when
+its own ``stretch`` argument is 0; calling ``set_expanding`` after
+the widget is already parented simply rewrites the inline CSS to
+match.
+
+**Interaction with Box stretch.**  When ``add_widget(child, stretch=N)``
+is called with ``N > 0``, the explicit ``stretch`` wins over
+``set_expanding`` on the main axis — it's the more specific
+per-container override and also carries a proportion (``stretch=2``
+vs. ``stretch=1`` for proportional growth).  ``set_expanding`` still
+controls the cross axis and any non-Box parents.
+
+**Image with use_animation_frame.** A canvas's intrinsic size is its
+drawing-buffer (``width``/``height`` attributes), so without an
+explicit policy it lays out at the bitmap size and may collapse to
+0×0 inside a non-stretch container (e.g. a fresh tab page).  Call
+``set_expanding(true, true)`` to make it fill, or
+``set_min_size(w, h)`` to pin a specific size — both work directly
+on the Image, no wrapper container required.
+
 .. _widget-gridbox:
 
 GridBox

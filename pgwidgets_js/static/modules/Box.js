@@ -53,40 +53,7 @@ class Box extends ContainerWidget {
      */
     add_widget(child, stretch=0) {
         super.add(child);
-
-        let elt = child.get_element();
-        elt.classList.add('box-child');
-
-        let orient = this.orientation;
-
-        // Override any CSS height/width:100% on the main axis so that
-        // flex-basis:auto resolves to content size, not parent size.
-        if (orient === 'vertical') {
-            elt.style.height = 'auto';
-        } else {
-            elt.style.width = 'auto';
-        }
-
-        // main axis sizing:
-        // - stretch=0 : rigid, never shrinks below natural size, never
-        //   grows beyond it.  The box's intrinsic size includes this
-        //   widget's natural size and propagates up to a boundary
-        //   container (Splitter, ScrollArea, TopLevel).
-        // - stretch>0 : grows proportionally into extra space, AND can
-        //   shrink (with min-* overrides) so widgets whose intrinsic
-        //   size depends on layout (Canvas, Image with use_animation_frame)
-        //   don't form a feedback loop that ratchets their size upward.
-        if (stretch > 0) {
-            elt.style.flex = stretch + ' 1 auto';
-            elt.style.minWidth = '0';
-            elt.style.minHeight = '0';
-        } else {
-            elt.style.flex = '0 0 auto';
-        }
-
-        // cross axis: rely on align-items:stretch (set in box-widget CSS)
-        // to make auto-sized children fill the box.  Widgets with an
-        // explicit CSS size keep that size — matching Qt's "Fixed" policy.
+        this._applyBoxChildSizing(child, stretch);
     }
 
     /**
@@ -97,27 +64,7 @@ class Box extends ContainerWidget {
      */
     insert_widget(index, child, stretch=0) {
         let elt = child.get_element();
-        elt.classList.add('box-child');
-
-        let orient = this.orientation;
-
-        // Override any CSS height/width:100% on the main axis
-        if (orient === 'vertical') {
-            elt.style.height = 'auto';
-        } else {
-            elt.style.width = 'auto';
-        }
-
-        if (stretch > 0) {
-            elt.style.flex = stretch + ' 1 auto';
-            elt.style.minWidth = '0';
-            elt.style.minHeight = '0';
-        } else {
-            elt.style.flex = '0 0 auto';
-        }
-
-        // cross axis: rely on align-items:stretch from box-widget CSS;
-        // widgets with explicit CSS size keep that size (Qt "Fixed").
+        this._applyBoxChildSizing(child, stretch);
 
         // Insert into children array at the right position
         if (index >= this.children.length) {
@@ -130,6 +77,56 @@ class Box extends ContainerWidget {
         }
 
         this.make_callback('child-added', child);
+    }
+
+    /** @private
+     * Apply box-child sizing to a newly-added or inserted child.
+     *
+     * Main-axis sizing:
+     *   stretch=0 + no set_expanding on this axis  : flex 0 0 auto (rigid).
+     *   stretch=0 + set_expanding on this axis     : flex 1 1 auto (fill).
+     *   stretch>0                                  : flex N 1 auto.
+     * Explicit stretch>0 wins over set_expanding on the main axis —
+     * it's more specific and carries a proportion.
+     *
+     * Cross-axis sizing comes from align-items:stretch on the box;
+     * the child's set_expanding flag on the cross axis is already
+     * baked into its inline width/height:100% + align-self:stretch
+     * by Widget.set_expanding(), so nothing extra to do here.
+     */
+    _applyBoxChildSizing(child, stretch) {
+        let elt = child.get_element();
+        elt.classList.add('box-child');
+
+        let orient = this.orientation;
+        let mainExpand = false;
+        if (child._expanding) {
+            mainExpand = orient === 'vertical'
+                ? child._expanding.vertical
+                : child._expanding.horizontal;
+        }
+
+        // Override any CSS height/width:100% on the main axis so that
+        // flex-basis:auto resolves to content size, not parent size.
+        // (set_expanding's width/height:100% is meant for non-flex
+        // parents; inside a Box we drive sizing through flex instead.)
+        if (orient === 'vertical') {
+            elt.style.height = 'auto';
+        } else {
+            elt.style.width = 'auto';
+        }
+
+        if (stretch > 0) {
+            elt.style.flex = stretch + ' 1 auto';
+            elt.style.minWidth = '0';
+            elt.style.minHeight = '0';
+        } else if (mainExpand) {
+            elt.style.flex = '1 1 auto';
+            elt.style.minWidth = '0';
+            elt.style.minHeight = '0';
+        } else {
+            elt.style.flex = '0 0 auto';
+        }
     }
 
     /**
