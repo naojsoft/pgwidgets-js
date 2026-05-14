@@ -62,16 +62,29 @@ class Image extends Widget {
         }
 
         if (this._useAnimationFrame) {
-            // Keep the canvas drawing-buffer size synced to its displayed
-            // pixel size, just like Canvas widget.
+            // When NO image has been loaded yet, sync the canvas's
+            // drawing-buffer to its displayed pixel size so any
+            // direct drawing (Canvas-style use) gets crisp pixels.
+            //
+            // Once an image is loaded, the bitmap is pinned to the
+            // image's natural size (see set_image / set_binary_image)
+            // and the browser handles the CSS-box scaling itself —
+            // otherwise drawImage(img, 0, 0, css_w, css_h) would
+            // distort the image whenever the canvas's CSS box and
+            // the image's natural aspect don't match.
             this.add_callback('resize', (widget, evt) => {
+                if (widget._lastImage) return;
                 let cw = Math.max(0, Math.round(evt.width));
                 let ch = Math.max(0, Math.round(evt.height));
                 if (widget.element.width !== cw) widget.element.width = cw;
                 if (widget.element.height !== ch) widget.element.height = ch;
                 if (widget._offscreen) {
-                    if (widget._offscreen.width !== cw) widget._offscreen.width = cw;
-                    if (widget._offscreen.height !== ch) widget._offscreen.height = ch;
+                    if (widget._offscreen.width !== cw) {
+                        widget._offscreen.width = cw;
+                    }
+                    if (widget._offscreen.height !== ch) {
+                        widget._offscreen.height = ch;
+                    }
                 }
             });
         }
@@ -96,14 +109,8 @@ class Image extends Widget {
         let img = new globalThis.Image();
         img.src = url;
         img.addEventListener("load", () => {
-            let ctx = this.get_draw_context();
-            ctx.clearRect(0, 0,
-                          this._offscreen ? this._offscreen.width : this.element.width,
-                          this._offscreen ? this._offscreen.height : this.element.height);
-            if (this.element.width > 0 && this.element.height > 0) {
-                ctx.drawImage(img, 0, 0, this.element.width, this.element.height);
-            }
-            this.update();
+            this._lastImage = img;
+            this._drawImage(img);
         });
     }
 
@@ -134,21 +141,51 @@ class Image extends Widget {
         // canvas owns the pixels at that point.
         let img = new globalThis.Image();
         img.addEventListener("load", () => {
-            let ctx = this.get_draw_context();
-            ctx.clearRect(0, 0,
-                this._offscreen ? this._offscreen.width : this.element.width,
-                this._offscreen ? this._offscreen.height : this.element.height);
-            if (this.element.width > 0 && this.element.height > 0) {
-                ctx.drawImage(img, 0, 0,
-                              this.element.width, this.element.height);
-            }
-            this.update();
+            this._lastImage = img;
+            this._drawImage(img);
             URL.revokeObjectURL(url);
         });
         img.addEventListener("error", () => {
             URL.revokeObjectURL(url);
         });
         img.src = url;
+    }
+
+    /** @private
+     * Pin the canvas drawing-buffer to the image's natural size, draw
+     * the image at native resolution (no scaling), and schedule an
+     * rAF flip from offscreen to visible.  Shared by set_image and
+     * set_binary_image.
+     *
+     * The "image is already the right size" invariant: callers
+     * generate or fetch images sized to match the widget's reported
+     * size (via the 'map' or 'resize' callback), so drawImage runs
+     * at natural scale and never distorts.  If the canvas's CSS box
+     * later drifts from the bitmap (e.g., a layout settle), the
+     * browser handles display scaling without us re-encoding pixels.
+     */
+    _drawImage(img) {
+        if (!this._useAnimationFrame) return;
+        let nw = img.naturalWidth;
+        let nh = img.naturalHeight;
+        if (nw <= 0 || nh <= 0) return;
+        // Pin the canvas (and offscreen) drawing-buffer to the image's
+        // natural size so the image renders at native resolution.  The
+        // canvas's CSS box is whatever the layout gave it; the browser
+        // scales the canvas display from bitmap to CSS box on its own,
+        // which preserves the image's data without us having to
+        // pre-distort it inside drawImage().
+        if (this.element.width !== nw) this.element.width = nw;
+        if (this.element.height !== nh) this.element.height = nh;
+        if (this._offscreen) {
+            if (this._offscreen.width !== nw) this._offscreen.width = nw;
+            if (this._offscreen.height !== nh) this._offscreen.height = nh;
+        }
+        let ctx = this.get_draw_context();
+        if (!ctx) return;
+        ctx.clearRect(0, 0, nw, nh);
+        ctx.drawImage(img, 0, 0);
+        this.update();
     }
 
     /**

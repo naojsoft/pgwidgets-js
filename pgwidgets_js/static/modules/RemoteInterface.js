@@ -361,6 +361,39 @@ class RemoteInterface {
                 if (typeof widget._scheduleMapCheck === 'function') {
                     widget._scheduleMapCheck();
                 }
+                // Synthetic resize-family fires with the final
+                // layout-settled sizes.  Resize events fired mid-
+                // reconstruction were suppressed on the Python side
+                // (state-replay echoes), so without this the user's
+                // handler is stuck with whatever size happened to be
+                // current when 'map' fired — even if the layout has
+                // since settled to something different.  Firing here
+                // lets a "regenerate sized to the widget" handler
+                // catch up before the user notices a mismatched
+                // bitmap.
+                //
+                // Two events are covered:
+                //   'resize'      — every Widget (this.cb['resize']).
+                //   'area-resize' — AbstractScrollArea (and its
+                //                   ScrollArea subclass).  Carries
+                //                   the inner content area size and
+                //                   per-scrollbar dimensions, which
+                //                   plain 'resize' can't report.
+                if (widget.element && widget.element.isConnected) {
+                    let box = widget.element.getBoundingClientRect();
+                    let w = Math.round(box.width);
+                    let h = Math.round(box.height);
+                    if (w > 0 || h > 0) {
+                        if (widget.cb && widget.cb['resize']) {
+                            widget.make_callback('resize',
+                                {width: w, height: h});
+                        }
+                        if (typeof widget._fireAreaResize
+                                === 'function') {
+                            widget._fireAreaResize();
+                        }
+                    }
+                }
             }
             requestAnimationFrame(() => {
                 for (let [, widget] of Callback._registry) {
