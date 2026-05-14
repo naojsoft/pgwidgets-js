@@ -341,6 +341,36 @@ class RemoteInterface {
      */
     _handleReconstructEnd(msg) {
         this._reconstructing = false;
+        // Two-stage backstop for the 'map' lifecycle callback.
+        //
+        // Stage 1 (next rAF): trigger a visibility-aware re-check on
+        // every widget — catches the case where layout settling lagged
+        // the per-widget MutationObserver's first frame.
+        //
+        // Stage 2 (one more rAF later): force-fire 'map' for any
+        // widget that's STILL unmapped, regardless of visibility or
+        // size.  This covers widgets in detached subtrees (e.g.
+        // TabWidget/StackWidget inactive pages, which are removed
+        // from the DOM entirely and would otherwise never fire 'map'
+        // until the user activates them).  Listeners can still run
+        // their setup logic; if the widget later becomes really
+        // visible, 'map' fires again with real geometry (multi-fire
+        // is preferred over miss, per design).
+        requestAnimationFrame(() => {
+            for (let [, widget] of Callback._registry) {
+                if (typeof widget._scheduleMapCheck === 'function') {
+                    widget._scheduleMapCheck();
+                }
+            }
+            requestAnimationFrame(() => {
+                for (let [, widget] of Callback._registry) {
+                    if (typeof widget._forceFireMap === 'function'
+                            && !widget._mapped) {
+                        widget._forceFireMap();
+                    }
+                }
+            });
+        });
         console.log("RemoteInterface: reconstruction complete");
         return {type: "result", id: msg.id};
     }
@@ -516,9 +546,19 @@ class RemoteInterface {
             this._listeners.delete(key);
         }
         let cb = (w, ...args) => {
-            // Suppress callbacks during reconstruction or cross-browser
-            // sync — these are side effects, not user actions.
-            if (this._reconstructing || this._syncing) {
+            // Suppress callbacks during cross-browser sync (silent calls
+            // replay state without re-emitting it back).  Reconstruction
+            // also suppresses most callbacks for the same reason, except
+            // 'map' — it's a one-shot lifecycle event tied to the widget
+            // becoming visually present.  Reconstruction can span
+            // multiple rendering frames, and the layout observers may
+            // fire mid-stream; suppressing 'map' there means the event
+            // is lost for that widget's lifetime since the observers
+            // disconnect after the single fire.
+            if (this._syncing) {
+                return;
+            }
+            if (this._reconstructing && msg.action !== 'map') {
                 return;
             }
             // console.log("[JS-CB] firing wid=" + msg.wid
@@ -552,6 +592,17 @@ class RemoteInterface {
         this._listeners.set(key, cb);
         widget.enable_callback(msg.action);
         widget.add_callback(msg.action, cb);
+
+        // Catch-up for the 'map' lifecycle callback.  During
+        // reconstruction the layout observer can fire before the
+        // listen for 'map' arrives (the listen is sent at the end of
+        // _reconstruct_widget, after children are attached, which can
+        // span multiple rendering frames).  Widget caches the latest
+        // payload in _mappedEvent precisely so we can replay it here.
+        if (msg.action === 'map'
+                && widget._mapped && widget._mappedEvent) {
+            cb(widget, widget._mappedEvent);
+        }
 
         // For "modified" actions, attach a debounced DOM input listener
         // so text changes are pushed to the server without the user

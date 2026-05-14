@@ -81,68 +81,119 @@ class Widget extends Callback {
     _installLayoutObservers() {
         if (!this.element || this._widgetResizeObserver) return;
 
-        // 'map' fires once, the first time the widget has BOTH a
-        // non-zero size AND has actually intersected the viewport.
-        // ResizeObserver alone misses cases where the element is laid
-        // out (size > 0) but not yet on screen — e.g. inside a hidden
-        // tab, an unscrolled-into-view container, or constructed off-
-        // screen.  IntersectionObserver fills that gap.  The two
-        // observers track their state independently; whichever fires
-        // second triggers 'map'.
-        let prevW = -1, prevH = -1;
-        let lastW = 0, lastH = 0;
-        let hasIntersected = false;
-
+        // 'map' is driven by a MutationObserver + Element.checkVisibility(),
+        // with ResizeObserver as a secondary trigger.  Both stay live
+        // for the widget's lifetime: 'map' fires every time visibility
+        // transitions from hidden to visible (tracked via wasVisible),
+        // so a tab being switched in or a parent being unhidden re-
+        // emits 'map'.  Per design, multi-fire is preferred over miss.
+        // checkVisibility() does the precise layout-aware visibility
+        // check (display:none anywhere, content-visibility, etc.) that
+        // is hard to reproduce manually.  We coalesce a burst of
+        // mutations per frame through requestAnimationFrame so the
+        // check runs at most once per frame even during reconstruction
+        // when the DOM is churning rapidly.
+        let mapCheckScheduled = false;
+        let wasVisible = false;
         let tryFireMap = () => {
-            if (this._mapped) return;
-            if (!hasIntersected) return;
-            if (lastW <= 0 && lastH <= 0) return;
-            this._mapped = true;
+            if (this._destroyed || !this.element) return;
+            let visible;
+            if (typeof this.element.checkVisibility === 'function') {
+                visible = this.element.checkVisibility();
+            } else {
+                visible = this.element.isConnected
+                    && this.element.offsetParent !== null;
+            }
+            if (!visible) { wasVisible = false; return; }
             let box = this.element.getBoundingClientRect();
+            let w = Math.round(box.width);
+            let h = Math.round(box.height);
+            if (w <= 0 && h <= 0) { wasVisible = false; return; }
+            if (wasVisible) return;  // already visible last check; no re-fire
+            wasVisible = true;
+            this._mapped = true;
             let parentBox = this.element.parentElement
                 ? this.element.parentElement.getBoundingClientRect()
                 : {left: 0, top: 0};
-            this.make_callback('map', {
+            // Cache the latest payload so a listener that registers
+            // AFTER 'map' has already fired (a real possibility during
+            // reconstruction, where layout can run between create and
+            // listen) can be served the most recent event via the
+            // catch-up path in RemoteInterface._handleListen.
+            this._mappedEvent = {
                 x: Math.round(box.left - parentBox.left),
                 y: Math.round(box.top - parentBox.top),
                 viewport_x: Math.round(box.left),
                 viewport_y: Math.round(box.top),
-                width: lastW,
-                height: lastH,
+                width: w,
+                height: h,
+            };
+            this.make_callback('map', this._mappedEvent);
+        };
+        let scheduleMapCheck = () => {
+            if (mapCheckScheduled) return;
+            mapCheckScheduled = true;
+            requestAnimationFrame(() => {
+                mapCheckScheduled = false;
+                tryFireMap();
             });
-            // The IntersectionObserver is single-shot — drop it.  The
-            // ResizeObserver stays installed because 'resize' callbacks
-            // continue to fire for subsequent layout changes.  On
-            // reconstruction a fresh Widget is constructed, so this
-            // path runs again and 'map' fires again naturally.
-            if (this._widgetIntersectionObserver) {
-                this._widgetIntersectionObserver.disconnect();
-                this._widgetIntersectionObserver = null;
-            }
+        };
+        // Expose the scheduler so RemoteInterface._handleReconstructEnd
+        // can force a re-check after reconstruction completes — a
+        // backstop against the widget becoming visible mid-stream and
+        // the observer firing before its listener was registered.
+        this._scheduleMapCheck = scheduleMapCheck;
+
+        // Force-fire 'map' regardless of visibility / size.  Used as
+        // the final-fallback backstop at reconstruct-end so a widget
+        // that's currently hidden (detached tab page, display:none
+        // ancestor, etc.) still gets at least one 'map' event so its
+        // listener can run setup logic.  Geometry is whatever the
+        // element reports right now (may be 0×0).  If the widget later
+        // becomes actually visible, the wasVisible-tracked path fires
+        // 'map' again with real geometry — multi-fire is preferred
+        // over miss.
+        this._forceFireMap = () => {
+            if (this._mapped || this._destroyed) return;
+            if (!this.element) return;
+            this._mapped = true;
+            wasVisible = false;  // let the next real visibility re-fire
+            let box = this.element.getBoundingClientRect();
+            let parentBox = this.element.parentElement
+                ? this.element.parentElement.getBoundingClientRect()
+                : {left: 0, top: 0};
+            this._mappedEvent = {
+                x: Math.round(box.left - parentBox.left),
+                y: Math.round(box.top - parentBox.top),
+                viewport_x: Math.round(box.left),
+                viewport_y: Math.round(box.top),
+                width: Math.round(box.width),
+                height: Math.round(box.height),
+            };
+            this.make_callback('map', this._mappedEvent);
         };
 
+        this._mapMutationObserver = new MutationObserver(scheduleMapCheck);
+        this._mapMutationObserver.observe(document.body, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['style', 'class', 'hidden'],
+        });
+        scheduleMapCheck();
+
+        let prevW = -1, prevH = -1;
         this._widgetResizeObserver = new ResizeObserver((entries) => {
             let rect = entries[0].contentRect;
             let w = Math.round(rect.width);
             let h = Math.round(rect.height);
+            scheduleMapCheck();
             if (w === prevW && h === prevH) return;
             prevW = w;
             prevH = h;
-            lastW = w;
-            lastH = h;
-            tryFireMap();
             this.make_callback('resize', {width: w, height: h});
         });
         this._widgetResizeObserver.observe(this.element);
-
-        this._widgetIntersectionObserver = new IntersectionObserver(
-            (entries) => {
-                if (entries.some(e => e.isIntersecting)) {
-                    hasIntersected = true;
-                    tryFireMap();
-                }
-            });
-        this._widgetIntersectionObserver.observe(this.element);
     }
 
     /**
@@ -468,9 +519,9 @@ class Widget extends Callback {
             this._widgetResizeObserver.disconnect();
             this._widgetResizeObserver = null;
         }
-        if (this._widgetIntersectionObserver) {
-            this._widgetIntersectionObserver.disconnect();
-            this._widgetIntersectionObserver = null;
+        if (this._mapMutationObserver) {
+            this._mapMutationObserver.disconnect();
+            this._mapMutationObserver = null;
         }
 
         if (this.element && this.element.parentNode) {
