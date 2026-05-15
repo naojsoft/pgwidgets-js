@@ -26,10 +26,16 @@
     background-color: #cde;
 }
 
-/* Menu (dropdown / submenu) */
+/* Menu (dropdown / submenu).
+   z-index is intentionally very large: TopLevel.raise_() assigns
+   z-indexes that grow by 1 per raise across all document.body
+   children (which include popped-up menus), so a small menu
+   z-index can be overtaken after a few raise operations.  Using
+   a high constant keeps popups above any raised TopLevel under
+   normal use. */
 .menu-widget {
     position: absolute;
-    z-index: 10000;
+    z-index: 1000000;
     background-color: #f6f6f6;
     border: 1px solid #aaa;
     box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.2);

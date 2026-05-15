@@ -243,7 +243,7 @@ class ToolBarAction extends Widget {
         let menuElt = menu.get_element();
         menuElt.style.display = 'none';
         menuElt.style.position = 'absolute';
-        menuElt.style.zIndex = '10000';
+        menuElt.style.zIndex = '1000000';
         this.element.style.position = 'relative';
         this.element.appendChild(menuElt);
 

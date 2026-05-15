@@ -87,7 +87,7 @@ class Label extends Widget {
         let menuElt = menu.get_element();
         menuElt.style.display = 'none';
         menuElt.style.position = 'fixed';
-        menuElt.style.zIndex = '10000';
+        menuElt.style.zIndex = '1000000';
         if (!document.body.contains(menuElt)) {
             document.body.appendChild(menuElt);
         }

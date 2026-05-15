@@ -75,7 +75,7 @@ class MenuBar extends Widget {
         let menuElt = menu.get_element();
         menuElt.style.display = 'none';
         menuElt.style.position = 'fixed';
-        menuElt.style.zIndex = '10000';
+        menuElt.style.zIndex = '1000000';
         document.body.appendChild(menuElt);
 
         const positionMenu = () => {
