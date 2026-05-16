@@ -1,13 +1,100 @@
 What's New
 ==========
 
-Significant changes since the last tagged release (``v0.1.2``).
+Recent changes — since ``v0.2.1``
+---------------------------------
+
+TextSource: TextBufferRef objects replace raw offsets
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``TextSource`` and ``TextArea`` (which embeds a ``TextSource``) now
+take and return ``TextBufferRef`` objects in place of raw character
+offsets.  A ref tracks a position in the buffer as edits happen
+around it, so a cursor or selection endpoint stays attached to "the
+character it was on" rather than being silently shifted by an
+unrelated insert.
+
+``TextBufferRef`` is itself a ``Callback`` subclass with a wid, so
+refs are first-class objects that cross the WebSocket wire.  This
+lets the Python binding return refs from ``create_ref`` /
+``get_cursor`` / ``set_cursor`` and pass them straight into other
+methods.  Named refs (``create_ref("bookmark1", ...)``) make it
+easy to revisit a tracked location, and unused refs are reclaimed
+via weak-reference tracking.
+
+New ``TextBufferRef`` navigation / mutation methods include
+``next_char``, ``prev_char``, ``next_word``, ``prev_word``,
+``line_start``, ``line_end``, ``insert``, ``delete_forward``,
+``delete_backward``, and comparison helpers.
+
+Widget: ``map`` lifecycle callback
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Every visual widget now fires a one-shot ``map`` callback the first
+time it gains a non-zero visible box on the page.  This is the
+right hook for code that needs the widget's real laid-out size
+before it can run — for example, generating a server-side bitmap
+that exactly matches an ``Image`` widget's flex-allocated size.
+
+``map`` fires reliably across reconnection / reconstruction.  The
+``RemoteInterface`` keeps two ``requestAnimationFrame`` backstops
+at the end of reconstruction: a visibility-aware re-check, and a
+force-fire pass for widgets in detached subtrees (e.g. inactive
+``TabWidget`` pages) so handlers run even before the user opens
+that tab.
+
+``set_expanding(horizontal, vertical)``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+New base-class size policy method, mirroring Qt's
+``QSizePolicy::Expanding``.  A widget with ``set_expanding(True,
+True)`` will fill the available space along both axes inside a
+flex container.
+
+Image: native-resolution rendering, no drawImage scaling
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In ``use_animation_frame`` mode the canvas drawing-buffer is now
+pinned to the image's natural size and ``drawImage`` runs at native
+scale.  The browser's CSS-box scaling handles display sizing
+without us re-encoding pixels — so a server-generated image that
+was rendered to match the widget's reported size never gets
+re-scaled into a mismatched aspect ratio.
+
+``set_min_size`` / ``set_max_size`` work again in animation mode,
+and the canvas can shrink inside a flex container (``min-width:
+0``).  After reconstruction, a synthetic ``resize`` and
+``area-resize`` are fired at the final layout-settled size so
+handlers that regenerate sized content catch up.
+
+Other improvements
+~~~~~~~~~~~~~~~~~~
+
+- ``Menu`` popup z-index raised to ``1000000`` so popups stay above
+  any ``TopLevel`` that has been ``raise_()``-d a few times
+  (``raise_()`` assigns ``max + 1`` across all ``document.body``
+  children, including open menus, so a small menu z-index could
+  eventually be overtaken).
+- ``RadioButton`` defaults to ``sans-serif`` to match
+  ``Label`` / ``Menu`` / ``ToolBar`` / ``StatusBar`` / etc.
+- New documentation page: :doc:`for-developers`, aimed at someone
+  implementing a new language binding or transport.  Covers the
+  WebSocket message protocol, serialization rules, widget identity
+  and creation, callback subscription, server-side state tracking,
+  and the full step-by-step of reconstruction (including the
+  subtle passive-vs-user-set-state distinction).
+- New project logo.
+
+----
+
+Earlier — since ``v0.1.2``
+--------------------------
 
 Major changes
--------------
+~~~~~~~~~~~~~
 
 TreeView: dict-tree model with stable key paths
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ``TreeView`` (and its subclass ``TableView``) now stores tree data as
 a hierarchy of dicts keyed by stable string identifiers.  Paths to
@@ -35,7 +122,7 @@ is available for the rare case where the split is ambiguous.  See
 :ref:`widget-treeview` for the full reference.
 
 Column descriptors and types
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+""""""""""""""""""""""""""""
 
 Columns now carry a stable ``key`` (auto-generated as ``_col0``,
 ``_col1`` ... if not supplied), and a richer set of types:
@@ -52,7 +139,7 @@ All per-column / per-row methods now take a key (not an index):
 ``set_cell(path, col_key, value)``, etc.
 
 Auto-spanning
-^^^^^^^^^^^^^
+"""""""""""""
 
 Within a row, a column whose key is missing (or whose value is
 ``null``/``undefined``) is "absent" and the preceding present cell
@@ -62,7 +149,7 @@ render as their own (empty) cell.  This lets parent rows be terse:
 renders as a single cell across the row.
 
 New tree methods
-^^^^^^^^^^^^^^^^
+""""""""""""""""
 
 - ``add_tree(tree, parent=null)`` -- merge a dict-tree under a
   parent path; existing same-key children are replaced subtree-deep.
@@ -75,7 +162,7 @@ New tree methods
 - ``set_sortable(tf)`` -- toggle click-to-sort.
 
 Window controls (TopLevel and MDISubWindow)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ``TopLevel`` now supports the same window controls that
 ``MDISubWindow`` has, plus a "shade" (roll up to title bar) state
@@ -110,7 +197,7 @@ The active (topmost) sub-window's title bar is now drawn slightly
 lighter, like the active tab in a TabWidget.
 
 Right-click title-bar context menu
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+""""""""""""""""""""""""""""""""""
 
 Both ``TopLevel`` and ``MDISubWindow`` show a context menu on
 right-click of the title bar.  Items are gated by the relevant
@@ -122,7 +209,7 @@ restricted to the left mouse button so right- and middle-click
 gestures don't accidentally move or resize the window.
 
 Image: binary-frame protocol
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ``Image.set_binary_image(format, buffer)`` accepts raw bytes from a
 WebSocket binary frame and renders them via a ``Blob`` of the
@@ -133,7 +220,7 @@ etc.).  The Python side's binding stores the latest frame so it is
 replayed on reconnect.
 
 Browser text-select disabled by default
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Drag-to-highlight inside widgets is now disabled by default — it
 interferes with row click/drag, shift-click range select, etc.
@@ -144,7 +231,7 @@ the new ``set_allow_text_selection(tf)`` method on the ``Widget``
 base class (or via constructor option on ``TreeView`` / ``TableView``).
 
 Other notable additions
------------------------
+~~~~~~~~~~~~~~~~~~~~~~~
 
 - ``MenuAction`` ``activated`` callback signature simplified.  Old:
   ``handler(widget, text, checked)``.  New: ``handler(widget)`` for
@@ -175,7 +262,7 @@ Other notable additions
   ``resize()`` set).  See :ref:`widget-fixedlayout`.
 
 Bug fixes
----------
+~~~~~~~~~
 
 - Sub-widgets created during a widget's constructor (e.g.
   ``ScrollBar`` instances inside ``TreeView``) no longer collide
