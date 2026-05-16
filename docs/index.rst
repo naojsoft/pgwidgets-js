@@ -41,3 +41,4 @@ into layout containers, and wire up callbacks.
    remote
    pyodide
    electron
+   for-developers
