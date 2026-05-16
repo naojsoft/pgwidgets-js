@@ -14,4 +14,4 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 html_theme = "furo"
 html_static_path = []
 html_title = "pgwidgets-js"
-html_logo = "../pgwidgets_js/static/icons/pgwidgets-logo.svg"
+html_logo = "../pgwidgets_js/static/icons/pgwidgets-logo.png"

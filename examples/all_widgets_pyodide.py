@@ -212,7 +212,7 @@ def make_demo(name):
                                  "width": 280, "height": 200})
 
     elif name == "Image":
-        img = Widgets.Image(url="../pgwidgets_js/static/icons/pgwidgets-logo.svg")
+        img = Widgets.Image(url="../pgwidgets_js/static/icons/pgwidgets-logo.png")
         subwin = mdi.add_widget(img,
                                 {"title": "Image",
                                  "width": 360, "height": 240})
