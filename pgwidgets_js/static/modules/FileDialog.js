@@ -12,8 +12,9 @@ import {Callback} from "./Callback.js";
  *
  * For file/files mode, call `open()` to show the picker. When the
  * user selects file(s), the `activated` callback fires with a payload
- * of `{files: [{name, size, type, data}, ...]}` where `data` is a
- * data URI (base64-encoded).
+ * of `{files: [{name, size, type, data}, ...]}` where `data` is an
+ * `ArrayBuffer` of the file's raw bytes (the Python side receives
+ * `bytes`).
  *
  * For save mode, call `save(filename, data, mime_type)` to trigger
  * a browser download.
@@ -59,7 +60,7 @@ class FileDialog extends Callback {
 
     /**
      * Open the native file picker (file/files mode).
-     * Selected files are read as data URIs and delivered via the
+     * Selected files are read as ArrayBuffers and delivered via the
      * `activated` callback.
      */
     open() {
@@ -92,7 +93,9 @@ class FileDialog extends Callback {
     }
 
     /**
-     * Read selected files as data URIs and fire the activated callback.
+     * Read selected files as ArrayBuffers and fire the activated callback.
+     * RemoteInterface ships the buffers as raw binary frames so the
+     * server sees `bytes`, not a base64 data-URI string.
      * @private
      */
     _readFiles(files, cleanup) {
@@ -152,7 +155,7 @@ class FileDialog extends Callback {
                 }
             };
 
-            reader.readAsDataURL(file);
+            reader.readAsArrayBuffer(file);
         }
     }
 

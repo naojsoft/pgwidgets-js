@@ -34,6 +34,20 @@ import {Callback} from "./Callback.js";
  */
 class RemoteInterface {
 
+    // dtype → TypedArray constructor, used to wrap a reassembled
+    // chunked-binary payload when the sender attached shape/dtype.
+    // Keys mirror pgwidgets-python's pgwidgets.buffer._DTYPES.
+    static _TYPED_ARRAY_CTORS = {
+        "uint8":   Uint8Array,
+        "uint16":  Uint16Array,
+        "uint32":  Uint32Array,
+        "int8":    Int8Array,
+        "int16":   Int16Array,
+        "int32":   Int32Array,
+        "float32": Float32Array,
+        "float64": Float64Array,
+    };
+
     /**
      * Creates a new RemoteInterface.
      * @param {Object} classMap - Map of class names to constructors
@@ -138,9 +152,12 @@ class RemoteInterface {
 
     /** @private */
     _onMessage(event) {
-        // Binary frame: pair with the most recently queued binary-call
-        // header (FIFO).  Used for image streaming and similar cases
-        // where base64 in JSON would inflate the payload by ~33%.
+        // Binary frame: pair with the most recently queued JSON header
+        // (FIFO).  Two header types reserve a binary frame:
+        //   * binary-call  — single-payload call (existing fast path)
+        //   * binary-chunk — one chunk of a chunked transfer (when
+        //                    encoding === "binary"; base64 chunks
+        //                    carry their data inline and don't reserve)
         if (event.data instanceof ArrayBuffer
                 || event.data instanceof Blob) {
             let header = this._pendingBinary && this._pendingBinary.shift();
@@ -149,7 +166,11 @@ class RemoteInterface {
                               + "with no queued header");
                 return;
             }
-            this._handleBinaryCall(header, event.data);
+            if (header.type === "binary-chunk") {
+                this._handleBinaryChunk(header, event.data);
+            } else {
+                this._handleBinaryCall(header, event.data);
+            }
             return;
         }
 
@@ -168,6 +189,32 @@ class RemoteInterface {
             return;
         }
 
+        // Chunked binary transfer: announce header opens the transfer,
+        // subsequent binary-chunk messages add data.  Encoding is
+        // per-chunk so a sender can mix raw frames and base64 in one
+        // transfer if it wants — typically a sender will pick one and
+        // stick with it.
+        if (msg && msg.type === "binary-call-chunked") {
+            this._handleBinaryCallChunked(msg);
+            return;
+        }
+        if (msg && msg.type === "binary-chunk") {
+            let encoding = msg.encoding || "binary";
+            if (encoding === "binary") {
+                // Pair with next binary frame.
+                if (!this._pendingBinary) this._pendingBinary = [];
+                this._pendingBinary.push(msg);
+            } else if (encoding === "base64") {
+                // Decode inline data; no following binary frame.
+                let payload = this._decodeBase64(msg.data || "");
+                this._handleBinaryChunk(msg, payload);
+            } else {
+                console.error("RemoteInterface: unknown binary-chunk "
+                              + "encoding: " + encoding);
+            }
+            return;
+        }
+
         // batch support: array of messages -> array of results
         if (Array.isArray(msg)) {
             let results = [];
@@ -181,6 +228,139 @@ class RemoteInterface {
         let result = this._dispatch(msg);
         if (result !== undefined) {
             this._send(result);
+        }
+    }
+
+    /**
+     * Decode a base64 string to a Uint8Array.  Used for binary-chunk
+     * messages with encoding="base64".
+     * @private
+     */
+    _decodeBase64(str) {
+        let bin = atob(str);
+        let len = bin.length;
+        let out = new Uint8Array(len);
+        for (let i = 0; i < len; i++) out[i] = bin.charCodeAt(i);
+        return out.buffer;
+    }
+
+    /**
+     * Open a chunked binary transfer.  The announce header carries the
+     * destination (wid + method), the JSON args that follow the binary
+     * payload on the JS side, and the number of chunks to expect.
+     *
+     * Optional ``shape`` / ``dtype`` fields on the announce promote
+     * the delivered payload from a raw ``ArrayBuffer`` to a typed
+     * array (``Uint8Array``, ``Float32Array``, …) — pgwidgets-python
+     * sets these when a ``Buffer`` is passed as an argument.
+     * @private
+     */
+    _handleBinaryCallChunked(msg) {
+        if (!this._chunkTransfers) this._chunkTransfers = new Map();
+        if (this._chunkTransfers.has(msg.transfer_id)) {
+            console.warn("RemoteInterface: transfer_id "
+                         + msg.transfer_id + " already open; overwriting");
+        }
+        this._chunkTransfers.set(msg.transfer_id, {
+            wid: msg.wid,
+            method: msg.method,
+            args: msg.args || [],
+            num_chunks: msg.num_chunks,
+            received: new Array(msg.num_chunks),
+            count: 0,
+            shape: msg.shape || null,
+            dtype: msg.dtype || null,
+        });
+    }
+
+    /**
+     * Append one chunk to an in-flight transfer.  When the last chunk
+     * arrives, concatenate everything into a single Uint8Array and
+     * dispatch to the target widget's method.  ``payload`` is an
+     * ArrayBuffer (binary frame) or Blob.
+     * @private
+     */
+    _handleBinaryChunk(header, payload) {
+        let transfer = this._chunkTransfers
+            && this._chunkTransfers.get(header.transfer_id);
+        if (!transfer) {
+            console.warn("RemoteInterface: binary-chunk for unknown "
+                         + "transfer_id " + header.transfer_id);
+            return;
+        }
+        let tid = header.transfer_id;
+        let idx = header.chunk_index;
+        // Normalize Blob to ArrayBuffer asynchronously, then process.
+        if (payload instanceof Blob) {
+            payload.arrayBuffer().then(buf => {
+                this._storeChunk(tid, idx, buf);
+            });
+        } else {
+            this._storeChunk(tid, idx, payload);
+        }
+    }
+
+    /** @private */
+    _storeChunk(tid, idx, buffer) {
+        let transfer = this._chunkTransfers && this._chunkTransfers.get(tid);
+        if (!transfer) return;
+        if (idx < 0 || idx >= transfer.num_chunks) {
+            console.error("RemoteInterface: chunk_index " + idx
+                          + " out of range for transfer "
+                          + "(num_chunks=" + transfer.num_chunks + ")");
+            return;
+        }
+        if (transfer.received[idx] !== undefined) {
+            console.warn("RemoteInterface: duplicate chunk_index " + idx);
+            return;
+        }
+        transfer.received[idx] = buffer;
+        transfer.count++;
+        if (transfer.count < transfer.num_chunks) return;
+        // All chunks present — reassemble and dispatch.
+        this._chunkTransfers.delete(tid);
+        let total = 0;
+        for (let b of transfer.received) total += b.byteLength;
+        let out = new Uint8Array(total);
+        let off = 0;
+        for (let b of transfer.received) {
+            out.set(new Uint8Array(b), off);
+            off += b.byteLength;
+        }
+        let widget = Callback._registry.get(transfer.wid);
+        if (!widget) {
+            console.warn("binary-call-chunked for unknown wid",
+                         transfer.wid);
+            return;
+        }
+        let method = widget[transfer.method];
+        if (typeof method !== 'function') {
+            console.warn("binary-call-chunked: " + transfer.method
+                         + " is not a function on "
+                         + widget.constructor.name);
+            return;
+        }
+        // If the sender attached a dtype, deliver a typed array so
+        // the receiver doesn't have to second-guess byte layout.
+        // Otherwise pass the raw ArrayBuffer (existing behavior).
+        let firstArg;
+        if (transfer.dtype) {
+            let Ctor = RemoteInterface._TYPED_ARRAY_CTORS[transfer.dtype];
+            if (!Ctor) {
+                console.error("RemoteInterface: unknown dtype "
+                              + transfer.dtype + "; delivering raw "
+                              + "ArrayBuffer");
+                firstArg = out.buffer;
+            } else {
+                firstArg = new Ctor(out.buffer);
+            }
+        } else {
+            firstArg = out.buffer;
+        }
+        try {
+            method.apply(widget, [firstArg].concat(transfer.args));
+        } catch (e) {
+            console.error("binary-call-chunked dispatch error:", e);
         }
     }
 
@@ -494,6 +674,17 @@ class RemoteInterface {
         if (msg.wid !== undefined) {
             displaced = Callback._registry.get(msg.wid);
         }
+        // Bump _nextId past msg.wid BEFORE constructing, so super()
+        // inside the constructor (Callback's wid = _nextId++) cannot
+        // auto-assign a wid that collides with a previously-assigned
+        // Python wid and silently overwrite that widget in the
+        // registry.  This matters whenever a class registered in the
+        // classMap does not call super() (so msg.wid stays "ahead" of
+        // _nextId), e.g. plain JS classes layered onto pgwidgets-js
+        // via a merged classMap.
+        if (msg.wid !== undefined && Callback._nextId <= msg.wid) {
+            Callback._nextId = msg.wid + 1;
+        }
         let beforeNextId = Callback._nextId;
         let widget = new cls(...args);
         // console.log("[CREATE] msg.wid=" + msg.wid
@@ -764,12 +955,18 @@ class RemoteInterface {
     /**
      * Send a callback with file data using chunked transfer.
      * Sends the callback first with metadata only (no file data),
-     * then sends file data as file-chunk messages, yielding between
-     * chunks via setTimeout(0) to keep the WebSocket responsive for
-     * other traffic.
+     * then sends file data as binary-chunk header + raw binary frame
+     * pairs, yielding between chunks via setTimeout(0) to keep the
+     * WebSocket responsive for other traffic.
+     *
+     * Each file's ``data`` field is expected to be an ``ArrayBuffer``
+     * (the drop handler in Widget.js uses ``readAsArrayBuffer``).
+     * Empty files are still announced with one zero-length chunk.
+     *
      * @param {number} wid - Widget ID.
      * @param {string} action - Callback action name.
-     * @param {Object} payload - Payload with a `files` array.
+     * @param {Object} payload - Payload with a `files` array, each
+     *   carrying ``{name, size, type, data: ArrayBuffer}``.
      * @private
      */
     _sendChunkedFiles(wid, action, payload) {
@@ -793,33 +990,49 @@ class RemoteInterface {
             args: [this._serializeValue(metaPayload)],
         });
 
-        // Build a flat list of all chunks to send.
-        let chunks = [];
+        // Build a flat list of (header, slice) pairs to send.  The
+        // header rides as JSON; the slice rides as a raw binary frame
+        // on the very next send.  Per-chunk encoding lets a future
+        // sender pick base64-inline if the transport can't carry raw
+        // binary; here we always emit raw frames.
+        let pairs = [];
         for (let fi = 0; fi < payload.files.length; fi++) {
-            let data = payload.files[fi].data || '';
-            let numChunks = Math.max(1, Math.ceil(data.length / chunkSize));
+            let buf = payload.files[fi].data;
+            // Normalize: caller may legitimately have no data (zero
+            // byte file).  Empty array buffer keeps the chunk count at 1.
+            if (!buf) buf = new ArrayBuffer(0);
+            let byteLen = buf.byteLength;
+            let numChunks = Math.max(1, Math.ceil(byteLen / chunkSize));
             for (let ci = 0; ci < numChunks; ci++) {
-                let slice = data.slice(ci * chunkSize,
-                                       (ci + 1) * chunkSize);
-                chunks.push({
-                    type: "file-chunk",
-                    wid: wid,
-                    transfer_id: transferId,
-                    file_index: fi,
-                    file_count: payload.files.length,
-                    chunk_index: ci,
-                    num_chunks: numChunks,
-                    data: slice,
+                let start = ci * chunkSize;
+                let end = Math.min(start + chunkSize, byteLen);
+                let slice = buf.slice(start, end);
+                pairs.push({
+                    header: {
+                        type: "binary-chunk",
+                        wid: wid,
+                        transfer_id: transferId,
+                        file_index: fi,
+                        file_count: payload.files.length,
+                        chunk_index: ci,
+                        num_chunks: numChunks,
+                        encoding: "binary",
+                    },
+                    payload: slice,
                 });
             }
         }
 
-        // Send chunks one at a time, yielding between each to allow
-        // other WebSocket messages to interleave.
+        // Send pairs one at a time, yielding between each.  Header
+        // and payload of the same pair go back-to-back so the
+        // receiver can pair them by FIFO order (no other binary
+        // sends are interleaved on this socket).
         let i = 0;
         let sendNext = () => {
-            if (i < chunks.length) {
-                this._send(chunks[i]);
+            if (i < pairs.length) {
+                let p = pairs[i];
+                this._send(p.header);
+                this._sendBinaryFrame(p.payload);
                 i++;
                 setTimeout(sendNext, 0);
             }
@@ -831,6 +1044,17 @@ class RemoteInterface {
     _send(msg) {
         if (this._ws && this._ws.readyState === WebSocket.OPEN) {
             this._ws.send(JSON.stringify(msg));
+        }
+    }
+
+    /**
+     * Send a raw binary WebSocket frame.  Used by the chunked
+     * transfer path; ``data`` is an ArrayBuffer or typed array.
+     * @private
+     */
+    _sendBinaryFrame(data) {
+        if (this._ws && this._ws.readyState === WebSocket.OPEN) {
+            this._ws.send(data);
         }
     }
 }

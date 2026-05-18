@@ -781,9 +781,9 @@ class Widget extends Callback {
      * | `url`    | string?  | URI list data, or null.                           |
      * | `html`   | string?  | HTML data, or null.                               |
      * | `files`  | array    | Dropped files. Each entry:                        |
-     * |          |          | `{name, size, type, data}` where `data` is a     |
-     * |          |          | data URI (base64). `data` is null on read error   |
-     * |          |          | (with an `error` field instead).                  |
+     * |          |          | `{name, size, type, data}` where `data` is an     |
+     * |          |          | `ArrayBuffer` of the file's raw bytes. `data` is  |
+     * |          |          | null on read error (with an `error` field too).   |
      *
      * ### Drag-progress fields
      * Present on: `drop-progress`. Fired during file reading.
@@ -907,7 +907,7 @@ class Widget extends Callback {
      * file metadata (name, size, type — no data yet), then reads all
      * dropped files asynchronously via FileReader and fires
      * 'drop-end' with the full payload including file contents
-     * as data URIs.
+     * as ArrayBuffers.
      *
      * Fires 'drop-progress' callbacks during file reading:
      *   {transferred_bytes, total_bytes, file_name, file_index, file_count}
@@ -919,7 +919,10 @@ class Widget extends Callback {
      * - `url`     string|null — URI list, if available.
      * - `html`    string|null — HTML content, if available.
      * - `files`   array of {name, size, type, data} — dropped files.
-     *   `data` is null in drop-start, a data URI in drop-end.
+     *   `data` is null in drop-start, an ArrayBuffer in drop-end.
+     *   When delivered over the remote interface, the buffer is
+     *   shipped as raw binary WebSocket frames so the Python side
+     *   sees `bytes`.
      * @private
      */
     _handleDrop(event) {
@@ -964,7 +967,7 @@ class Widget extends Callback {
         payload.files = fileMeta;
         this.make_callback('drop-start', payload);
 
-        // Read all files as data URIs, firing progress along the way.
+        // Read all files as ArrayBuffers, firing progress along the way.
         let fileCount = files.length;
         let results = new Array(fileCount);
         let completed = 0;
@@ -990,7 +993,9 @@ class Widget extends Callback {
                     name: file.name,
                     size: file.size,
                     type: file.type || 'application/octet-stream',
-                    data: reader.result,   // data URI
+                    // ArrayBuffer; RemoteInterface ships it as raw
+                    // binary frames so the server receives `bytes`.
+                    data: reader.result,
                 };
                 completed++;
                 // Fire progress for file completion.
@@ -1022,7 +1027,7 @@ class Widget extends Callback {
                 }
             };
 
-            reader.readAsDataURL(file);
+            reader.readAsArrayBuffer(file);
         }
     }
 

@@ -14,6 +14,17 @@ class Callback {
     static _registry = new Map();
 
     constructor() {
+        // Skip over any registry slot that's already occupied so we
+        // never silently overwrite a widget at an in-use wid.  This
+        // matters under the remote interface: a class in the classMap
+        // that doesn't call super() (e.g. a plain JS class layered on
+        // top) leaves _nextId behind the Python-assigned wid range,
+        // and the next super() call would otherwise clobber a real
+        // widget there.  RemoteInterface._handleCreate also bumps
+        // _nextId past msg.wid, this is a defensive backstop.
+        while (Callback._registry.has(Callback._nextId)) {
+            Callback._nextId++;
+        }
         this.wid = Callback._nextId++;
         Callback._registry.set(this.wid, this);
 

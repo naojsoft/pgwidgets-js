@@ -92,10 +92,34 @@ Server → Browser
 
 ``{type: "binary-call", id, wid, method, args}`` (followed by a raw binary WebSocket frame)
    Identical to ``call`` except the binary frame becomes the *first*
-   argument to the method. Used for image bytes, so a JPEG isn't
-   base64-inflated through JSON. Order matters: the JSON header is
-   queued FIFO; the next binary frame is paired with the head of the
-   queue.
+   argument to the method. Used for small image bytes (JPEG/PNG etc.)
+   so the payload isn't base64-inflated through JSON. Order matters:
+   the JSON header is queued FIFO; the next binary frame is paired
+   with the head of the queue.
+
+``{type: "binary-call-chunked", id, wid, method, args, transfer_id, num_chunks}`` (announce; followed by N binary-chunk pairs)
+   Opens a chunked transfer for payloads too large to ship in one
+   frame.  The announce reserves a ``transfer_id``; the receiver
+   accumulates exactly ``num_chunks`` paired ``binary-chunk`` messages
+   and then dispatches ``widget[method](payload, ...args)``.  Optional
+   fields ``shape`` (array of ints) and ``dtype`` (one of
+   ``"uint8"``, ``"uint16"``, ``"uint32"``, ``"int8"``, ``"int16"``,
+   ``"int32"``, ``"float32"``, ``"float64"``) promote the delivered
+   payload from a raw ``ArrayBuffer`` to a typed array of that dtype.
+   See *Chunked binary transport* below.
+
+``{type: "binary-chunk", transfer_id, chunk_index, num_chunks, encoding, [file_index, file_count, data]}`` (one chunk)
+   One chunk of an in-flight transfer.  ``encoding`` is per-chunk:
+
+   * ``"binary"`` (default): the **next** WebSocket frame is the
+     chunk's raw bytes.  Zero protocol overhead.
+   * ``"base64"``: the ``data`` field on this JSON message **is** the
+     chunk, base64-encoded.  No following binary frame.  Useful when
+     the transport can't carry raw binary cleanly.
+
+   The optional ``file_index`` / ``file_count`` fields scope a chunk
+   to one file within a multi-file upload; without them the chunks
+   belong to a single payload.
 
 ``{type: "listen", id, wid, action}``
    Subscribe to a callback. The browser wires up a forwarder on the
@@ -134,8 +158,10 @@ Browser → Server
    Sent at session-info time and on every window resize, so the server
    can answer ``get_screen_size()`` locally without a round-trip.
 
-``{type: "file-chunk", wid, transfer_id, file_index, file_count, chunk_index, num_chunks, data}``
-   See *File uploads* below.
+``{type: "binary-chunk", wid, transfer_id, file_index, file_count, chunk_index, num_chunks, encoding}`` (followed by a raw binary frame, unless ``encoding == "base64"``)
+   Same shape as the server-side ``binary-chunk``; used by the
+   browser to upload dropped files / picker selections.  See *File
+   uploads* below.
 
 
 Serialization Rules
@@ -163,9 +189,13 @@ Serialization Rules
   reconstruction can re-spread it as ``method(*tuple)``.
 
 * **Binary payloads** travel out of band. Build the JSON header
-  describing the call, send it, then send the raw binary frame
-  immediately after. Do not interleave other binary frames between
-  header and payload — the browser pairs them FIFO.
+  describing the call (``binary-call`` for one frame,
+  ``binary-call-chunked`` + N ``binary-chunk`` for multi-frame
+  transfers), send it, then send the raw binary frame(s).  Receivers
+  pair them by FIFO order on a single connection; ``transfer_id``
+  in chunked transfers groups frames belonging to the same payload.
+  Do not interleave other binary frames between a chunk header and
+  its payload.
 
 
 Widget Definitions: ``defs.py``
@@ -532,24 +562,68 @@ deciding which actions to forward; see ``STATE_SYNC_CALLBACKS`` and
 ``WIDGET_CALLBACK_SYNC`` in ``method_types.py`` for the policy table.
 
 
-File Uploads
-------------
+Chunked Binary Transport
+------------------------
 
-Drag-and-drop file payloads can be large, and a single WebSocket
-``send`` would block the channel. The protocol splits them:
+Used in both directions for payloads too large to ship in a single
+WebSocket frame, or when the sender wants to interleave control
+messages with a long transfer.  The same ``binary-chunk`` envelope
+is symmetric: server → browser (for ``binary-call-chunked`` —
+e.g. an Image's pixel buffer) and browser → server (for file
+uploads).
 
-1. The browser sends a metadata-only ``callback`` (file list with
-   sizes/types but no data), tagged with a ``transfer_id``.
-2. It follows with one or more ``file-chunk`` messages, each carrying
-   ``transfer_id, file_index, file_count, chunk_index, num_chunks,
-   data`` (base64). Chunks yield between sends via ``setTimeout(0)``
-   so other messages can interleave.
-3. The server reassembles by ``(transfer_id, file_index, chunk_index)``
-   and, when ``chunk_index + 1 == num_chunks`` for every file, fires
-   the user's callback with the full payload.
+Wire layout::
 
-If your binding doesn't care about file uploads you can ignore this
-section — nothing else uses ``file-chunk``.
+   server→browser (binary-call-chunked):
+
+      → {"type": "binary-call-chunked",
+         "id": 42, "wid": 7, "method": "load_buffer",
+         "args": [[2048, 2048], {...}],
+         "transfer_id": 17, "num_chunks": 32,
+         "shape": [2048, 2048, 4], "dtype": "uint8"}    ← optional
+      → {"type": "binary-chunk", "transfer_id": 17,
+         "chunk_index": 0, "num_chunks": 32, "encoding": "binary"}
+      → <raw 524288-byte binary frame>
+      → {"type": "binary-chunk", ..., "chunk_index": 1, ...}
+      → <raw 524288-byte binary frame>
+        ⋮
+      → {"type": "binary-chunk", ..., "chunk_index": 31, ...}
+      → <raw <=524288-byte binary frame>
+
+   browser→server (file upload):
+
+      → {"type": "callback", "wid": 7, "action": "drop-end",
+         "args": [{"transfer_id": 17,
+                   "files": [{"name": "...", "size": ..., "type": ...}],
+                   ...}]}
+      → {"type": "binary-chunk", "wid": 7,
+         "transfer_id": 17, "file_index": 0, "file_count": 1,
+         "chunk_index": 0, "num_chunks": N, "encoding": "binary"}
+      → <raw binary frame>
+        ⋮
+
+Per-chunk ``encoding`` lets a sender choose ``"binary"`` (next
+frame is the chunk) or ``"base64"`` (the chunk rides in this JSON
+message's ``data`` field, no following binary frame).  Default is
+``"binary"``; both pgwidgets-js and pgwidgets-python only emit the
+binary form, but receivers must accept either.
+
+When the announce includes ``shape`` and ``dtype``, the receiver
+constructs a typed array of that dtype (``Uint8Array``,
+``Float32Array``, …) before dispatch instead of a raw
+``ArrayBuffer``.  The supported dtypes mirror pgwidgets-python's
+:class:`pgwidgets.Buffer` (``uint8`` / ``uint16`` / ``uint32`` /
+``int8`` / ``int16`` / ``int32`` / ``float32`` / ``float64``).
+
+Chunks may arrive out-of-order in principle (a single TCP/WS
+stream preserves order in practice, but receivers should still
+write into indexed slots by ``chunk_index``, not append).  The
+transfer completes when every slot is filled; the receiver
+reassembles, dispatches, and discards the transfer.
+
+A binding can opt to ignore the chunked path and only support
+single-frame ``binary-call`` if it doesn't need large payloads or
+file uploads.
 
 
 Session Identity and Reconnection
