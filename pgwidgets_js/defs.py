@@ -548,6 +548,8 @@ WIDGETS = {
             # browser reconnect).  Not part of the user-facing API.
             "_restoreTagIntervals": ["intervals"],
             "_bindNamedRef": ["name", "ref"],
+            "_setCursorOffset": ["offset"],
+            "_setSelectionOffsets": ["start", "end"],
             "get_ref_start": [],
             "get_ref_end": [],
             "get_ref_bounds": [],

@@ -1655,6 +1655,40 @@ class TextSource extends Widget {
     }
 
     /**
+     * Restore the cursor to *offset*.  Used by the reconstruction
+     * path: callers can't easily mint a temporary ref over the wire
+     * (it would consume a wid), so the offset path is the
+     * straightforward way to restore the position.  Equivalent to
+     * ``set_cursor(buffer.create_ref(offset))`` but without the
+     * ref-allocation overhead.
+     * @private
+     * @param {number} offset
+     */
+    _setCursorOffset(offset) {
+        offset = this._clampOffset(offset);
+        this._cursor = offset;
+        this._selStart = offset;
+        this._selEnd = offset;
+        this._applySelectionToDOM();
+    }
+
+    /**
+     * Restore the selection to ``[start, end]`` offsets.  Reconstruction
+     * counterpart to ``_setCursorOffset`` for a non-empty selection.
+     * @private
+     * @param {number} start
+     * @param {number} end
+     */
+    _setSelectionOffsets(start, end) {
+        start = this._clampOffset(start);
+        end = this._clampOffset(end);
+        this._selStart = start;
+        this._selEnd = end;
+        this._cursor = end;
+        this._applySelectionToDOM();
+    }
+
+    /**
      * Remove (clip out) a tag from the range [startRef, endRef).
      * @param {string} name
      * @param {TextBufferRef} startRef
