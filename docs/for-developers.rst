@@ -654,31 +654,96 @@ Things That Will Bite You
 
 In rough order of how easy they are to miss:
 
-* **Wid collisions.** Always advance your allocator past any
-  ``next_wid`` you see in a ``result``, not just the wid you sent.
+* **Wid collisions and classMap classes that don't extend Callback.**
+  Advancing your allocator past ``next_wid`` (from every ``result``,
+  not just the latest) is necessary but not sufficient.  If the
+  receiving side has a class in ``classMap`` whose constructor
+  doesn't call ``super()`` (e.g. a plain JS class layered on top of
+  pgwidgets-js — gingajs's ``Controller`` is one), then ``_nextId``
+  doesn't advance during that widget's construction.  The **next**
+  widget's ``super()`` will then auto-assign a wid that the previous
+  Python-allocated widget is already sitting at, silently
+  overwriting it in the registry.  Symptom: subsequent
+  ``add_widget`` / ``listen`` calls fail with "Unknown widget id".
+  Mitigations in the reference implementation (do at least one):
+
+  - ``_handleCreate`` bumps ``Callback._nextId`` past ``msg.wid``
+    *before* calling ``new cls(...)``, so the auto-wid is guaranteed
+    to land in unoccupied territory.
+  - The ``Callback`` constructor skips occupied registry slots when
+    allocating, as a defensive backstop.
+
+  A binding that only ever uses classes which extend ``Callback`` is
+  safe without either mitigation, but it's worth having both.
+
 * **Tuple vs single-arg setters.** ``set_position(x, y)`` stores a
   tuple but ``set_text(s)`` stores a string. Your binding must
   normalize so reconstruction can re-spread tuples as multiple args
   and singles as one arg.
+
 * **Suppressing callbacks.** Forget to set ``_syncing`` /
   ``_reconstructing`` and you'll get echo loops or duplicate state
   updates.
+
 * **The ``map`` exception.** Don't apply ``_reconstructing``
   suppression to ``map``. The observers fire once and disconnect; if
   you swallow ``map`` the user's handler is dead until something
   else re-fires it.
+
 * **Replaying passively-captured size.** This is the silent killer.
   Capture must be unconditional (for getters), replay must be
   conditional (or you pin every widget to whatever pixel size the
   layout happened to settle at on capture). The same guard applies
   in both the top-level state replay AND ``_transfer_proxy``.
+
 * **Order in ``_replay_interleaved``.** ``_children`` and
   ``_replay_calls`` carry their own sequence numbers for exactly
   this reason. Replay them merged in seq order.
+
 * **Constructor args that are widgets.** Reconstruct them first
   (``_ensure_reconstructed``) before sending the parent's ``create``.
-* **Binary frames are FIFO-paired with headers.** If you reorder
-  outgoing messages, pair up header and binary frames first.
+
+* **Binary frames are FIFO-paired with headers.** A single
+  ``binary-call`` JSON header followed by anything other than the
+  expected binary frame breaks the pairing for every following
+  binary call on that connection.  Same applies to chunked
+  ``binary-chunk`` headers with ``encoding == "binary"``.
+
+* **Atomic emission of a chunked transfer.** On the sender side,
+  all chunks for one transfer should ship under a single
+  coroutine / lock on the WebSocket so other binary calls can't
+  splice frames in between.  Receivers use ``transfer_id`` to
+  disambiguate, so out-of-band interleaving is technically OK —
+  but the reference implementation chooses atomic emission anyway
+  to keep failure modes simpler.
+
+* **Chunk reassembly by index, not append.** WebSocket frames over
+  a single TCP stream do arrive in order, so a naive append-based
+  reassembler will *work* in practice — but ``chunk_index`` is on
+  every chunk header for a reason.  Writing chunks into a slotted
+  array indexed by ``chunk_index`` is one extra line and bullet-
+  proofs you against any future transport that doesn't preserve
+  order.
+
+* **Mixing encodings within a transfer.** ``"binary"`` and
+  ``"base64"`` chunks are interchangeable per the protocol, but
+  doing both in one transfer is surprising.  Pick one per transfer
+  and stay consistent.
+
+* **Unknown dtypes degrade to raw ArrayBuffer.** If an announce
+  carries ``dtype: "float16"`` (or anything else not in the
+  standard set), the JS side has no matching TypedArray
+  constructor and logs a warning, then delivers the raw
+  ``ArrayBuffer`` instead.  Stick to the documented dtypes
+  (``uint8`` / ``uint16`` / ``uint32`` / ``int8`` / ``int16`` /
+  ``int32`` / ``float32`` / ``float64``).
+
+* **API shape: ``f.data`` is bytes.** As of the binary-transport
+  unification, ``payload.files[i].data`` in drop / FileDialog
+  callbacks is raw bytes (``ArrayBuffer`` on the JS side, ``bytes``
+  on the Python side) — not a ``"data:<mime>;base64,…"`` string.
+  Old code that did ``base64.b64decode(data.split(",", 1)[1])`` is
+  now wrong; just use ``data`` directly.
 
 
 Where to Look in the Code
