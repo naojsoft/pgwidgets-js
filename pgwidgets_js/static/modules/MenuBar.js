@@ -146,7 +146,7 @@ class MenuBar extends Widget {
      * If released elsewhere, closes all menus.
      * @private
      */
-    _onDocumentMouseUp(e) {
+    _onDocumentMouseUp = (e) => {
         document.removeEventListener('mouseup', this._onDocumentMouseUp);
 
         if (!this._armed) return;

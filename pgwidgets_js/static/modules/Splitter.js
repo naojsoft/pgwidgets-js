@@ -167,7 +167,11 @@ class Splitter extends ContainerWidget {
         document.addEventListener('mouseup', this.onMouseUp);
     }
 
-    onMouseMove(e) {
+    // Class-field arrows so the handler identity is stable per
+    // instance (needed for removeEventListener to find the same fn
+    // we added), and `this` is the Splitter instance regardless of
+    // who fires the event.
+    onMouseMove = (e) => {
         if (this.activeIndex < 0) return;
 
         let delta;
@@ -201,7 +205,7 @@ class Splitter extends ContainerWidget {
         paneB.style.flex = newSizeB + ' 1 0';
     }
 
-    onMouseUp(e) {
+    onMouseUp = (e) => {
         this.activeIndex = -1;
         document.removeEventListener('mousemove', this.onMouseMove);
         document.removeEventListener('mouseup', this.onMouseUp);

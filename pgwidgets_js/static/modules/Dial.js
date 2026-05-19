@@ -404,7 +404,7 @@ class Dial extends Widget {
     }
 
     /** @private */
-    _onMouseDown(e) {
+    _onMouseDown = (e) => {
         e.preventDefault();
         this.value = this._eventToValue(e);
         this._updateVisual();
@@ -416,7 +416,7 @@ class Dial extends Widget {
     }
 
     /** @private */
-    _onMouseMove(e) {
+    _onMouseMove = (e) => {
         this.value = this._eventToValue(e);
         this._updateVisual();
         if (this.track) {
@@ -425,7 +425,7 @@ class Dial extends Widget {
     }
 
     /** @private */
-    _onMouseUp(e) {
+    _onMouseUp = (e) => {
         document.removeEventListener('mousemove', this._onMouseMove);
         document.removeEventListener('mouseup', this._onMouseUp);
         this.value = this._eventToValue(e);

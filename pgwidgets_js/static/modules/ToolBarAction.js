@@ -276,7 +276,7 @@ class ToolBarAction extends Widget {
      * Handles mouseup while armed (drag mode).
      * @private
      */
-    _onDocumentMouseUp(e) {
+    _onDocumentMouseUp = (e) => {
         document.removeEventListener('mouseup', this._onDocumentMouseUp);
         if (!this._armed) return;
         this._armed = false;
@@ -302,7 +302,7 @@ class ToolBarAction extends Widget {
      * Handles mousedown outside in click mode to close menu.
      * @private
      */
-    _onDocumentMouseDown(e) {
+    _onDocumentMouseDown = (e) => {
         if (!this.element.contains(e.target)) {
             this._closeMenu();
         }

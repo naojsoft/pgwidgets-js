@@ -56,7 +56,7 @@ class TextEntry extends Widget {
      * @param {KeyboardEvent} event
      * @private
      */
-    _onKeyDown(event) {
+    _onKeyDown = (event) => {
         if (event.key === 'ArrowUp') {
             event.preventDefault();
             if (this._history.length > 0) {

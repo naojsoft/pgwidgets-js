@@ -130,7 +130,7 @@ class SpinBox extends Widget {
         }
     }
 
-    _on_input(e) {
+    _on_input = (e) => {
         let parsed = this._parse(this.input.value);
         if (isNaN(parsed)) {
             this._display();

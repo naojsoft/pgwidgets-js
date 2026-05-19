@@ -130,7 +130,7 @@ class Slider extends Widget {
         }
     }
 
-    _cb_redirect(event) {
+    _cb_redirect = (event) => {
         this._updateValueLabel();
         this.make_callback('activated', this.get_value());
     }

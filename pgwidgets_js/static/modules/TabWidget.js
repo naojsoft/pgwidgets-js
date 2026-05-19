@@ -180,7 +180,7 @@ class TabWidget extends ContainerWidget {
         event.target.classList.add('dragging');
     }
 
-    handleDrop(event) {
+    handleDrop = (event) => {
         event.preventDefault();
         const tab_id = event.dataTransfer.getData('text/plain');
         const draggedIndex = this.tabs.indexOf(tab_id);

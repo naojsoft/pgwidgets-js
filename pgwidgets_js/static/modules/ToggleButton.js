@@ -52,7 +52,7 @@ class ToggleButton extends Widget {
         this.enable_callback('activated');
     }
 
-    _cb_redirect(event) {
+    _cb_redirect = (event) => {
         if (this.group !== null) {
             if (this.state) {
                 // toggle off the current one

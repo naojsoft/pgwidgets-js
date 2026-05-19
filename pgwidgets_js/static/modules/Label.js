@@ -133,7 +133,7 @@ class Label extends Widget {
     }
 
     /** @private */
-    _onMenuMouseUp(e) {
+    _onMenuMouseUp = (e) => {
         document.removeEventListener('mouseup', this._onMenuMouseUp);
         if (!this._menuArmed) return;
         this._menuArmed = false;
