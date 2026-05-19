@@ -30,14 +30,20 @@ class TreeView extends Widget {
      * @param {Array} [options.columns=[]] - Column descriptors.  Each
      *   entry is either a plain string (label; type defaults to
      *   'string', auto key generated) or an object
-     *   { label, type, key, editable, halign, icon_size }.  Supported
-     *   types: 'string' (alias 'str'), 'integer' (alias 'int'),
-     *   'float' (alias 'number'), 'boolean' (renders ✓ when truthy),
-     *   and 'icon' (cell value is a URL or data: URL used as the
-     *   image source).  halign is 'left' | 'center' | 'right';
+     *   { label, type, key, editable, halign, icon_size, colwidth }.
+     *   Supported types: 'string' (alias 'str'), 'integer' (alias
+     *   'int'), 'float' (alias 'number'), 'boolean' (renders ✓ when
+     *   truthy), and 'icon' (cell value is a URL or data: URL used
+     *   as the image source).  halign is 'left' | 'center' | 'right';
      *   default depends on type (numeric → right, boolean/icon →
      *   center, otherwise left).  Each column gets a stable string
      *   key — auto-generated as `_col0`, `_col1`, ... if not supplied.
+     *   colwidth, if present, sets the initial column width — a
+     *   number is treated as pixels, a string passes through as a
+     *   CSS grid track value (e.g. "200px", "10em", "1fr").  Columns
+     *   without colwidth default to "1fr" (equal share of remaining
+     *   space).  Use ``set_column_width(key, w)`` to change a width
+     *   after construction.
      * @param {boolean} [options.show_header=true]
      * @param {string} [options.selection_mode='single'] - 'single', 'multiple', or 'none'.
      * @param {boolean} [options.alternate_row_colors=false]
@@ -77,7 +83,7 @@ class TreeView extends Widget {
             this.set_allow_text_selection(true);
         }
 
-        this._colWidths = this._columns.map(() => '1fr');
+        this._colWidths = this._columns.map(c => c.colwidth || '1fr');
 
         // Sort state.  _sortColKey is the key of the active sort
         // column (null = no sort).  When set, every node's
@@ -200,7 +206,8 @@ class TreeView extends Widget {
         this._columns = raw.map((c, i) => {
             if (typeof c === 'string') {
                 return { label: c, type: 'string', editable: false,
-                         key: '_col' + (autoIdx++), halign: 'left' };
+                         key: '_col' + (autoIdx++), halign: 'left',
+                         colwidth: null };
             }
             let type = TreeView._normalizeType(c.type);
             let key = c.key;
@@ -212,8 +219,21 @@ class TreeView extends Widget {
                 key: key,
                 halign: TreeView._normalizeHalign(c.halign, type),
                 icon_size: c.icon_size,
+                colwidth: TreeView._normalizeColWidth(c.colwidth),
             };
         });
+    }
+
+    /**
+     * Normalize a colwidth value into a CSS grid track string, or
+     * null if absent.  Numbers become pixel values; strings pass
+     * through (caller's responsibility to use a valid grid track
+     * value like "200px", "10em", "1fr").
+     */
+    static _normalizeColWidth(w) {
+        if (w == null) return null;
+        if (typeof w === 'number') return w + 'px';
+        return String(w);
     }
 
     static _normalizeHalign(halign, type) {
@@ -451,7 +471,7 @@ class TreeView extends Widget {
 
     set_columns(columns) {
         this._parseColumns(columns);
-        this._colWidths = this._columns.map(() => '1fr');
+        this._colWidths = this._columns.map(c => c.colwidth || '1fr');
         this._sortColKey = null;
         if (this._showHeader && this._columns.length > 0) {
             this._headerClip.style.display = '';
@@ -1527,7 +1547,8 @@ class TreeView extends Widget {
         let autoIdx = this._columns.length;
         if (typeof column === 'string') {
             parsed = { label: column, type: 'string', editable: false,
-                       key: '_col' + autoIdx, halign: 'left' };
+                       key: '_col' + autoIdx, halign: 'left',
+                       colwidth: null };
         } else {
             let type = TreeView._normalizeType(column.type);
             parsed = {
@@ -1537,6 +1558,7 @@ class TreeView extends Widget {
                 key: column.key || ('_col' + autoIdx),
                 halign: TreeView._normalizeHalign(column.halign, type),
                 icon_size: column.icon_size,
+                colwidth: TreeView._normalizeColWidth(column.colwidth),
             };
         }
         let insertAt = this._columns.length;
@@ -1545,7 +1567,7 @@ class TreeView extends Widget {
             if (idx >= 0) insertAt = idx;
         }
         this._columns.splice(insertAt, 0, parsed);
-        this._colWidths.splice(insertAt, 0, '1fr');
+        this._colWidths.splice(insertAt, 0, parsed.colwidth || '1fr');
         this._buildHeader();
         this._renderAll();
     }
