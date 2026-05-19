@@ -4,7 +4,6 @@ import {Callback} from "./Callback.js";
 import {Widget} from "./Widget.js";
 import {ScrollBar} from "./ScrollBar.js";
 
-
 /**
  * A live reference to a position in a TextSource buffer.
  * The position automatically updates as text is inserted or deleted.
@@ -245,7 +244,6 @@ class TextBufferRef extends Callback {
     }
 }
 
-
 /**
  * A multi-line rich text editor widget, inspired by GtkSourceView.
  *
@@ -284,25 +282,6 @@ class TextSource extends Widget {
         this.element.className = 'textsource-widget';
 
         // -- method bindings --
-        this.set_text = this.set_text.bind(this);
-        this.get_text = this.get_text.bind(this);
-        this.insert_text = this.insert_text.bind(this);
-        this.delete_range = this.delete_range.bind(this);
-        this.get_length = this.get_length.bind(this);
-        this.clear = this.clear.bind(this);
-        this.set_editable = this.set_editable.bind(this);
-        this.set_wrap = this.set_wrap.bind(this);
-        this.set_line_numbers = this.set_line_numbers.bind(this);
-        this.set_icon_gutter = this.set_icon_gutter.bind(this);
-        this.set_icon = this.set_icon.bind(this);
-        this.get_cursor = this.get_cursor.bind(this);
-        this.set_cursor = this.set_cursor.bind(this);
-        this.get_selection_range = this.get_selection_range.bind(this);
-        this.set_selection_range = this.set_selection_range.bind(this);
-        this._render = this._render.bind(this);
-        this.set_scroll_position = this.set_scroll_position.bind(this);
-        this._syncScrollbars = this._syncScrollbars.bind(this);
-        this._syncFromScroll = this._syncFromScroll.bind(this);
 
         this._scrollTimer = null;
         this._scrollReady = false;

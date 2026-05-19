@@ -31,7 +31,6 @@ class FixedLayout extends ContainerWidget {
         // (left, top) coordinates are relative to this container.
         this.element.style.position = 'relative';
 
-        this.add_widget = this.add_widget.bind(this);
     }
 
     /**

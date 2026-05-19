@@ -32,11 +32,6 @@ class ToolBar extends Widget {
             this.element.classList.add('horizontal');
         }
 
-        // JavaScript hack to bind "this" correctly for our methods
-        this.add_widget = this.add_widget.bind(this);
-        this.add_separator = this.add_separator.bind(this);
-        this.add_spacer = this.add_spacer.bind(this);
-        this.add_action = this.add_action.bind(this);
     }
 
     /**

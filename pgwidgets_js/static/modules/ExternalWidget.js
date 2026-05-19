@@ -33,10 +33,6 @@ class ExternalWidget extends Widget {
         }
         this.element.className = 'external-widget';
 
-        this.set_content = this.set_content.bind(this);
-        this.get_content_element = this.get_content_element.bind(this);
-        this.clear = this.clear.bind(this);
-
         // Inner div where external content is rendered.
         this._content = document.createElement('div');
         this._content.className = 'external-widget-content';

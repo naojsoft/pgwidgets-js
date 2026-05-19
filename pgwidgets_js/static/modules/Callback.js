@@ -31,12 +31,6 @@ class Callback {
         this.cb = {};
         this._destroyed = false;
 
-        // JavaScript hack to bind "this" correctly for our methods
-        this.enable_callback = this.enable_callback.bind(this);
-        this.add_callback = this.add_callback.bind(this);
-        this.clear_callback = this.clear_callback.bind(this);
-        this.remove_callback = this.remove_callback.bind(this);
-        this.make_callback = this.make_callback.bind(this);
     }
 
     /* CALLBACK HANDLING */

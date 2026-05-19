@@ -46,22 +46,6 @@ class TopLevel extends ContainerWidget {
         this.element.style.overflow = 'hidden';
         this.element.style.margin = '1px';
 
-        // JavaScript hack to bind "this" correctly for our methods
-        this.set_widget = this.set_widget.bind(this);
-        this.set_position = this.set_position.bind(this);
-        this.set_title = this.set_title.bind(this);
-        this.set_icon = this.set_icon.bind(this);
-        this.set_moveable = this.set_moveable.bind(this);
-        this.raise_ = this.raise_.bind(this);
-        this.lower = this.lower.bind(this);
-        this.show = this.show.bind(this);
-        this.hide = this.hide.bind(this);
-        this.toggle_minimize = this.toggle_minimize.bind(this);
-        this.toggle_maximize = this.toggle_maximize.bind(this);
-        this.toggle_shade = this.toggle_shade.bind(this);
-        this.set_window_state = this.set_window_state.bind(this);
-        this.get_window_state = this.get_window_state.bind(this);
-
         this.enable_callback('move');
         this.enable_callback('close');
         this.enable_callback('window-state');

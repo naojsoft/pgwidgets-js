@@ -48,12 +48,6 @@ class ToggleButton extends Widget {
             this.group = null;
         }
 
-        // JavaScript hack to bind "this" correctly for our methods
-        this.set_text = this.set_text.bind(this);
-        this.set_state = this.set_state.bind(this);
-        this.get_state = this.get_state.bind(this);
-        this._cb_redirect = this._cb_redirect.bind(this);
-
         this.element.addEventListener('click', this._cb_redirect);
         this.enable_callback('activated');
     }

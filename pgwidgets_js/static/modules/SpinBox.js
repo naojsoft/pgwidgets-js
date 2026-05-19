@@ -63,14 +63,6 @@ class SpinBox extends Widget {
         inner.appendChild(btnContainer);
         this.element.appendChild(inner);
 
-        // JavaScript hack to bind "this" correctly for our methods
-        this.set_value = this.set_value.bind(this);
-        this.get_value = this.get_value.bind(this);
-        this.set_limits = this.set_limits.bind(this);
-        this.set_decimals = this.set_decimals.bind(this);
-        this._step = this._step.bind(this);
-        this._on_input = this._on_input.bind(this);
-
         this.upButton.addEventListener('click', () => this._step(1));
         this.downButton.addEventListener('click', () => this._step(-1));
         this.input.addEventListener('wheel', (e) => {

@@ -37,20 +37,6 @@ class GridBox extends ContainerWidget {
         // map from child -> {row, col} for removal
         this.cellMap = new Map();
 
-        // JavaScript hack to bind "this" correctly for our methods
-        this.add_widget = this.add_widget.bind(this);
-        this.remove = this.remove.bind(this);
-        this.set_row_spacing = this.set_row_spacing.bind(this);
-        this.set_column_spacing = this.set_column_spacing.bind(this);
-        this.set_spacing = this.set_spacing.bind(this);
-        this.get_row_column_count = this.get_row_column_count.bind(this);
-        this.get_widget_at_cell = this.get_widget_at_cell.bind(this);
-        this.insert_row = this.insert_row.bind(this);
-        this.append_row = this.append_row.bind(this);
-        this.delete_row = this.delete_row.bind(this);
-        this.insert_column = this.insert_column.bind(this);
-        this.append_column = this.append_column.bind(this);
-        this.delete_column = this.delete_column.bind(this);
     }
 
     _update_grid() {

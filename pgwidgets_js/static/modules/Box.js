@@ -24,12 +24,6 @@ class Box extends ContainerWidget {
         this.element.className = 'box-widget';
         this.orientation = this.get_option(options, 'orientation', 'horizontal');
 
-        // JavaScript hack to bind "this" correctly for our methods
-        this.add_widget = this.add_widget.bind(this);
-        this.insert_widget = this.insert_widget.bind(this);
-        this.set_spacing = this.set_spacing.bind(this);
-        this.init_style = this.init_style.bind(this);
-
         this.init_style();
     }
 
@@ -183,7 +177,6 @@ class ButtonBox extends Box {
         this._halign = this.get_option(options, 'halign', 'center');
         this._applyAlign();
 
-        this.set_halign = this.set_halign.bind(this);
     }
 
     /** @private */

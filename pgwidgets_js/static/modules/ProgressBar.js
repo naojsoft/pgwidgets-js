@@ -31,10 +31,6 @@ class ProgressBar extends Widget {
 
         this.value = 0;
 
-        // JavaScript hack to bind "this" correctly for our methods
-        this.set_value = this.set_value.bind(this);
-        this.get_value = this.get_value.bind(this);
-
         this._display();
     }
 

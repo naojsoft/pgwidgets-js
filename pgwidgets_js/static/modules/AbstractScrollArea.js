@@ -63,12 +63,6 @@ class AbstractScrollArea extends ContainerWidget {
         this._vVisibility = 'auto';
 
         // bind public methods
-        this.set_widget = this.set_widget.bind(this);
-        this.set_thumb_percent = this.set_thumb_percent.bind(this);
-        this.get_thumb_percent = this.get_thumb_percent.bind(this);
-        this.set_scroll_percent = this.set_scroll_percent.bind(this);
-        this.get_scroll_percent = this.get_scroll_percent.bind(this);
-        this.set_scroll_bar_visibility = this.set_scroll_bar_visibility.bind(this);
 
         // scrollbar user interaction -> 'scrolled' callback
         this._hScrollBar.add_callback('activated', (w, pct) => {

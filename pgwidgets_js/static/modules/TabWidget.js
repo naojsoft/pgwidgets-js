@@ -38,23 +38,6 @@ class TabWidget extends ContainerWidget {
         this.reorderable = this.get_option(options, 'reorderable', false);
         this.tabPos = this.get_option(options, 'tab_position', 'top');
 
-        // JavaScript hack to bind "this" correctly for our methods
-        this.get_tab_id = this.get_tab_id.bind(this);
-        this.get_child = this.get_child.bind(this);
-        this._addTab = this._addTab.bind(this);
-        this._showTab = this._showTab.bind(this);
-        this._closeTab = this._closeTab.bind(this);
-        this.signal_close = this.signal_close.bind(this);
-        this.handleDragStart = this.handleDragStart.bind(this);
-        this.handleDrop = this.handleDrop.bind(this);
-        this.set_index = this.set_index.bind(this);
-        this.get_index = this.get_index.bind(this);
-        this.add_widget = this.add_widget.bind(this);
-        this.close_widget = this.close_widget.bind(this);
-        this.show_widget = this.show_widget.bind(this);
-        this.set_tab_position = this.set_tab_position.bind(this);
-        this.index_to_widget = this.index_to_widget.bind(this);
-
         this.tabContentContainer = document.createElement('div');
         this.tabContentContainer.className = 'tab-content-container';
 

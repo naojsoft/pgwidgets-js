@@ -34,15 +34,6 @@ class Label extends Widget {
         let halign = this.get_option(options, 'halign', 'left');
         this.element.style.textAlign = halign;
 
-        // JavaScript hack to bind "this" correctly for our methods
-        this.set_text = this.set_text.bind(this);
-        this.get_text = this.get_text.bind(this);
-        this.set_color = this.set_color.bind(this);
-        this.set_halign = this.set_halign.bind(this);
-        this.set_menu = this.set_menu.bind(this);
-        this._onMenuMouseUp = this._onMenuMouseUp.bind(this);
-        this._onMenuOutsideMouseDown = this._onMenuOutsideMouseDown.bind(this);
-
         if (this.get_option(options, 'interactive', false)) {
             this._initInteractiveEvents({focusable: true});
         }

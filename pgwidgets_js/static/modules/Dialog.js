@@ -39,13 +39,6 @@ class Dialog extends TopLevel {
             this.element.classList.add('dialog-modal');
         }
 
-        // JavaScript hack to bind "this" correctly for our methods
-        this.get_content_area = this.get_content_area.bind(this);
-        this.add_widget = this.add_widget.bind(this);
-        this.insert_widget = this.insert_widget.bind(this);
-        this.add_button = this.add_button.bind(this);
-        this.set_spacing = this.set_spacing.bind(this);
-
         // main layout: content area + button bar
         this._vbox = new VBox();
         this._vbox.set_spacing(4);

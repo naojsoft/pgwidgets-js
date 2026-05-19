@@ -32,16 +32,6 @@ class TextArea extends Widget {
         this.element.className = 'textarea-widget';
 
         // Method bindings
-        this.set_text = this.set_text.bind(this);
-        this.get_text = this.get_text.bind(this);
-        this.append_text = this.append_text.bind(this);
-        this.clear = this.clear.bind(this);
-        this.set_editable = this.set_editable.bind(this);
-        this.set_wrap = this.set_wrap.bind(this);
-        this.set_limit = this.set_limit.bind(this);
-        this.set_scroll_position = this.set_scroll_position.bind(this);
-        this._syncScrollbars = this._syncScrollbars.bind(this);
-        this._syncFromScroll = this._syncFromScroll.bind(this);
 
         this._scrollTimer = null;
         this._scrollReady = false;

@@ -32,10 +32,6 @@ class ColorDialog extends Dialog {
 
         this.element.classList.add('colordialog-widget');
 
-        // JavaScript hack to bind "this" correctly for our methods
-        this.get_color = this.get_color.bind(this);
-        this.set_color = this.set_color.bind(this);
-
         // Create the embedded color picker widget
         this._colorWidget = new ColorWidget({
             color: options.color || '#ff0000'

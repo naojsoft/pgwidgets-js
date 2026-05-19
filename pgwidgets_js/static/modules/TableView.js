@@ -26,7 +26,6 @@ class TableView extends TreeView {
         super(merged);
         this.element.classList.add('tableview-widget');
 
-        this.set_rows = this.set_rows.bind(this);
     }
 
     /**

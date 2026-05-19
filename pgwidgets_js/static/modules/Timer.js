@@ -34,17 +34,6 @@ class Timer extends Callback {
         this.enable_callback('expired');
         this.enable_callback('cancelled');
 
-        // JavaScript hack to bind "this" correctly for our methods
-        this.start = this.start.bind(this);
-        this.stop = this.stop.bind(this);
-        this.cancel = this.cancel.bind(this);
-        this.is_set = this.is_set.bind(this);
-        this.elapsed_time = this.elapsed_time.bind(this);
-        this.time_left = this.time_left.bind(this);
-        this.set_duration = this.set_duration.bind(this);
-        this.get_duration = this.get_duration.bind(this);
-        this.set = this.set.bind(this);
-        this.cond_set = this.cond_set.bind(this);
     }
 
     /**

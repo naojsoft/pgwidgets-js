@@ -59,14 +59,6 @@ class Slider extends Widget {
             this.element.appendChild(this._input);
         }
 
-        // JavaScript hack to bind "this" correctly for our methods
-        this.set_value = this.set_value.bind(this);
-        this.get_value = this.get_value.bind(this);
-        this.set_limits = this.set_limits.bind(this);
-        this.set_decimals = this.set_decimals.bind(this);
-        this._cb_redirect = this._cb_redirect.bind(this);
-        this._updateValueLabel = this._updateValueLabel.bind(this);
-
         // 'input' fires continuously while dragging;
         // 'change' fires only on mouse release
         if (this.track) {

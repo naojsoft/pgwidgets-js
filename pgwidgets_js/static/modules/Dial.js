@@ -115,18 +115,6 @@ class Dial extends Widget {
             this._applyValuePosition();
         }
 
-        // JavaScript hack to bind "this" correctly for our methods
-        this.set_value = this.set_value.bind(this);
-        this.get_value = this.get_value.bind(this);
-        this.set_limits = this.set_limits.bind(this);
-        this.set_tracking = this.set_tracking.bind(this);
-        this.set_decimals = this.set_decimals.bind(this);
-        this.set_knob_diameter = this.set_knob_diameter.bind(this);
-        this.set_icon = this.set_icon.bind(this);
-        this._onMouseDown = this._onMouseDown.bind(this);
-        this._onMouseMove = this._onMouseMove.bind(this);
-        this._onMouseUp = this._onMouseUp.bind(this);
-
         this._svg.addEventListener('mousedown', this._onMouseDown);
         this._svg.addEventListener('wheel', (e) => {
             e.preventDefault();

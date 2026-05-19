@@ -6,7 +6,6 @@ import {showWindowMenu} from "./WindowMenu.js";
 
 const default_icon_url = new URL("../icons/pgicon.svg", import.meta.url).href;
 
-
 /**
  * An individual sub-window within an MDIWidget workspace.
  * Supports dragging, resizing, minimize, maximize, raise, lower, and close.
@@ -32,22 +31,6 @@ class MDISubWindow extends ContainerWidget {
         // the MDI window we belong to
         this.mdi_widget = mdi_widget
         //this.mdi_widget = null;
-
-        // JavaScript hack to bind "this" correctly for our methods
-        this.update_state = this.update_state.bind(this);
-        this.get_state = this.get_state.bind(this);
-        this.get_child = this.get_child.bind(this);
-        this.makeDraggable = this.makeDraggable.bind(this);
-        this.makeResizable = this.makeResizable.bind(this);
-        this.toggle_minimize = this.toggle_minimize.bind(this);
-        this.toggle_maximize = this.toggle_maximize.bind(this);
-        this.toggle_shade = this.toggle_shade.bind(this);
-        this.raise_ = this.raise_.bind(this);
-        this.lower_ = this.lower.bind(this);
-        this.signal_close = this.signal_close.bind(this);
-        this.close = this.close.bind(this);
-        this.set_title = this.set_title.bind(this);
-        this.move = this.move.bind(this);
 
         // shadeable defaults to true; pass shadeable: false to disable.
         this._shadeable = (opts && opts.shadeable !== undefined)
@@ -632,29 +615,6 @@ class MDIWidget extends ContainerWidget {
         });
 
         this.windowStateMap = new Map();
-
-        // JavaScript hack to bind "this" correctly for our methods
-        this.add_widget = this.add_widget.bind(this);
-        this.cascade_windows = this.cascade_windows.bind(this);
-        this.tile_windows = this.tile_windows.bind(this);
-        this.get_children = this.get_children.bind(this);
-        this.get_subwindows = this.get_subwindows.bind(this);
-        this.get_subwin = this.get_subwin.bind(this);
-        this.get_configuration = this.get_configuration.bind(this);
-        this.move_child = this.move_child.bind(this);
-        this.resize_child = this.resize_child.bind(this);
-        this.get_child_size = this.get_child_size.bind(this);
-        this.get_child_position = this.get_child_position.bind(this);
-        this.close_child = this.close_child.bind(this);
-        this.get_index = this.get_index.bind(this);
-        this.set_index = this.set_index.bind(this);
-        this.index_of = this.index_of.bind(this);
-        this.index_to_widget = this.index_to_widget.bind(this);
-        this.set_resistance = this.set_resistance.bind(this);
-        this.set_scroll_position = this.set_scroll_position.bind(this);
-        this._updateWorkspaceSize = this._updateWorkspaceSize.bind(this);
-        this._syncScrollbars = this._syncScrollbars.bind(this);
-        this._syncFromScroll = this._syncFromScroll.bind(this);
 
         // observe viewport size changes
         this._resizeObserver = new ResizeObserver(() => this._syncScrollbars());

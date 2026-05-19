@@ -57,24 +57,6 @@ class ComboBox extends Widget {
         // user-driven selections set this to true; clear() resets it.
         this._indexExplicit = false;
 
-        // JavaScript hack to bind "this" correctly for our methods
-        this.append_text = this.append_text.bind(this);
-        this.insert_alpha = this.insert_alpha.bind(this);
-        this.delete_alpha = this.delete_alpha.bind(this);
-        this.set_text = this.set_text.bind(this);
-        this.get_text = this.get_text.bind(this);
-        this.set_index = this.set_index.bind(this);
-        this.get_index = this.get_index.bind(this);
-        this.get_alpha = this.get_alpha.bind(this);
-        this.show_text = this.show_text.bind(this);
-        this.clear = this.clear.bind(this);
-        this.set_length = this.set_length.bind(this);
-        this._autoSize = this._autoSize.bind(this);
-        this._buildDropdown = this._buildDropdown.bind(this);
-        this._showDropdown = this._showDropdown.bind(this);
-        this._hideDropdown = this._hideDropdown.bind(this);
-        this._toggleDropdown = this._toggleDropdown.bind(this);
-
         // toggle dropdown on button or input click (input click only for non-editable)
         this._button.addEventListener('mousedown', (e) => {
             e.preventDefault();

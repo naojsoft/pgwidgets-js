@@ -39,12 +39,6 @@ class Splitter extends ContainerWidget {
 
         this.enable_callback('sizing');
 
-        // JavaScript hack to bind "this" correctly for our methods
-        this.add_widget = this.add_widget.bind(this);
-        this.set_minimum_size = this.set_minimum_size.bind(this);
-        this.onMouseDown = this.onMouseDown.bind(this);
-        this.onMouseMove = this.onMouseMove.bind(this);
-        this.onMouseUp = this.onMouseUp.bind(this);
     }
 
     /**

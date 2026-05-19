@@ -41,11 +41,6 @@ class Canvas extends Widget {
             this._offscreen.height = this.element.height;
         }
 
-        // JavaScript hack to bind "this" correctly for our methods
-        this.draw_image = this.draw_image.bind(this);
-        this.get_draw_context = this.get_draw_context.bind(this);
-        this.update = this.update.bind(this);
-
         super.init_style();
         if (this.get_option(options, 'interactive', false)) {
             this._initInteractiveEvents({focusable: true, cursor: 'crosshair'});

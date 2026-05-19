@@ -30,16 +30,6 @@ class MenuAction extends Widget {
         this.checkable = this.get_option(options, 'checkable', false);
         this.checked = false;
 
-        // JavaScript hack to bind "this" correctly for our methods
-        this.set_text = this.set_text.bind(this);
-        this.get_text = this.get_text.bind(this);
-        this.set_icon = this.set_icon.bind(this);
-        this.set_checked = this.set_checked.bind(this);
-        this.get_checked = this.get_checked.bind(this);
-        this.set_state = this.set_state.bind(this);
-        this.get_state = this.get_state.bind(this);
-        this._activate = this._activate.bind(this);
-
         // checkbox indicator (hidden unless checkable)
         this._check = document.createElement('span');
         this._check.className = 'menuaction-check';

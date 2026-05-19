@@ -35,9 +35,6 @@ class FileDialog extends Callback {
         this._mode = this.get_option(options, 'mode', 'file');
         this._accept = this.get_option(options, 'accept', '');
 
-        this.open = this.open.bind(this);
-        this.save = this.save.bind(this);
-
         this.enable_callback('activated');
     }
 

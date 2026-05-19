@@ -41,7 +41,6 @@ class ScrollArea extends AbstractScrollArea {
         this._scrollReady = false;
 
         // bind
-        this.set_scroll_position = this.set_scroll_position.bind(this);
 
         // when the user interacts with a scrollbar, scroll the viewport
         this.add_callback('scrolled', (w, hPct, vPct) => {

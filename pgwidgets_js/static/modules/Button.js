@@ -31,14 +31,6 @@ class Button extends Widget {
             this.element.appendChild(this.textElement);
         }
 
-        // JavaScript hack to bind "this" correctly for our methods
-        this.set_text = this.set_text.bind(this);
-        this.get_text = this.get_text.bind(this);
-        this.set_icon = this.set_icon.bind(this);
-        this.get_icon = this.get_icon.bind(this);
-        this.set_color = this.set_color.bind(this);
-        this._cb_redirect = this._cb_redirect.bind(this);
-
         super.init_style();
 
         this.element.onclick = () => this._cb_redirect('clicked');

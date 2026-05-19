@@ -32,25 +32,6 @@ class VideoWidget extends Widget {
         }
         this.element.className = 'video-widget';
 
-        this.set_url = this.set_url.bind(this);
-        this.set_stream = this.set_stream.bind(this);
-        this.play = this.play.bind(this);
-        this.pause = this.pause.bind(this);
-        this.stop = this.stop.bind(this);
-        this.set_muted = this.set_muted.bind(this);
-        this.get_muted = this.get_muted.bind(this);
-        this.set_volume = this.set_volume.bind(this);
-        this.get_volume = this.get_volume.bind(this);
-        this.set_loop = this.set_loop.bind(this);
-        this.get_loop = this.get_loop.bind(this);
-        this.set_controls = this.set_controls.bind(this);
-        this.get_controls = this.get_controls.bind(this);
-        this.set_current_time = this.set_current_time.bind(this);
-        this.get_current_time = this.get_current_time.bind(this);
-        this.get_duration = this.get_duration.bind(this);
-        this.get_paused = this.get_paused.bind(this);
-        this.fullscreen = this.fullscreen.bind(this);
-
         for (let name of ['play', 'pause', 'ended', 'error',
                           'timeupdate', 'volumechange']) {
             this.enable_callback(name);

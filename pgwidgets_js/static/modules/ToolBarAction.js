@@ -50,13 +50,6 @@ class ToolBarAction extends Widget {
         }
         this.state = false;
 
-        // JavaScript hack to bind "this" correctly for our methods
-        this.set_text = this.set_text.bind(this);
-        this.get_text = this.get_text.bind(this);
-        this.set_icon = this.set_icon.bind(this);
-        this.set_state = this.set_state.bind(this);
-        this.get_state = this.get_state.bind(this);
-
         // icon
         this._icon = null;
 
@@ -81,9 +74,6 @@ class ToolBarAction extends Widget {
         this._menu = this.get_option(options, 'menu', null);
         this._menuOpen = false;
         this._armed = false;
-        this._onDocumentMouseUp = this._onDocumentMouseUp.bind(this);
-        this._onDocumentMouseDown = this._onDocumentMouseDown.bind(this);
-        this.set_menu = this.set_menu.bind(this);
 
         if (this._menu) {
             this._setupMenu(this._menu);

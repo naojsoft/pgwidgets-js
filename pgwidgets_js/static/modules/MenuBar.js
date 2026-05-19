@@ -27,13 +27,6 @@ class MenuBar extends Widget {
         this._openName = null;  // name of currently open menu, or null
         this._armed = false;    // true while mouse button is held from menubar
 
-        // JavaScript hack to bind "this" correctly for our methods
-        this.add_menu = this.add_menu.bind(this);
-        this.add_name = this.add_name.bind(this);
-        this.get_menu = this.get_menu.bind(this);
-        this._closeAll = this._closeAll.bind(this);
-        this._onDocumentMouseUp = this._onDocumentMouseUp.bind(this);
-
         // close any open menu when clicking outside
         this._onDocumentMouseDown = (e) => {
             if (this._destroyed) return;

@@ -40,9 +40,6 @@ class TextEntrySet extends TextEntry {
 
         this.element = wrapper;
 
-        // JavaScript hack to bind "this" correctly for our methods
-        this.set_button_text = this.set_button_text.bind(this);
-
         // fire activated on button click
         this._button.addEventListener('click', () => {
             this._recordHistory();

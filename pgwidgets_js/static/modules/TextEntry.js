@@ -42,15 +42,6 @@ class TextEntry extends Widget {
         this._historyIdx = -1;
         this._historySaved = '';
 
-        // JavaScript hack to bind "this" correctly for our methods
-        this.set_text = this.set_text.bind(this);
-        this.get_text = this.get_text.bind(this);
-        this.clear = this.clear.bind(this);
-        this.set_length = this.set_length.bind(this);
-        this._autoSize = this._autoSize.bind(this);
-        this._onKeyDown = this._onKeyDown.bind(this);
-        this._recordHistory = this._recordHistory.bind(this);
-
         this._input.addEventListener("keydown", this._onKeyDown);
         this._input.addEventListener("input", () => this._autoSize());
         this.enable_callback('activated');

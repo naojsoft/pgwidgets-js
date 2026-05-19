@@ -26,15 +26,6 @@ class Menu extends Widget {
         this._items = [];
         this._menus = {};
 
-        // JavaScript hack to bind "this" correctly for our methods
-        this.add_widget = this.add_widget.bind(this);
-        this.add_name = this.add_name.bind(this);
-        this.add_menu = this.add_menu.bind(this);
-        this.add_separator = this.add_separator.bind(this);
-        this.get_menu = this.get_menu.bind(this);
-        this.popup = this.popup.bind(this);
-        this._closeSubmenus = this._closeSubmenus.bind(this);
-
         // auto-hide when a menu action is selected (for popup menus)
         this.element.addEventListener('menuaction-select', () => {
             this._closeSubmenus();

@@ -52,11 +52,6 @@ class Image extends Widget {
             this._offscreen.height = this.element.height;
         }
 
-        // JavaScript hack to bind "this" correctly for our methods
-        this.set_image = this.set_image.bind(this);
-        this.get_draw_context = this.get_draw_context.bind(this);
-        this.update = this.update.bind(this);
-
         if (this.get_option(options, 'interactive', false)) {
             this._initInteractiveEvents({focusable: true});
         }

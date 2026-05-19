@@ -26,16 +26,6 @@ class HtmlView extends Widget {
         }
         this.element.className = 'htmlview-widget';
 
-        this.set_html = this.set_html.bind(this);
-        this.get_html = this.get_html.bind(this);
-        this.append_html = this.append_html.bind(this);
-        this.clear = this.clear.bind(this);
-        this.scroll_to_top = this.scroll_to_top.bind(this);
-        this.scroll_to_bottom = this.scroll_to_bottom.bind(this);
-        this.set_scroll_position = this.set_scroll_position.bind(this);
-        this._syncScrollbars = this._syncScrollbars.bind(this);
-        this._syncFromScroll = this._syncFromScroll.bind(this);
-
         this._scrollTimer = null;
         this._scrollReady = false;
 

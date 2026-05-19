@@ -72,18 +72,6 @@ class RemoteInterface {
         this._sessionId = null;
         this._sessionToken = null;
 
-        this.connect = this.connect.bind(this);
-        this.disconnect = this.disconnect.bind(this);
-        this._onMessage = this._onMessage.bind(this);
-        this._dispatch = this._dispatch.bind(this);
-        this._handleCreate = this._handleCreate.bind(this);
-        this._handleCall = this._handleCall.bind(this);
-        this._handleListen = this._handleListen.bind(this);
-        this._handleUnlisten = this._handleUnlisten.bind(this);
-        this._resolveArgs = this._resolveArgs.bind(this);
-        this._serializeValue = this._serializeValue.bind(this);
-        this._send = this._send.bind(this);
-
         // Restore session credentials from sessionStorage if available.
         this._loadSessionCredentials();
 
@@ -106,7 +94,9 @@ class RemoteInterface {
             console.log("RemoteInterface: connected to " + this._url);
         };
 
-        this._ws.onmessage = this._onMessage;
+        // Arrow wrapper so the handler runs with `this` = RemoteInterface,
+        // not the WebSocket itself.
+        this._ws.onmessage = (e) => this._onMessage(e);
 
         this._ws.onclose = (event) => {
             console.log("RemoteInterface: disconnected (code=" + event.code + ")");
@@ -896,7 +886,6 @@ class RemoteInterface {
         }
         return {type: "result", id: msg.id};
     }
-
 
     /**
      * Recursively resolves widget references in an arguments array.

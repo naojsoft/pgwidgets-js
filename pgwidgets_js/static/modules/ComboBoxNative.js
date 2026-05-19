@@ -23,17 +23,6 @@ class ComboBoxNative extends Widget {
         
         this.element.className = 'combobox-native-widget';
         
-        // JavaScript hack to bind "this" correctly for our methods
-        this.append_text = this.append_text.bind(this);
-        this.insert_alpha = this.insert_alpha.bind(this);
-        this.delete_alpha = this.delete_alpha.bind(this);
-        this.set_text = this.set_text.bind(this);
-        this.get_text = this.get_text.bind(this);
-        this.get_alpha = this.get_alpha.bind(this);
-        this.show_text = this.show_text.bind(this);
-        this.clear = this.clear.bind(this);
-        this._cb_redirect = this._cb_redirect.bind(this);
-
         this.element.onclick = () => this._cb_redirect('clicked');
         this.element.addEventListener('wheel', (e) => {
             e.preventDefault();

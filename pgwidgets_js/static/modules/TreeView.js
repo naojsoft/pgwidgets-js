@@ -168,7 +168,6 @@ class TreeView extends Widget {
         this._scrollTimer = null;
         this._scrollReady = false;
 
-        this._syncScrollbars = this._syncScrollbars.bind(this);
         this._resizeObserver = new ResizeObserver(() => this._syncScrollbars());
         this._resizeObserver.observe(this._viewport);
         this._resizeObserver.observe(this._body);
@@ -176,26 +175,6 @@ class TreeView extends Widget {
         this.element.tabIndex = 0;
         this.element.addEventListener('keydown', (e) => this._onKeyDown(e));
 
-        // Bind public methods
-        for (let name of [
-            'set_tree', 'add_tree', 'update_tree', 'set_data',
-            'add_item', 'remove_item', 'remove_items', 'clear',
-            'expand_all', 'collapse_all', 'get_expanded', 'get_collapsed',
-            'expand_item', 'collapse_item',
-            'get_selected', 'get_subtree',
-            'set_selected', 'clear_selection',
-            'select_path', 'select_paths', 'select_all',
-            'set_column_width', 'set_optimal_column_widths',
-            'sort_by_column', 'scroll_to_path', 'scroll_to_end',
-            'set_scroll_position', 'get_scroll_position',
-            'get_column_count', 'get_row_count',
-            'set_show_grid', 'set_show_row_numbers', 'set_sortable',
-            'set_column_editable', 'set_cell',
-            'insert_column', 'append_column', 'delete_column',
-            'insert_row', 'append_row', 'delete_row',
-        ]) {
-            this[name] = this[name].bind(this);
-        }
         requestAnimationFrame(() => { this._scrollReady = true; });
     }
 

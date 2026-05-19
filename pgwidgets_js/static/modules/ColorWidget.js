@@ -28,9 +28,6 @@ class ColorWidget extends Widget {
         this.element = document.createElement('div');
         this.element.className = 'colorwidget';
 
-        this.get_color = this.get_color.bind(this);
-        this.set_color = this.set_color.bind(this);
-
         // internal HSV state (h: 0-360, s: 0-1, v: 0-1)
         this._h = 0;
         this._s = 1;

@@ -42,12 +42,6 @@ class ScrollBar extends Widget {
         this._thumb.className = 'scrollbar-thumb';
         this.element.appendChild(this._thumb);
 
-        // JavaScript hack to bind "this" correctly for our methods
-        this.set_scroll_percent = this.set_scroll_percent.bind(this);
-        this.get_scroll_percent = this.get_scroll_percent.bind(this);
-        this.set_thumb_percent = this.set_thumb_percent.bind(this);
-        this.get_thumb_percent = this.get_thumb_percent.bind(this);
-
         // drag handling
         this._setupDrag();
 

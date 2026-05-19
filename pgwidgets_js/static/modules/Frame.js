@@ -36,11 +36,6 @@ class Frame extends ContainerWidget {
         this.contentContainer.className = 'frame-content';
         this.element.appendChild(this.contentContainer);
 
-        // JavaScript hack to bind "this" correctly for our methods
-        this.set_widget = this.set_widget.bind(this);
-        this.set_title = this.set_title.bind(this);
-        this.set_text = this.set_text.bind(this);
-        this.get_text = this.get_text.bind(this);
     }
 
     /**

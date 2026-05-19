@@ -19,23 +19,7 @@ class Widget extends Callback {
         this.element = null;
         this._enabled = true;
 
-        // JavaScript hack to bind "this" correctly for our methods
-        this.get_element = this.get_element.bind(this);
-        this.set_border_width = this.set_border_width.bind(this);
-        this.set_border_color = this.set_border_color.bind(this);
-        this.set_min_size = this.set_min_size.bind(this);
-        this.set_max_size = this.set_max_size.bind(this);
-        this.set_expanding = this.set_expanding.bind(this);
         this._expanding = {horizontal: false, vertical: false};
-        this.init_style = this.init_style.bind(this);
-        this.resize = this.resize.bind(this);
-        this.set_enabled = this.set_enabled.bind(this);
-        this.get_enabled = this.get_enabled.bind(this);
-        this.set_tooltip = this.set_tooltip.bind(this);
-        this.get_tooltip = this.get_tooltip.bind(this);
-        this.show = this.show.bind(this);
-        this.hide = this.hide.bind(this);
-        this.set_allow_text_selection = this.set_allow_text_selection.bind(this);
 
         this._cursors = {};        // name -> CSS cursor value
         this._currentCursor = null; // name of active custom cursor, or null
@@ -1065,14 +1049,6 @@ class ContainerWidget extends Widget {
         super();
 
         this.children = [];
-
-        // JavaScript hack to bind "this" correctly for our methods
-        this.get_children = this.get_children.bind(this);
-        this.num_children = this.num_children.bind(this);
-        this.add = this.add.bind(this);
-        this.add_child = this.add_child.bind(this);
-        this.remove = this.remove.bind(this);
-        this.remove_child = this.remove_child.bind(this);
 
         for (let name of ['child-added', 'child-removed']) {
             this.enable_callback(name);

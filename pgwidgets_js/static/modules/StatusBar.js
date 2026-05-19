@@ -24,10 +24,6 @@ class StatusBar extends Label {
 
         this._timer = null;
 
-        // JavaScript hack to bind "this" correctly for our methods
-        this.set_message = this.set_message.bind(this);
-        this.clear = this.clear.bind(this);
-
         // Start with empty placeholder
         this.set_text('');
     }
