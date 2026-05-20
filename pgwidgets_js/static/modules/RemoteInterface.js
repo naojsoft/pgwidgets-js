@@ -962,11 +962,15 @@ class RemoteInterface {
         let transferId = this._nextTransferId++;
         let chunkSize = this._chunkSize;
 
-        // Build metadata-only payload (strip file data).
+        // Build metadata-only payload (strip file data).  ``encoding``
+        // describes the eventual `data` field's wire form (currently
+        // always "bytes"; reserved for "base64" if a future sender
+        // delivers the file body without binary frame reassembly).
         let metaFiles = payload.files.map(f => ({
             name: f.name,
             size: f.size,
             type: f.type,
+            encoding: f.encoding || 'bytes',
         }));
         let metaPayload = Object.assign({}, payload, {
             transfer_id: transferId,

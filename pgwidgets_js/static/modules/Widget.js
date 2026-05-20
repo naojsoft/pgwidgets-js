@@ -765,9 +765,12 @@ class Widget extends Callback {
      * | `url`    | string?  | URI list data, or null.                           |
      * | `html`   | string?  | HTML data, or null.                               |
      * | `files`  | array    | Dropped files. Each entry:                        |
-     * |          |          | `{name, size, type, data}` where `data` is an     |
-     * |          |          | `ArrayBuffer` of the file's raw bytes. `data` is  |
-     * |          |          | null on read error (with an `error` field too).   |
+     * |          |          | `{name, size, type, encoding, data}` where        |
+     * |          |          | `encoding` is `"bytes"` (default — `data` is the  |
+     * |          |          | file's raw bytes as an `ArrayBuffer`; on the      |
+     * |          |          | Python side, a `bytes` object) and reserved      |
+     * |          |          | values include `"base64"`.  `data` is null on    |
+     * |          |          | read error (with an `error` field also set).      |
      *
      * ### Drag-progress fields
      * Present on: `drop-progress`. Fired during file reading.
@@ -945,6 +948,13 @@ class Widget extends Callback {
                 name: file.name,
                 size: file.size,
                 type: file.type || 'application/octet-stream',
+                // 'bytes' indicates that the eventual `data` field
+                // delivered with drop-end will be raw bytes (an
+                // ArrayBuffer on the JS side; `bytes` on the Python
+                // side after binary-chunk reassembly).  Reserved for
+                // future use: 'base64' if a sender ever chooses to
+                // deliver the file as a base64-encoded string.
+                encoding: 'bytes',
                 data: null,
             });
         }
@@ -977,6 +987,7 @@ class Widget extends Callback {
                     name: file.name,
                     size: file.size,
                     type: file.type || 'application/octet-stream',
+                    encoding: 'bytes',
                     // ArrayBuffer; RemoteInterface ships it as raw
                     // binary frames so the server receives `bytes`.
                     data: reader.result,
@@ -1001,6 +1012,7 @@ class Widget extends Callback {
                     name: file.name,
                     size: file.size,
                     type: file.type || 'application/octet-stream',
+                    encoding: 'bytes',
                     data: null,
                     error: reader.error?.message || 'read error',
                 };

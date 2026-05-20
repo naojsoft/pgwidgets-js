@@ -12,9 +12,10 @@ import {Callback} from "./Callback.js";
  *
  * For file/files mode, call `open()` to show the picker. When the
  * user selects file(s), the `activated` callback fires with a payload
- * of `{files: [{name, size, type, data}, ...]}` where `data` is an
- * `ArrayBuffer` of the file's raw bytes (the Python side receives
- * `bytes`).
+ * of `{files: [{name, size, type, encoding, data}, ...]}`.
+ * ``encoding`` is `"bytes"` (data is an `ArrayBuffer` of raw bytes;
+ * Python sees `bytes`); the field is included so receivers can branch
+ * on it, and is reserved for future values like `"base64"`.
  *
  * For save mode, call `save(filename, data, mime_type)` to trigger
  * a browser download.
@@ -121,6 +122,7 @@ class FileDialog extends Callback {
                     name: file.name,
                     size: file.size,
                     type: file.type || 'application/octet-stream',
+                    encoding: 'bytes',
                     data: reader.result,
                 };
                 completed++;
@@ -142,6 +144,7 @@ class FileDialog extends Callback {
                     name: file.name,
                     size: file.size,
                     type: file.type || 'application/octet-stream',
+                    encoding: 'bytes',
                     data: null,
                     error: reader.error?.message || 'read error',
                 };
