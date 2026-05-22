@@ -1,6 +1,108 @@
 What's New
 ==========
 
+Recent changes — since ``v0.2.3``
+---------------------------------
+
+Chunked binary transport (both directions, raw frames)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The remote interface gained a unified chunked binary transport
+that works in both directions and ships raw binary WebSocket
+frames by default.  A new ``binary-call-chunked`` announce opens
+a transfer; subsequent ``binary-chunk`` messages each carry a
+JSON header plus one raw binary frame (or, optionally, an
+inline base64 payload).  Optional ``shape`` + ``dtype`` fields on
+the announce promote the reassembled payload from a raw
+``ArrayBuffer`` to a typed array (``Uint8Array``,
+``Float32Array``, …) before dispatch — the JS-side companion to
+pgwidgets-python's new :class:`pgwidgets.Buffer` descriptor.
+
+The browser-side file upload path was migrated to the same
+envelope.  Drag-and-drop and ``FileDialog`` now read files with
+``readAsArrayBuffer`` instead of ``readAsDataURL`` and ship the
+bytes via binary frames; the ``payload.files[i].data`` field is
+now an ``ArrayBuffer`` (JavaScript side) / ``bytes`` (Python
+side) rather than a ``"data:<mime>;base64,…"`` string.  Each
+file dict carries an explicit ``encoding`` field (currently
+always ``"bytes"``; reserved for future ``"base64"``) so
+receivers can branch on it.
+
+**Pre-1.0 API break**: any drop or FileDialog handler that did
+``base64.b64decode(data.split(",", 1)[1])`` should now just use
+``data`` directly.
+
+Constructor-bind hack removed
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The legacy ``this.foo = this.foo.bind(this)`` constructor lines
+were removed from every widget module — 443 line deletions
+across 48 files.  The codebase never relied on bare method
+references (DOM handlers etc. use arrow wrappers), so the
+preemptive binding was redundant.  A handful of places that
+*did* register handlers via ``addEventListener("event",
+this.method)`` were converted to class-field arrow methods
+(``onMouseMove = (e) => { ... }``) so the handler identity is
+stable per instance — critical for the paired
+``removeEventListener`` to find the same function.
+
+**Pre-1.0 API break**: code outside the library that passed a
+pgwidgets method as a bare reference (``setTimeout(button.set_text,
+0)``, ``el.addEventListener("click", widget.foo)``, etc.) must
+now wrap with an arrow at the call site (``() =>
+button.set_text(s)``) or apply ``.bind`` itself.
+
+Wid-collision fix in ``_handleCreate``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When a class registered in ``classMap`` doesn't extend
+``Callback`` (e.g. a plain JS class layered on top of
+pgwidgets-js — gingajs's ``Controller`` is one), its constructor
+doesn't allocate a wid.  The next widget's ``super()`` would
+then auto-assign a wid that the previous Python-allocated widget
+was sitting at, silently overwriting it in the registry.
+Two complementary safeguards:
+
+- ``_handleCreate`` now bumps ``Callback._nextId`` past
+  ``msg.wid`` *before* calling ``new cls(...)``.
+- ``Callback``'s constructor skips occupied registry slots when
+  allocating, as a defensive backstop.
+
+A binding that only ever uses classes which extend ``Callback``
+is safe without either mitigation, but having both removes a
+whole class of mysterious "Unknown widget id" errors.
+
+TreeView: per-column ``colwidth``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Column descriptors accept an optional ``colwidth`` field set
+initial column widths declaratively::
+
+    tree.set_columns([
+        {label: "Name", key: "NAME", type: "string", colwidth: 240},
+        {label: "Type", key: "TYPE", type: "string", colwidth: "10em"},
+        {label: "Size", key: "SIZE", type: "integer"},   // -> 1fr
+    ])
+
+Numbers are treated as pixels; strings pass through as CSS grid
+track values.  Columns without ``colwidth`` keep the previous
+default of ``"1fr"``.  ``set_column_width(key, w)`` continues to
+work for runtime adjustments.
+
+Other improvements
+~~~~~~~~~~~~~~~~~~
+
+- ``TextSource`` gained internal ``_setCursorOffset`` /
+  ``_setSelectionOffsets`` helpers used by the ref-binding
+  machinery on reconstruction.
+- For-developers documentation expanded: the "Things That Will
+  Bite You" section now covers the wid-collision rule, the
+  ``encoding`` field on chunks, atomic chunk emission, indexed
+  reassembly, dtype-falls-back-to-ArrayBuffer, and the
+  ``f.data``-is-bytes API break.
+
+----
+
 Recent changes — since ``v0.2.1``
 ---------------------------------
 
