@@ -1202,8 +1202,17 @@ class TreeView extends Widget {
 
         row.addEventListener('click', (e) => this._onRowClick(e, node));
         row.addEventListener('dblclick', (e) => {
+            // Derive col_key from the cell the dblclick landed on
+            // (each cell stashes its column key on construction).
+            // Editable cells stopPropagation in their own handler,
+            // so this only fires for clicks on non-editable cells.
+            let col_key = null;
+            let cell = e.target.closest('.treeview-cell');
+            if (cell && cell._colKey !== undefined) {
+                col_key = cell._colKey;
+            }
             this.make_callback('activated', node.values,
-                               this._pathOfNode(node));
+                               this._pathOfNode(node), col_key);
         });
 
         return row;
@@ -1304,8 +1313,10 @@ class TreeView extends Widget {
             break;
         case 'Enter':
             e.preventDefault();
+            // Keyboard activation targets the row, not a specific
+            // cell, so col_key is null.
             this.make_callback('activated', node.values,
-                               this._pathOfNode(node));
+                               this._pathOfNode(node), null);
             break;
         }
     }
