@@ -283,7 +283,23 @@ class TreeView extends Widget {
 
     _gridTemplate() {
         let cols = '';
-        if (this._showRowNumbers) cols += 'min-content ';
+        if (this._showRowNumbers) {
+            // Reserve enough room for the largest row number we
+            // could display, so the column doesn't jump wider each
+            // time the user scrolls past an order-of-magnitude
+            // boundary (9 → 10, 99 → 100, ...).  With
+            // ``font-variant-numeric: tabular-nums`` already on
+            // ``.treeview-rownum``, ``ch`` units give a stable
+            // equal-digit-width sizing.  +2 covers the 2px+4px
+            // horizontal padding from the .treeview-rownum rule.
+            // Cached in ``_visibleCount`` by _renderAll so we don't
+            // re-walk the tree on every per-row template apply.
+            let n = (this._visibleCount != null
+                     ? this._visibleCount
+                     : this._getVisibleNodes().length);
+            let digits = String(Math.max(1, n)).length;
+            cols += `${digits + 2}ch `;
+        }
         cols += '16px 18px ' + this._colWidths.join(' ');
         return cols;
     }
@@ -1073,15 +1089,23 @@ class TreeView extends Widget {
     // -- Internal: rendering --
 
     _renderAll() {
+        // Pre-count visible rows so _gridTemplate can size the
+        // row-number gutter to the largest number we'll display.
+        // Set the cache *before* the create-row loop so per-row
+        // templates use the final width on the first pass.
+        let visible = this._getVisibleNodes();
+        this._visibleCount = visible.length;
+
         this._body.innerHTML = '';
-        let visibleIndex = 0;
-        this._walkVisible(this._root, (node) => {
-            let row = this._createRow(node, visibleIndex);
+        for (let i = 0; i < visible.length; i++) {
+            let row = this._createRow(visible[i], i);
             this._body.appendChild(row);
-            node.element = row;
-            visibleIndex++;
-        });
-        this._syncRowNumberHeader(visibleIndex);
+            visible[i].element = row;
+        }
+        this._syncRowNumberHeader(visible.length);
+        // Header template depends on _visibleCount; refresh now
+        // that the per-row count may have changed.
+        this._header.style.gridTemplateColumns = this._gridTemplate();
         this._syncScrollbars();
     }
 
@@ -1193,7 +1217,12 @@ class TreeView extends Widget {
                 cell.classList.add('treeview-cell-editable');
                 cell.addEventListener('dblclick', (e) => {
                     e.stopPropagation();
-                    this._startEdit(node, i, cell);
+                    // Use the value already snapshot on the cell —
+                    // ``i`` is declared outside the while loop, so
+                    // referencing it from the closure would see its
+                    // post-loop value (== numCols), not the index
+                    // captured at construction time.
+                    this._startEdit(node, cell._colIndex, cell);
                 });
             }
             row.appendChild(cell);
