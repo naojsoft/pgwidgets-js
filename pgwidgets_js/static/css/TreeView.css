@@ -242,6 +242,13 @@
     white-space: nowrap;
 }
 
+/* ── Cell selection (single-cell / multiple-cell modes) ── */
+
+.treeview-cell-selected {
+    background-color: #2a64c8;
+    color: white;
+}
+
 /* ── Inline cell editor ─────────────────────────────── */
 
 .treeview-cell-editable {

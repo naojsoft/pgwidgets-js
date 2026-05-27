@@ -765,9 +765,14 @@ WIDGETS = {
             "delete_row": ["path_or_key"],
             "set_scroll_position": ["h_pct", "v_pct"],
             "get_scroll_position": [],
+            "get_selected_cells": [],
+            "select_cell": ["path", "col_key", "state"],
+            "select_cells": ["cells", "state"],
+            "clear_cell_selection": [],
         },
         "callbacks": ["activated", "selected", "expanded", "collapsed",
-                      "sorted", "cell_edited", "scrolled"],
+                      "sorted", "cell_edited", "scrolled",
+                      "cell_selected", "copy", "cut", "paste"],
     },
 
     "TableView": {
@@ -806,9 +811,14 @@ WIDGETS = {
             "delete_row": ["index"],
             "set_scroll_position": ["h_pct", "v_pct"],
             "get_scroll_position": [],
+            "get_selected_cells": [],
+            "select_cell": ["path", "col_key", "state"],
+            "select_cells": ["cells", "state"],
+            "clear_cell_selection": [],
         },
         "callbacks": ["activated", "selected", "sorted", "cell_edited",
-                      "scrolled"],
+                      "scrolled",
+                      "cell_selected", "copy", "cut", "paste"],
     },
 
     "Timer": {

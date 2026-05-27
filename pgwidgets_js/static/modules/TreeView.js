@@ -96,7 +96,8 @@ class TreeView extends Widget {
         this._editInfo = null;
 
         for (let name of ['activated', 'selected', 'expanded', 'collapsed',
-                          'sorted', 'cell_edited', 'scrolled']) {
+                          'sorted', 'cell_edited', 'scrolled',
+                          'cell_selected', 'copy', 'cut', 'paste']) {
             this.enable_callback(name);
         }
 
@@ -109,6 +110,13 @@ class TreeView extends Widget {
             expanded: true,
         });
         this._selection = [];
+
+        // Cell selection state (used in 'single-cell' / 'multiple-cell'
+        // modes).  Keys are ``${JSON.stringify(path)}|${col_key}``.
+        // _cellAnchor is the most recent plain or Ctrl-click target,
+        // used as the anchor for Shift-extend rectangles.
+        this._cellSelection = new Set();
+        this._cellAnchor = null;
 
         // -- Header --
         // The header lives inside a clipping wrapper so it can be
@@ -279,6 +287,27 @@ class TreeView extends Widget {
         return -1;
     }
 
+    // -- Cell selection helpers --
+
+    /** True when the current selection_mode operates on cells
+     *  (rather than whole rows). */
+    _isCellMode() {
+        return this._selectionMode === 'single-cell'
+            || this._selectionMode === 'multiple-cell';
+    }
+
+    /** Build the canonical key used in ``_cellSelection``. */
+    _cellKey(node, colIndex) {
+        let colKey = this._columns[colIndex]
+            ? this._columns[colIndex].key : null;
+        return JSON.stringify(this._pathOfNode(node)) + '|' + colKey;
+    }
+
+    /** True if ``(node, colIndex)`` is currently selected. */
+    _isCellSelected(node, colIndex) {
+        return this._cellSelection.has(this._cellKey(node, colIndex));
+    }
+
     // -- Column grid template --
 
     _gridTemplate() {
@@ -359,6 +388,17 @@ class TreeView extends Widget {
 
             cell.addEventListener('click', (e) => {
                 if (e.target.classList.contains('treeview-resize-handle')) return;
+                // In cell modes, a header click selects the column.
+                // When sortable, plain click still sorts (the user's
+                // already-defined gesture) and modifier-clicks select.
+                // When not sortable, plain click selects too.
+                if (this._isCellMode()) {
+                    let usingModifier = e.shiftKey || e.ctrlKey || e.metaKey;
+                    if (usingModifier || !this._sortable) {
+                        this._onHeaderColumnSelect(e, i);
+                        return;
+                    }
+                }
                 this._onHeaderClick(this._columns[i].key);
             });
 
@@ -658,6 +698,8 @@ class TreeView extends Widget {
         this._root.children = new Map();
         this._root.sortedView = null;
         this._selection = [];
+        this._cellSelection.clear();
+        this._cellAnchor = null;
         this._body.innerHTML = '';
     }
 
@@ -1138,6 +1180,14 @@ class TreeView extends Widget {
             let rn = document.createElement('span');
             rn.className = 'treeview-rownum';
             rn.textContent = String(visibleIndex + 1);
+            // In cell mode, clicking the row-number cell selects the
+            // whole row (with Ctrl-toggle / Shift-extend modifiers).
+            rn.addEventListener('click', (e) => {
+                if (this._isCellMode()) {
+                    e.stopPropagation();
+                    this._onRowNumberClick(e, node);
+                }
+            });
             row.appendChild(rn);
         }
 
@@ -1225,6 +1275,16 @@ class TreeView extends Widget {
                     this._startEdit(node, cell._colIndex, cell);
                 });
             }
+            // Cell-selection visual + click routing.
+            if (this._isCellSelected(node, i)) {
+                cell.classList.add('treeview-cell-selected');
+            }
+            cell.addEventListener('click', (e) => {
+                if (this._isCellMode()) {
+                    e.stopPropagation();
+                    this._onCellClick(e, node, cell._colIndex);
+                }
+            });
             row.appendChild(cell);
             i += span;
         }
@@ -1250,6 +1310,9 @@ class TreeView extends Widget {
     // -- Selection --
 
     _onRowClick(e, node) {
+        // Cell modes route clicks through the per-cell handler;
+        // ignore bubbled row-level clicks here.
+        if (this._isCellMode()) return;
         if (this._selectionMode === 'none') return;
 
         if (this._selectionMode === 'multiple' && (e.ctrlKey || e.metaKey)) {
@@ -1279,19 +1342,443 @@ class TreeView extends Widget {
         this.make_callback('selected', this.get_selected());
     }
 
-    _updateSelectionDisplay() {
-        for (let row of this._body.querySelectorAll('.treeview-row')) {
-            if (this._selection.includes(row._node)) {
-                row.classList.add('treeview-row-selected');
+    _onCellClick(e, node, colIndex) {
+        if (this._selectionMode === 'single-cell') {
+            this._setCellSingle(node, colIndex);
+        } else {  // 'multiple-cell'
+            if (e.shiftKey && this._cellAnchor) {
+                this._extendCellRectangle(node, colIndex);
+            } else if (e.ctrlKey || e.metaKey) {
+                this._toggleCell(node, colIndex);
+                this._cellAnchor = {node, colIndex};
             } else {
-                row.classList.remove('treeview-row-selected');
+                this._setCellSingle(node, colIndex);
             }
         }
+        this._updateSelectionDisplay();
+        this.make_callback('cell_selected', this.get_selected_cells());
+    }
+
+    _onRowNumberClick(e, node) {
+        let visible = this._getVisibleNodes();
+        let numCols = this._columns.length;
+
+        if (this._selectionMode === 'single-cell') {
+            this._cellSelection.clear();
+            this._addRowCells(node);
+            this._cellAnchor = {node, colIndex: 0};
+        } else if (e.shiftKey && this._cellAnchor) {
+            let r0 = visible.indexOf(this._cellAnchor.node);
+            let r1 = visible.indexOf(node);
+            if (r0 >= 0 && r1 >= 0) {
+                let [rMin, rMax] = (r0 < r1) ? [r0, r1] : [r1, r0];
+                this._cellSelection.clear();
+                for (let r = rMin; r <= rMax; r++) {
+                    this._addRowCells(visible[r]);
+                }
+            }
+        } else if (e.ctrlKey || e.metaKey) {
+            // Toggle: if every cell in the row is already selected,
+            // remove them; otherwise add all cells in the row.
+            let allOn = true;
+            for (let c = 0; c < numCols; c++) {
+                if (!this._isCellSelected(node, c)) { allOn = false; break; }
+            }
+            for (let c = 0; c < numCols; c++) {
+                let k = this._cellKey(node, c);
+                if (allOn) this._cellSelection.delete(k);
+                else this._cellSelection.add(k);
+            }
+            this._cellAnchor = {node, colIndex: 0};
+        } else {
+            this._cellSelection.clear();
+            this._addRowCells(node);
+            this._cellAnchor = {node, colIndex: 0};
+        }
+        this._updateSelectionDisplay();
+        this.make_callback('cell_selected', this.get_selected_cells());
+    }
+
+    _onHeaderColumnSelect(e, colIndex) {
+        let visible = this._getVisibleNodes();
+        if (visible.length === 0) return;
+        let anchorNode = visible[0];
+
+        if (this._selectionMode === 'single-cell'
+                || (!e.shiftKey && !e.ctrlKey && !e.metaKey)) {
+            this._cellSelection.clear();
+            this._addColumnCells(visible, colIndex);
+            this._cellAnchor = {node: anchorNode, colIndex};
+        } else if (e.shiftKey && this._cellAnchor) {
+            let c0 = this._cellAnchor.colIndex;
+            let c1 = colIndex;
+            let [cMin, cMax] = (c0 < c1) ? [c0, c1] : [c1, c0];
+            this._cellSelection.clear();
+            for (let c = cMin; c <= cMax; c++) {
+                this._addColumnCells(visible, c);
+            }
+        } else if (e.ctrlKey || e.metaKey) {
+            let allOn = visible.every(n => this._isCellSelected(n, colIndex));
+            for (let n of visible) {
+                let k = this._cellKey(n, colIndex);
+                if (allOn) this._cellSelection.delete(k);
+                else this._cellSelection.add(k);
+            }
+            this._cellAnchor = {node: anchorNode, colIndex};
+        }
+        this._updateSelectionDisplay();
+        this.make_callback('cell_selected', this.get_selected_cells());
+    }
+
+    // -- Cell-selection mutators (internal) --
+
+    _setCellSingle(node, colIndex) {
+        this._cellSelection.clear();
+        this._cellSelection.add(this._cellKey(node, colIndex));
+        this._cellAnchor = {node, colIndex};
+    }
+
+    _toggleCell(node, colIndex) {
+        let k = this._cellKey(node, colIndex);
+        if (this._cellSelection.has(k)) {
+            this._cellSelection.delete(k);
+        } else {
+            this._cellSelection.add(k);
+        }
+    }
+
+    _extendCellRectangle(toNode, toColIndex) {
+        let visible = this._getVisibleNodes();
+        let r0 = visible.indexOf(this._cellAnchor.node);
+        let r1 = visible.indexOf(toNode);
+        if (r0 < 0 || r1 < 0) return;
+        let [rMin, rMax] = (r0 < r1) ? [r0, r1] : [r1, r0];
+        let c0 = this._cellAnchor.colIndex;
+        let [cMin, cMax] = (c0 < toColIndex) ? [c0, toColIndex]
+                                              : [toColIndex, c0];
+        this._cellSelection.clear();
+        for (let r = rMin; r <= rMax; r++) {
+            for (let c = cMin; c <= cMax; c++) {
+                this._cellSelection.add(this._cellKey(visible[r], c));
+            }
+        }
+    }
+
+    _addRowCells(node) {
+        for (let c = 0; c < this._columns.length; c++) {
+            this._cellSelection.add(this._cellKey(node, c));
+        }
+    }
+
+    _addColumnCells(visible, colIndex) {
+        for (let n of visible) {
+            this._cellSelection.add(this._cellKey(n, colIndex));
+        }
+    }
+
+    _updateSelectionDisplay() {
+        if (this._isCellMode()) {
+            // Repaint cell-selection class on every visible cell.
+            for (let row of this._body.querySelectorAll('.treeview-row')) {
+                let node = row._node;
+                if (!node) continue;
+                for (let cell of row.querySelectorAll('.treeview-cell')) {
+                    if (this._isCellSelected(node, cell._colIndex)) {
+                        cell.classList.add('treeview-cell-selected');
+                    } else {
+                        cell.classList.remove('treeview-cell-selected');
+                    }
+                }
+            }
+        } else {
+            for (let row of this._body.querySelectorAll('.treeview-row')) {
+                if (this._selection.includes(row._node)) {
+                    row.classList.add('treeview-row-selected');
+                } else {
+                    row.classList.remove('treeview-row-selected');
+                }
+            }
+        }
+    }
+
+    // -- Cell-selection public API --
+
+    /** Return the current cell selection as a list of
+     *  ``{path, col_key, value}`` records.  Ordered by visible row
+     *  then column (left to right). */
+    get_selected_cells() {
+        let result = [];
+        let visible = this._getVisibleNodes();
+        for (let node of visible) {
+            let path = this._pathOfNode(node);
+            for (let i = 0; i < this._columns.length; i++) {
+                if (this._isCellSelected(node, i)) {
+                    let colKey = this._columns[i].key;
+                    let value = (node.values != null
+                                 && typeof node.values === 'object'
+                                 && !Array.isArray(node.values)
+                                 && colKey in node.values)
+                        ? node.values[colKey] : '';
+                    result.push({path, col_key: colKey, value});
+                }
+            }
+        }
+        return result;
+    }
+
+    /** Select (or deselect) a single cell by ``(path, col_key)``. */
+    select_cell(path, col_key, state = true) {
+        let node = this._nodeAtPath(path);
+        if (!node) return;
+        let colIndex = this._columnIndex(col_key);
+        if (colIndex < 0) return;
+        let k = this._cellKey(node, colIndex);
+        if (state) {
+            this._cellSelection.add(k);
+            this._cellAnchor = {node, colIndex};
+        } else {
+            this._cellSelection.delete(k);
+        }
+        this._updateSelectionDisplay();
+    }
+
+    /** Bulk select a list of ``{path, col_key}`` records.
+     *  ``state`` applies to every record. */
+    select_cells(cells, state = true) {
+        for (let c of cells) {
+            this.select_cell(c.path, c.col_key, state);
+        }
+    }
+
+    /** Clear cell-selection state. */
+    clear_cell_selection() {
+        this._cellSelection.clear();
+        this._cellAnchor = null;
+        this._updateSelectionDisplay();
+    }
+
+    // -- Clipboard (Ctrl/Cmd + C / X / V) --
+
+    /** Build a tab-separated grid covering the bounding box of the
+     *  current selection (cell or row mode).  Gaps inside the
+     *  bounding box become empty cells.  Returns '' if nothing is
+     *  selected. */
+    _buildSelectionTSV() {
+        let visible = this._getVisibleNodes();
+        let pathToIdx = new Map();
+        for (let r = 0; r < visible.length; r++) {
+            pathToIdx.set(
+                JSON.stringify(this._pathOfNode(visible[r])), r);
+        }
+
+        let cells;
+        if (this._isCellMode()) {
+            cells = this.get_selected_cells();
+        } else {
+            // Row mode: treat every cell in every selected row as
+            // selected for clipboard purposes.
+            cells = [];
+            for (let n of this._selection) {
+                let path = this._pathOfNode(n);
+                for (let i = 0; i < this._columns.length; i++) {
+                    let colKey = this._columns[i].key;
+                    let value = (n.values != null
+                                 && typeof n.values === 'object'
+                                 && !Array.isArray(n.values)
+                                 && colKey in n.values)
+                        ? n.values[colKey] : '';
+                    cells.push({path, col_key: colKey, value});
+                }
+            }
+        }
+        if (cells.length === 0) return '';
+
+        let rMin = Infinity, rMax = -Infinity;
+        let cMin = Infinity, cMax = -Infinity;
+        let lookup = new Map();  // "r|c" -> string value
+        for (let cell of cells) {
+            let r = pathToIdx.get(JSON.stringify(cell.path));
+            if (r == null) continue;
+            let c = this._columnIndex(cell.col_key);
+            if (c < 0) continue;
+            if (r < rMin) rMin = r; if (r > rMax) rMax = r;
+            if (c < cMin) cMin = c; if (c > cMax) cMax = c;
+            lookup.set(r + '|' + c,
+                       cell.value != null ? String(cell.value) : '');
+        }
+        if (rMin > rMax || cMin > cMax) return '';
+
+        let lines = [];
+        for (let r = rMin; r <= rMax; r++) {
+            let row = [];
+            for (let c = cMin; c <= cMax; c++) {
+                row.push(lookup.get(r + '|' + c) || '');
+            }
+            lines.push(row.join('\t'));
+        }
+        return lines.join('\n');
+    }
+
+    /** Return the top-left ``{rowIdx, colIndex}`` of the current
+     *  selection, or null if nothing's selected.  Used to anchor
+     *  paste targets. */
+    _selectionTopLeft() {
+        let visible = this._getVisibleNodes();
+        let pathToIdx = new Map();
+        for (let r = 0; r < visible.length; r++) {
+            pathToIdx.set(
+                JSON.stringify(this._pathOfNode(visible[r])), r);
+        }
+        let rMin = Infinity, cMin = Infinity;
+        let cells = this._isCellMode()
+            ? this.get_selected_cells()
+            : this._selection.map(n => ({
+                path: this._pathOfNode(n),
+                col_key: this._columns.length > 0
+                    ? this._columns[0].key : null,
+            }));
+        for (let cell of cells) {
+            let r = pathToIdx.get(JSON.stringify(cell.path));
+            if (r == null) continue;
+            let c = cell.col_key != null
+                ? this._columnIndex(cell.col_key) : 0;
+            if (c < 0) continue;
+            if (r < rMin) rMin = r;
+            if (c < cMin) cMin = c;
+        }
+        if (rMin === Infinity) return null;
+        return {rowIdx: rMin, colIndex: cMin};
+    }
+
+    async _copyToClipboard() {
+        let tsv = this._buildSelectionTSV();
+        if (!tsv) return;
+        try {
+            await navigator.clipboard.writeText(tsv);
+        } catch (err) {
+            console.warn('TreeView: clipboard write failed:', err);
+            return;
+        }
+        this.make_callback('copy', tsv);
+    }
+
+    async _cutToClipboard() {
+        let tsv = this._buildSelectionTSV();
+        if (!tsv) return;
+        try {
+            await navigator.clipboard.writeText(tsv);
+        } catch (err) {
+            console.warn('TreeView: clipboard write failed:', err);
+            return;
+        }
+        // Clear editable cells in the selection.
+        let cells = this._isCellMode()
+            ? this.get_selected_cells()
+            : null;
+        if (cells) {
+            for (let cell of cells) {
+                let colIdx = this._columnIndex(cell.col_key);
+                if (colIdx < 0) continue;
+                let colDef = this._columns[colIdx];
+                if (!colDef || !colDef.editable) continue;
+                let oldValue = cell.value;
+                this.set_cell(cell.path, cell.col_key, '');
+                this.make_callback('cell_edited', cell.path,
+                                   cell.col_key, oldValue, '');
+            }
+        } else {
+            // Row mode: clear every editable cell in every selected
+            // row.
+            for (let n of this._selection) {
+                let path = this._pathOfNode(n);
+                for (let i = 0; i < this._columns.length; i++) {
+                    let colDef = this._columns[i];
+                    if (!colDef || !colDef.editable) continue;
+                    let colKey = colDef.key;
+                    let oldValue = (n.values && colKey in n.values)
+                        ? n.values[colKey] : '';
+                    this.set_cell(path, colKey, '');
+                    this.make_callback('cell_edited', path, colKey,
+                                       oldValue, '');
+                }
+            }
+        }
+        this.make_callback('cut', tsv);
+    }
+
+    async _pasteFromClipboard() {
+        let text;
+        try {
+            text = await navigator.clipboard.readText();
+        } catch (err) {
+            console.warn('TreeView: clipboard read failed:', err);
+            return;
+        }
+        if (text == null || text === '') return;
+
+        let anchor = this._selectionTopLeft();
+        if (!anchor) return;
+
+        // Normalise line endings, drop the conventional trailing
+        // newline that clipboard text usually carries.
+        let rows = text.replace(/\r\n/g, '\n')
+                       .replace(/\r/g, '\n')
+                       .split('\n');
+        while (rows.length > 0 && rows[rows.length - 1] === '') {
+            rows.pop();
+        }
+        if (rows.length === 0) return;
+
+        let visible = this._getVisibleNodes();
+        for (let i = 0; i < rows.length; i++) {
+            let r = anchor.rowIdx + i;
+            if (r >= visible.length) break;
+            let node = visible[r];
+            let path = this._pathOfNode(node);
+            let cells = rows[i].split('\t');
+            for (let j = 0; j < cells.length; j++) {
+                let c = anchor.colIndex + j;
+                if (c >= this._columns.length) break;
+                let colDef = this._columns[c];
+                if (!colDef || !colDef.editable) continue;
+                let colKey = colDef.key;
+                let oldValue = (node.values
+                                && typeof node.values === 'object'
+                                && colKey in node.values)
+                    ? node.values[colKey] : '';
+                let newValue = cells[j];
+                this.set_cell(path, colKey, newValue);
+                this.make_callback('cell_edited', path, colKey,
+                                   oldValue, newValue);
+            }
+        }
+        this.make_callback('paste', text);
     }
 
     // -- Keyboard --
 
     _onKeyDown(e) {
+        // Clipboard shortcuts work in any selection mode and aren't
+        // gated on having a current arrow-key cursor.
+        if (e.ctrlKey || e.metaKey) {
+            let key = e.key.toLowerCase();
+            if (key === 'c') {
+                e.preventDefault();
+                this._copyToClipboard();
+                return;
+            }
+            if (key === 'x') {
+                e.preventDefault();
+                this._cutToClipboard();
+                return;
+            }
+            if (key === 'v') {
+                e.preventDefault();
+                this._pasteFromClipboard();
+                return;
+            }
+        }
+
         if (this._selection.length === 0) return;
         let visible = this._getVisibleNodes();
         let current = visible.indexOf(this._selection[this._selection.length - 1]);
