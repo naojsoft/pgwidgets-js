@@ -1650,6 +1650,25 @@ class TreeView extends Widget {
         return {rowIdx: rMin, colIndex: cMin};
     }
 
+    /** Public method: copy the current selection to the system
+     *  clipboard.  Equivalent to the user pressing Ctrl/Cmd+C
+     *  on the focused widget. */
+    copy_selection() {
+        this._copyToClipboard();
+    }
+
+    /** Public method: cut the current selection (copy + clear
+     *  editable cells).  Equivalent to Ctrl/Cmd+X. */
+    cut_selection() {
+        this._cutToClipboard();
+    }
+
+    /** Public method: paste from the system clipboard onto the
+     *  current selection.  Equivalent to Ctrl/Cmd+V. */
+    paste_selection() {
+        this._pasteFromClipboard();
+    }
+
     async _copyToClipboard() {
         let tsv = this._buildSelectionTSV();
         if (!tsv) return;
