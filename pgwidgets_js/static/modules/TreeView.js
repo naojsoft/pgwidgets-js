@@ -118,6 +118,17 @@ class TreeView extends Widget {
         this._cellSelection = new Set();
         this._cellAnchor = null;
 
+        // Per-cell / row / column / table colour overrides.  Each
+        // entry is ``{fg, bg}`` (with ``fg`` and/or ``bg`` possibly
+        // null when only one channel was set).  Looked up at render
+        // time in precedence cell > row > column > table; fg and bg
+        // merge across levels.  Selected cells skip these — the
+        // selection highlight wins.
+        this._cellStyles = new Map();    // "pathKey|colKey" -> {fg,bg}
+        this._rowStyles = new Map();     // pathKey         -> {fg,bg}
+        this._columnStyles = new Map();  // colKey          -> {fg,bg}
+        this._tableStyle = null;         // {fg,bg} | null
+
         // -- Header --
         // The header lives inside a clipping wrapper so it can be
         // wider than the visible widget (matching the body's
@@ -306,6 +317,148 @@ class TreeView extends Widget {
     /** True if ``(node, colIndex)`` is currently selected. */
     _isCellSelected(node, colIndex) {
         return this._cellSelection.has(this._cellKey(node, colIndex));
+    }
+
+    // -- Cell-style resolution + application --
+
+    /** Resolve the effective ``{fg, bg}`` for a cell by walking
+     *  cell → row → column → table precedence; fg and bg merge
+     *  across levels (the most specific non-null value wins
+     *  per channel).  Returns null when nothing applies. */
+    _resolveStyle(node, colIndex) {
+        let pathKey = JSON.stringify(this._pathOfNode(node));
+        let colKey = this._columns[colIndex]
+            ? this._columns[colIndex].key : null;
+        let fg = null;
+        let bg = null;
+
+        // Most specific first; fill in nulls from less specific.
+        let cellStyle = this._cellStyles.get(pathKey + '|' + colKey);
+        if (cellStyle) {
+            if (cellStyle.fg != null) fg = cellStyle.fg;
+            if (cellStyle.bg != null) bg = cellStyle.bg;
+        }
+        if (fg == null || bg == null) {
+            let rowStyle = this._rowStyles.get(pathKey);
+            if (rowStyle) {
+                if (fg == null && rowStyle.fg != null) fg = rowStyle.fg;
+                if (bg == null && rowStyle.bg != null) bg = rowStyle.bg;
+            }
+        }
+        if (fg == null || bg == null) {
+            let colStyle = this._columnStyles.get(colKey);
+            if (colStyle) {
+                if (fg == null && colStyle.fg != null) fg = colStyle.fg;
+                if (bg == null && colStyle.bg != null) bg = colStyle.bg;
+            }
+        }
+        if (fg == null || bg == null) {
+            if (this._tableStyle) {
+                if (fg == null && this._tableStyle.fg != null)
+                    fg = this._tableStyle.fg;
+                if (bg == null && this._tableStyle.bg != null)
+                    bg = this._tableStyle.bg;
+            }
+        }
+        if (fg == null && bg == null) return null;
+        return {fg, bg};
+    }
+
+    /** Apply the resolved cell style to ``cell`` (a span element).
+     *  Called from the cell-creation loop for non-selected cells. */
+    _applyCellStyle(cell, node, colIndex) {
+        let style = this._resolveStyle(node, colIndex);
+        if (style == null) return;
+        if (style.fg != null) cell.style.color = style.fg;
+        if (style.bg != null) cell.style.backgroundColor = style.bg;
+    }
+
+    // -- Cell-style public API --
+
+    /** Set foreground / background colour on a single cell.
+     *  ``fg`` and/or ``bg`` may be null/undefined to leave that
+     *  channel unchanged (so the row / column / table level can
+     *  still supply it).  Passing both null clears the cell-level
+     *  override.  Colours are CSS strings — hex (``'#ff0000'``),
+     *  named (``'red'``), or ``rgb()``/``rgba()``. */
+    set_cell_color(path, col_key, fg = null, bg = null) {
+        let node = this._nodeAtPath(path);
+        if (!node) return;
+        if (this._columnIndex(col_key) < 0) return;
+        let key = JSON.stringify(this._pathOfNode(node)) + '|' + col_key;
+        if (fg == null && bg == null) {
+            this._cellStyles.delete(key);
+        } else {
+            this._cellStyles.set(key, {fg, bg});
+        }
+        this._renderAll();
+    }
+
+    /** Set foreground / background colour on a whole row. */
+    set_row_color(path, fg = null, bg = null) {
+        let node = this._nodeAtPath(path);
+        if (!node) return;
+        let key = JSON.stringify(this._pathOfNode(node));
+        if (fg == null && bg == null) {
+            this._rowStyles.delete(key);
+        } else {
+            this._rowStyles.set(key, {fg, bg});
+        }
+        this._renderAll();
+    }
+
+    /** Set foreground / background colour on a whole column. */
+    set_column_color(col_key, fg = null, bg = null) {
+        if (this._columnIndex(col_key) < 0) return;
+        if (fg == null && bg == null) {
+            this._columnStyles.delete(col_key);
+        } else {
+            this._columnStyles.set(col_key, {fg, bg});
+        }
+        this._renderAll();
+    }
+
+    /** Set foreground / background colour on the whole table.
+     *  Lowest-precedence layer — cells / rows / columns override. */
+    set_table_color(fg = null, bg = null) {
+        if (fg == null && bg == null) {
+            this._tableStyle = null;
+        } else {
+            this._tableStyle = {fg, bg};
+        }
+        this._renderAll();
+    }
+
+    /** Clear a single-cell colour override. */
+    clear_cell_color(path, col_key) {
+        let node = this._nodeAtPath(path);
+        if (!node) return;
+        let key = JSON.stringify(this._pathOfNode(node)) + '|' + col_key;
+        this._cellStyles.delete(key);
+        this._renderAll();
+    }
+
+    /** Clear a row colour override. */
+    clear_row_color(path) {
+        let node = this._nodeAtPath(path);
+        if (!node) return;
+        this._rowStyles.delete(JSON.stringify(this._pathOfNode(node)));
+        this._renderAll();
+    }
+
+    /** Clear a column colour override. */
+    clear_column_color(col_key) {
+        this._columnStyles.delete(col_key);
+        this._renderAll();
+    }
+
+    /** Clear *all* colour overrides at every level. */
+    clear_all_colors() {
+        this._cellStyles.clear();
+        this._rowStyles.clear();
+        this._columnStyles.clear();
+        this._tableStyle = null;
+        this._renderAll();
     }
 
     // -- Column grid template --
@@ -700,6 +853,13 @@ class TreeView extends Widget {
         this._selection = [];
         this._cellSelection.clear();
         this._cellAnchor = null;
+        // Cell- and row-keyed style overrides reference path keys
+        // that won't exist after clear; drop them so they don't
+        // linger for ghost paths.  Column / table level overrides
+        // are not row-specific — preserve those so the next
+        // ``set_rows`` inherits them.
+        this._cellStyles.clear();
+        this._rowStyles.clear();
         this._body.innerHTML = '';
     }
 
@@ -1278,6 +1438,10 @@ class TreeView extends Widget {
             // Cell-selection visual + click routing.
             if (this._isCellSelected(node, i)) {
                 cell.classList.add('treeview-cell-selected');
+            } else {
+                // Only apply custom colours when the cell is *not*
+                // selected; selection highlight wins.
+                this._applyCellStyle(cell, node, i);
             }
             cell.addEventListener('click', (e) => {
                 if (this._isCellMode()) {
