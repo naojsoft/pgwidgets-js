@@ -209,6 +209,30 @@ class Label extends Widget {
         this.element.style.textAlign = align;
     }
 
+    /**
+     * Sets the vertical alignment of the text within the label.
+     * Only has a visible effect when the label is allocated more
+     * vertical space than its text needs (e.g. when stretched
+     * inside a parent Box cell).  Switches the label to a
+     * column-flex layout so ``justifyContent`` controls vertical
+     * placement of the text node; ``textAlign`` (set by
+     * ``set_halign``) still controls horizontal placement of the
+     * text *within* the line, which works the same in a flex
+     * column as in the default block layout.
+     * @param {string} align - 'top', 'center', or 'bottom'.
+     */
+    set_valign(align) {
+        const map = {'top':    'flex-start',
+                     'center': 'center',
+                     'bottom': 'flex-end'};
+        if (!(align in map)) {
+            throw new Error("unknown valign: " + align);
+        }
+        this.element.style.display = 'flex';
+        this.element.style.flexDirection = 'column';
+        this.element.style.justifyContent = map[align];
+    }
+
 }
 
 export { Label };

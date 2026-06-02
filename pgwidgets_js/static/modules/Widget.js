@@ -302,6 +302,23 @@ class Widget extends Callback {
     }
 
     /**
+     * Sets the background color on the widget element.  Pass null
+     * (or any falsy value) to clear the override and let the
+     * inherited style take over.  Themed widgets (buttons, etc.)
+     * paint multi-state backgrounds; a generic set_bg may be
+     * partially overridden by hover/active states on those.
+     * @param {string|null} color - CSS color value, or null to
+     *     clear.
+     */
+    set_bg(color) {
+        if (color == null || color === '') {
+            this.element.style.backgroundColor = '';
+        } else {
+            this.element.style.backgroundColor = color;
+        }
+    }
+
+    /**
      * Resizes the widget to the given dimensions.
      * @param {number} width - Width in pixels.
      * @param {number} height - Height in pixels.
