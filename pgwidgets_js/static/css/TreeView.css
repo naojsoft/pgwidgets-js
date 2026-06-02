@@ -266,3 +266,24 @@
     font: inherit;
     outline: none;
 }
+
+/*
+ * Widget-typed cells (checkbox / combobox / progress / button).
+ * Center the embedded element vertically, drop the default
+ * text padding so the widget hugs the cell edges.
+ */
+.treeview-cell-widget {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1px 2px;
+}
+
+.treeview-cell-combobox,
+.treeview-cell-button {
+    font: inherit;
+}
+
+.treeview-cell-progress {
+    width: 100%;
+}

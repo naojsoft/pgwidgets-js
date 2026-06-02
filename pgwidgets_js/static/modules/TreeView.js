@@ -97,7 +97,8 @@ class TreeView extends Widget {
 
         for (let name of ['activated', 'selected', 'expanded', 'collapsed',
                           'sorted', 'cell_edited', 'scrolled',
-                          'cell_selected', 'copy', 'cut', 'paste']) {
+                          'cell_selected', 'cell_action',
+                          'copy', 'cut', 'paste']) {
             this.enable_callback(name);
         }
 
@@ -226,11 +227,12 @@ class TreeView extends Widget {
             if (typeof c === 'string') {
                 return { label: c, type: 'string', editable: false,
                          key: '_col' + (autoIdx++), halign: 'left',
-                         colwidth: null };
+                         colwidth: null, widget: null };
             }
             let type = TreeView._normalizeType(c.type);
             let key = c.key;
             if (!key) key = '_col' + (autoIdx++);
+            let widget = TreeView._normalizeWidget(c.widget);
             return {
                 label: c.label || '',
                 type: type,
@@ -239,8 +241,33 @@ class TreeView extends Widget {
                 halign: TreeView._normalizeHalign(c.halign, type),
                 icon_size: c.icon_size,
                 colwidth: TreeView._normalizeColWidth(c.colwidth),
+                widget: widget,
+                choices: (Array.isArray(c.choices)
+                          ? c.choices.slice() : null),
+                min: (c.min != null ? c.min : null),
+                max: (c.max != null ? c.max : null),
+                text: (c.text != null ? c.text : null),
+                enabled_key: (c.enabled_key != null
+                              ? String(c.enabled_key) : null),
+                visible_key: (c.visible_key != null
+                              ? String(c.visible_key) : null),
             };
         });
+    }
+
+    /**
+     * Normalize a 'widget' field on a column descriptor.  A column
+     * with widget set hosts a real DOM input element per cell
+     * (checkbox / combobox / progress / button) instead of plain
+     * text.  Returns null if no widget was specified.
+     */
+    static _normalizeWidget(w) {
+        if (w == null || w === '') return null;
+        if (w === 'checkbox' || w === 'combobox'
+                || w === 'progress' || w === 'button') {
+            return w;
+        }
+        throw new Error("unknown column widget: " + w);
     }
 
     /**
@@ -331,37 +358,22 @@ class TreeView extends Widget {
             ? this._columns[colIndex].key : null;
         let fg = null;
         let bg = null;
+        let bold = null;
+
+        function absorb(d) {
+            if (!d) return;
+            if (fg == null && d.fg != null) fg = d.fg;
+            if (bg == null && d.bg != null) bg = d.bg;
+            if (bold == null && d.bold != null) bold = d.bold;
+        }
 
         // Most specific first; fill in nulls from less specific.
-        let cellStyle = this._cellStyles.get(pathKey + '|' + colKey);
-        if (cellStyle) {
-            if (cellStyle.fg != null) fg = cellStyle.fg;
-            if (cellStyle.bg != null) bg = cellStyle.bg;
-        }
-        if (fg == null || bg == null) {
-            let rowStyle = this._rowStyles.get(pathKey);
-            if (rowStyle) {
-                if (fg == null && rowStyle.fg != null) fg = rowStyle.fg;
-                if (bg == null && rowStyle.bg != null) bg = rowStyle.bg;
-            }
-        }
-        if (fg == null || bg == null) {
-            let colStyle = this._columnStyles.get(colKey);
-            if (colStyle) {
-                if (fg == null && colStyle.fg != null) fg = colStyle.fg;
-                if (bg == null && colStyle.bg != null) bg = colStyle.bg;
-            }
-        }
-        if (fg == null || bg == null) {
-            if (this._tableStyle) {
-                if (fg == null && this._tableStyle.fg != null)
-                    fg = this._tableStyle.fg;
-                if (bg == null && this._tableStyle.bg != null)
-                    bg = this._tableStyle.bg;
-            }
-        }
-        if (fg == null && bg == null) return null;
-        return {fg, bg};
+        absorb(this._cellStyles.get(pathKey + '|' + colKey));
+        absorb(this._rowStyles.get(pathKey));
+        absorb(this._columnStyles.get(colKey));
+        absorb(this._tableStyle);
+        if (fg == null && bg == null && bold == null) return null;
+        return {fg, bg, bold};
     }
 
     /** Apply the resolved cell style to ``cell`` (a span element).
@@ -371,6 +383,8 @@ class TreeView extends Widget {
         if (style == null) return;
         if (style.fg != null) cell.style.color = style.fg;
         if (style.bg != null) cell.style.backgroundColor = style.bg;
+        if (style.bold === true) cell.style.fontWeight = 'bold';
+        else if (style.bold === false) cell.style.fontWeight = 'normal';
     }
 
     // -- Cell-style public API --
@@ -381,50 +395,53 @@ class TreeView extends Widget {
      *  still supply it).  Passing both null clears the cell-level
      *  override.  Colours are CSS strings — hex (``'#ff0000'``),
      *  named (``'red'``), or ``rgb()``/``rgba()``. */
-    set_cell_color(path, col_key, fg = null, bg = null) {
+    set_cell_color(path, col_key, fg = null, bg = null, bold = null) {
         let node = this._nodeAtPath(path);
         if (!node) return;
         if (this._columnIndex(col_key) < 0) return;
         let key = JSON.stringify(this._pathOfNode(node)) + '|' + col_key;
-        if (fg == null && bg == null) {
+        if (fg == null && bg == null && bold == null) {
             this._cellStyles.delete(key);
         } else {
-            this._cellStyles.set(key, {fg, bg});
+            this._cellStyles.set(key, {fg, bg, bold});
         }
         this._renderAll();
     }
 
-    /** Set foreground / background colour on a whole row. */
-    set_row_color(path, fg = null, bg = null) {
+    /** Set foreground / background colour (and optional ``bold``)
+     *  on a whole row. */
+    set_row_color(path, fg = null, bg = null, bold = null) {
         let node = this._nodeAtPath(path);
         if (!node) return;
         let key = JSON.stringify(this._pathOfNode(node));
-        if (fg == null && bg == null) {
+        if (fg == null && bg == null && bold == null) {
             this._rowStyles.delete(key);
         } else {
-            this._rowStyles.set(key, {fg, bg});
+            this._rowStyles.set(key, {fg, bg, bold});
         }
         this._renderAll();
     }
 
-    /** Set foreground / background colour on a whole column. */
-    set_column_color(col_key, fg = null, bg = null) {
+    /** Set foreground / background colour (and optional ``bold``)
+     *  on a whole column. */
+    set_column_color(col_key, fg = null, bg = null, bold = null) {
         if (this._columnIndex(col_key) < 0) return;
-        if (fg == null && bg == null) {
+        if (fg == null && bg == null && bold == null) {
             this._columnStyles.delete(col_key);
         } else {
-            this._columnStyles.set(col_key, {fg, bg});
+            this._columnStyles.set(col_key, {fg, bg, bold});
         }
         this._renderAll();
     }
 
-    /** Set foreground / background colour on the whole table.
-     *  Lowest-precedence layer — cells / rows / columns override. */
-    set_table_color(fg = null, bg = null) {
-        if (fg == null && bg == null) {
+    /** Set foreground / background colour (and optional ``bold``)
+     *  on the whole table.  Lowest-precedence layer — cells /
+     *  rows / columns override. */
+    set_table_color(fg = null, bg = null, bold = null) {
+        if (fg == null && bg == null && bold == null) {
             this._tableStyle = null;
         } else {
-            this._tableStyle = {fg, bg};
+            this._tableStyle = {fg, bg, bold};
         }
         this._renderAll();
     }
@@ -1407,7 +1424,30 @@ class TreeView extends Widget {
             let colType = colDef.type;
             let editable = colDef.editable && colType !== 'icon';
 
-            if (colType === 'icon' && val) {
+            if (colDef.widget) {
+                // Widget cells host a real DOM input rather than
+                // plain text.  Build the appropriate element and
+                // wire change/click events back to the framework
+                // callbacks.  The cell still tracks _colIndex /
+                // _colKey for selection routing.
+                //
+                // Per-row gates: ``visible_key`` (skip rendering
+                // when the named row field is falsy) and
+                // ``enabled_key`` (disable the widget when the
+                // named field is falsy).
+                let values = node.values || {};
+                let visible = (colDef.visible_key == null
+                               || !!values[colDef.visible_key]);
+                if (visible) {
+                    let el = this._buildCellWidget(node, colDef, val);
+                    if (colDef.enabled_key != null
+                            && !values[colDef.enabled_key]) {
+                        el.disabled = true;
+                    }
+                    cell.appendChild(el);
+                    cell.classList.add('treeview-cell-widget');
+                }
+            } else if (colType === 'icon' && val) {
                 let img = document.createElement('img');
                 img.className = 'treeview-icon';
                 img.src = val;
@@ -1423,7 +1463,7 @@ class TreeView extends Widget {
                 cell.title = cell.textContent;
             }
 
-            if (editable) {
+            if (editable && !colDef.widget) {
                 cell.classList.add('treeview-cell-editable');
                 cell.addEventListener('dblclick', (e) => {
                     e.stopPropagation();
@@ -2204,6 +2244,95 @@ class TreeView extends Widget {
         this._sortable = !!tf;
     }
 
+    /**
+     * Build the DOM element for a widget-typed cell and wire its
+     * change / click events back to the TreeView callbacks.
+     *
+     * - ``checkbox``: <input type="checkbox">.  Change fires
+     *   ``cell_edited(path, col_key, old, new)`` with bool old/new.
+     * - ``combobox``: <select> with options from ``col.choices``.
+     *   Change fires ``cell_edited`` with the new option string.
+     * - ``progress``: <progress max=col.max value=val>.  Read-only.
+     * - ``button``:  <button>.  Click fires
+     *   ``cell_action(row_values, col_key)``.  The button label is
+     *   the per-row value when non-null, else ``col.text`` if set.
+     */
+    _buildCellWidget(node, colDef, val) {
+        let colKey = colDef.key;
+        let path = this._pathOfNode(node);
+        let wtype = colDef.widget;
+        if (wtype === 'checkbox') {
+            let el = document.createElement('input');
+            el.type = 'checkbox';
+            el.className = 'treeview-cell-checkbox';
+            el.checked = !!val;
+            el.addEventListener('click', (e) => e.stopPropagation());
+            el.addEventListener('change', () => {
+                let newVal = !!el.checked;
+                let oldVal = !!val;
+                if (node.values == null) node.values = {};
+                node.values[colKey] = newVal;
+                this.make_callback('cell_edited', path, colKey,
+                                   oldVal, newVal);
+            });
+            return el;
+        }
+        if (wtype === 'combobox') {
+            let el = document.createElement('select');
+            el.className = 'treeview-cell-combobox';
+            let choices = colDef.choices || [];
+            for (let ch of choices) {
+                let opt = document.createElement('option');
+                opt.value = String(ch);
+                opt.textContent = String(ch);
+                if (val != null && String(val) === String(ch)) {
+                    opt.selected = true;
+                }
+                el.appendChild(opt);
+            }
+            el.addEventListener('click', (e) => e.stopPropagation());
+            el.addEventListener('change', () => {
+                let newVal = el.value;
+                let oldVal = val != null ? String(val) : '';
+                if (node.values == null) node.values = {};
+                node.values[colKey] = newVal;
+                this.make_callback('cell_edited', path, colKey,
+                                   oldVal, newVal);
+            });
+            return el;
+        }
+        if (wtype === 'progress') {
+            let el = document.createElement('progress');
+            el.className = 'treeview-cell-progress';
+            let lo = colDef.min != null ? Number(colDef.min) : 0;
+            let hi = colDef.max != null ? Number(colDef.max) : 100;
+            el.max = hi - lo;
+            let v = (val != null ? Number(val) : lo);
+            if (!Number.isFinite(v)) v = lo;
+            el.value = Math.max(0, Math.min(el.max, v - lo));
+            return el;
+        }
+        if (wtype === 'button') {
+            let el = document.createElement('button');
+            el.type = 'button';
+            el.className = 'treeview-cell-button';
+            el.textContent = (val != null ? String(val)
+                              : (colDef.text || ''));
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.make_callback('cell_action', node.values || {},
+                                   colKey);
+            });
+            return el;
+        }
+        // Should be unreachable — _parseColumns rejects unknown
+        // widget names.  Fall back to a text node so an unexpected
+        // widget value doesn't crash the row build.
+        let span = document.createElement('span');
+        span.textContent = val != null ? String(val) : '';
+        return span;
+    }
+
     set_show_grid(tf) {
         this._showGrid = !!tf;
         this.element.classList.toggle('treeview-grid', this._showGrid);
@@ -2258,9 +2387,10 @@ class TreeView extends Widget {
         if (typeof column === 'string') {
             parsed = { label: column, type: 'string', editable: false,
                        key: '_col' + autoIdx, halign: 'left',
-                       colwidth: null };
+                       colwidth: null, widget: null };
         } else {
             let type = TreeView._normalizeType(column.type);
+            let widget = TreeView._normalizeWidget(column.widget);
             parsed = {
                 label: column.label || '',
                 type: type,
@@ -2269,6 +2399,12 @@ class TreeView extends Widget {
                 halign: TreeView._normalizeHalign(column.halign, type),
                 icon_size: column.icon_size,
                 colwidth: TreeView._normalizeColWidth(column.colwidth),
+                widget: widget,
+                choices: (Array.isArray(column.choices)
+                          ? column.choices.slice() : null),
+                min: (column.min != null ? column.min : null),
+                max: (column.max != null ? column.max : null),
+                text: (column.text != null ? column.text : null),
             };
         }
         let insertAt = this._columns.length;
