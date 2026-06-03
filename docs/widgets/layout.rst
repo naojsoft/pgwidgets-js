@@ -115,6 +115,11 @@ Vertical box layout. Children are stacked top to bottom.
      - Add a child widget. *stretch* (0 or 1) controls whether it expands.
    * - ``set_spacing(gap)``
      - Set spacing between children in pixels.
+   * - ``set_align(align)``
+     - Cross-axis alignment of children.  For a vertical box
+       this is the horizontal axis -- accepts ``"left"`` /
+       ``"center"`` / ``"right"``.  Maps to flex
+       ``align-items``.
 
 **Callbacks:** ``child-added``, ``child-removed`` (from ContainerWidget).
 
@@ -123,6 +128,7 @@ Vertical box layout. Children are stacked top to bottom.
    let vbox = new Widgets.VBox();
    vbox.set_spacing(8);
    vbox.set_padding(10);
+   vbox.set_align("center");    // centre children horizontally
    vbox.add_widget(label, 0);   // fixed size
    vbox.add_widget(editor, 1);  // stretches to fill
 
@@ -147,6 +153,11 @@ Horizontal box layout. Children are placed left to right.
      - Add a child widget. *stretch* controls whether it expands.
    * - ``set_spacing(gap)``
      - Set spacing between children in pixels.
+   * - ``set_align(align)``
+     - Cross-axis alignment of children.  For a horizontal box
+       this is the vertical axis -- accepts ``"top"`` /
+       ``"center"`` / ``"bottom"``.  Maps to flex
+       ``align-items``.
 
 **Callbacks:** ``child-added``, ``child-removed``.
 
@@ -154,6 +165,7 @@ Horizontal box layout. Children are placed left to right.
 
    let hbox = new Widgets.HBox();
    hbox.set_spacing(4);
+   hbox.set_align("center");      // centre children vertically
    hbox.add_widget(button1, 0);
    hbox.add_widget(button2, 0);
 

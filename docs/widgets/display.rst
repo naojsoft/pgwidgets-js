@@ -271,6 +271,10 @@ matter how the visible tree is sorted.
 selection_mode, alternate_row_colors, show_grid, show_row_numbers,
 sortable, allow_text_selection})``
 
+``selection_mode`` is one of ``"single"`` / ``"multiple"`` (rows)
+or ``"single-cell"`` / ``"multiple-cell"`` (cells).  See
+"Cell-level selection" below.
+
 **Column descriptors:** each column is a string (label only) or an
 object with the following keys:
 
@@ -288,6 +292,22 @@ object with the following keys:
 - ``editable`` -- whether cells in the column can be edited via
   double-click.
 - ``icon_size`` -- pixel size for icon columns (default 16).
+- ``colwidth`` -- initial column width.  Numbers are pixels;
+  strings pass through as CSS grid track values (e.g.
+  ``"10em"``, ``"1fr"``).  Default is ``"1fr"``.
+- ``widget`` -- one of ``"checkbox"`` / ``"combobox"`` /
+  ``"progress"`` / ``"button"``.  Replaces the column's
+  plain-text cells with a real DOM input.  See "Widget cells"
+  below.
+- ``choices`` -- ``Array`` of option strings (combobox only).
+- ``min`` / ``max`` -- numeric bounds (progress only).
+- ``text`` -- default button label when the row value is
+  ``null`` (button only).
+- ``enabled_key`` -- name of a row-dict field whose truthiness
+  gates the embedded widget's enabled state per row.
+- ``visible_key`` -- name of a row-dict field whose truthiness
+  gates whether the widget appears on a given row.  When
+  falsy, the cell stays empty.
 
 **Tree shape (set_tree):**
 
@@ -380,6 +400,24 @@ supplies no value for it, so most interiors need no
      - Toggle grid lines, row numbers, and click-to-sort.
    * - ``set_column_editable(col_key, tf)``
      - Make a column editable.
+   * - ``set_cell_color(path, col_key, fg, bg, bold)`` /
+       ``set_row_color(path, fg, bg, bold)`` /
+       ``set_column_color(col_key, fg, bg, bold)`` /
+       ``set_table_color(fg, bg, bold)``
+     - Per-cell / row / column / table style overrides.  Each
+       channel cascades cell → row → column → table.  See
+       "Colour overrides" below.
+   * - ``clear_cell_color`` / ``clear_row_color`` /
+       ``clear_column_color`` / ``clear_all_colors``
+     - Drop overrides at the matching layer.
+   * - ``select_cell(path, col_key, state)`` /
+       ``select_cells(cells, state)`` /
+       ``clear_cell_selection()``
+     - Cell-mode selection API.  ``cells`` is an array of
+       ``{path, col_key}`` objects.
+   * - ``copy_selection()`` / ``cut_selection()`` /
+       ``paste_selection(tsv)``
+     - Programmatic equivalents of Ctrl/Cmd+C/X/V.
 
 **Auto-spanning:** within a row, a column whose key is missing is
 "absent" and the preceding present cell extends across it via CSS
@@ -390,14 +428,57 @@ across the row.
 
 **Callbacks:**
 
-- ``activated`` -- handler signature ``(widget, values, path)``;
-  fires on row double-click or Enter.
+- ``activated`` -- handler signature ``(widget, values, path,
+  col_key)``; fires on row double-click or Enter.  ``col_key``
+  is the column the click landed on (``null`` for
+  keyboard-triggered activation).
 - ``selected`` -- selection changed; handler receives an array of
   ``{path, values}`` objects.
 - ``expanded`` / ``collapsed`` -- handler ``(widget, values, path)``.
 - ``cell_edited`` -- ``(widget, path, col_key, oldValue, newValue)``.
+- ``cell_selected`` -- cell-mode selection changed; handler
+  receives ``(widget, cells)`` where each cell is
+  ``{path, col_key, value}``.
+- ``cell_action`` -- ``(widget, row_values, col_key)``; fires
+  when the user clicks a ``widget: "button"`` cell.
+- ``copy`` / ``cut`` / ``paste`` -- ``(widget, tsv)``; fire from
+  Ctrl/Cmd+C/X/V and from the programmatic helpers.
 - ``sorted`` -- ``(widget, col_key, ascending)``.
 - ``scrolled`` -- ``(widget, h_pct, v_pct)``.
+
+**Widget cells.** A column with ``widget`` set hosts a real
+DOM input per cell:
+
+* ``"checkbox"`` -- bound to a boolean cell value; toggling
+  fires ``cell_edited``.
+* ``"combobox"`` -- ``<select>`` populated from ``choices``;
+  changing fires ``cell_edited``.
+* ``"progress"`` -- read-only ``<progress>`` driven by
+  ``min`` / ``max`` and the numeric cell value.
+* ``"button"`` -- ``<button>`` whose label is the cell value
+  (or the column's ``text`` fallback when null); clicking
+  fires ``cell_action``.
+
+``enabled_key`` and ``visible_key`` name row-dict fields that
+gate the per-row widget.  An empty row value of ``null`` /
+``false`` on a button column suppresses that row's button if
+``visible_key`` is also unset.
+
+**Colour overrides.** Each of the four ``set_*_color`` methods
+takes ``fg`` (text), ``bg`` (background), and ``bold``.  All
+three are optional; passing all-null clears that layer's
+override.  Resolved style cascades per-channel cell → row →
+column → table, so a row-level fg can compose with a
+column-level bg.
+
+**Cell-level selection.** Setting ``selection_mode`` to
+``"single-cell"`` or ``"multiple-cell"`` switches the
+behaviour from row selection to cell selection.  Selection
+state is reported via the new ``cell_selected`` callback;
+``select_cell`` / ``select_cells`` / ``clear_cell_selection``
+mutate it programmatically.  The widget-level
+``copy_selection`` / ``cut_selection`` honour cell-mode and
+emit a TSV payload.
 
 .. code-block:: javascript
 
@@ -456,11 +537,27 @@ dicts (preferred) or a list of positional arrays:
    table.append_row({NAME: "Carol", DEPT: "Sales", SALARY: 71000});
    table.sort_by_column("SALARY", false);  // descending
 
-**Callbacks:**
+**Callbacks:** identical to TreeView, including the new
+``activated`` 4-arg signature with ``col_key``, the
+``cell_selected`` / ``cell_action`` / ``copy`` / ``cut`` /
+``paste`` callbacks, and the per-cell ``cell_edited``
+signature.
 
-- ``activated`` -- ``(widget, values, path)``; fires on row
-  double-click or Enter.
-- ``selected`` -- ``(widget, items)`` where each item is
-  ``{path, values}``.
-- ``cell_edited`` -- ``(widget, path, col_key, oldValue, newValue)``.
-- ``sorted``, ``scrolled`` -- as for TreeView.
+TableView ``set_columns`` accepts the same column descriptor
+fields as TreeView, including ``widget`` / ``choices`` /
+``min`` / ``max`` / ``text`` / ``enabled_key`` /
+``visible_key`` / ``colwidth``.  Colour overrides
+(``set_*_color`` / ``clear_*_color``) work identically.
+
+For per-row Mute checkbox + Reset button -- the canonical
+"widget cells" use case -- declare two columns::
+
+    table.set_columns([
+        {label: "Time", key: "TIME", type: "string"},
+        {label: "ID",   key: "ID",   type: "string"},
+        {label: "Mute", key: "MUTE", type: "bool",
+         widget: "checkbox", enabled_key: "CAN_MUTE"},
+        {label: "",     key: "RESET", type: "string",
+         widget: "button", text: "Reset",
+         visible_key: "CAN_RESET"},
+    ]);

@@ -29,7 +29,13 @@ Static text with alignment, color, and font options.
    * - ``set_color(bg, fg)``
      - Set background and foreground colors.
    * - ``set_halign(align)``
-     - Set horizontal alignment.
+     - Set horizontal alignment (``"left"`` / ``"center"`` /
+       ``"right"``).
+   * - ``set_valign(align)``
+     - Set vertical alignment (``"top"`` / ``"center"`` /
+       ``"bottom"``) of the label text.  Only visible when the
+       label is allocated more height than its text needs --
+       typically inside a stretched Box cell.
 
 **Callbacks:** None.
 

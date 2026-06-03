@@ -132,6 +132,16 @@ override CSS when called:
      - CSS Properties Affected
    * - ``set_color(bg, fg)``
      - ``background-color``, ``color``
+   * - ``set_bg(color)``
+     - ``background-color`` (base-class helper; ``null`` clears
+       the override)
+   * - ``Label.set_valign(align)``
+     - ``display: flex; flex-direction: column; justify-content:
+       flex-start | center | flex-end`` -- vertical placement
+       of the label text
+   * - ``Box.set_align(align)``
+     - ``align-items`` (cross-axis alignment of Box children;
+       orientation-aware)
    * - ``set_font(family, size, weight, style)``
      - ``font-family``, ``font-size``, ``font-weight``, ``font-style``
    * - ``set_border_width(w)``

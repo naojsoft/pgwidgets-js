@@ -1,6 +1,111 @@
 What's New
 ==========
 
+Recent changes — since ``v0.3.0``
+---------------------------------
+
+TreeView / TableView: widget-typed cells
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Column descriptors gained an optional ``widget`` field that
+swaps a column's plain-text cells for a real DOM input element:
+
+* ``"checkbox"`` -- ``<input type="checkbox">`` bound to a
+  boolean cell value;
+* ``"combobox"`` -- ``<select>`` populated from a ``choices``
+  array;
+* ``"progress"`` -- ``<progress>`` driven by ``min`` / ``max``
+  (read-only);
+* ``"button"`` -- ``<button>`` whose label is the cell value
+  (or the column's ``text`` fallback).
+
+Editable widget cells fire ``cell_edited(widget, path, col_key,
+old, new)``; buttons fire a new ``cell_action(widget,
+row_values, col_key)`` callback.  Two more column-descriptor
+keys gate the per-row widget by row-dict field name:
+``enabled_key`` (greys the widget out when the named field is
+falsy) and ``visible_key`` (suppresses the widget entirely on
+that row -- the cell stays empty).
+
+.. code-block:: javascript
+
+   table.set_columns([
+       {label: "Name", key: "NAME", type: "string"},
+       {label: "Done", key: "DONE", type: "bool",
+        widget: "checkbox", enabled_key: "CAN_EDIT"},
+       {label: "",     key: "GO",   type: "string",
+        widget: "button", text: "Open",
+        visible_key: "OPENABLE"},
+   ]);
+
+Cell / row / column / table colour overrides
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Four new override layers paint cells without touching the
+underlying data: ``set_cell_color(path, col_key, fg, bg, bold)``,
+``set_row_color(path, fg, bg, bold)``, ``set_column_color(col_key,
+fg, bg, bold)``, and ``set_table_color(fg, bg, bold)``.
+Specificity cascades cell → row → column → table per-channel,
+so a row-level fg + column-level bg compose into the same
+cell.  Each method also accepts an optional ``bold`` argument
+that toggles the cell font weight.
+
+Matching ``clear_*_color`` helpers and ``clear_all_colors()``
+drop overrides at any layer.
+
+Cell-level selection and clipboard
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+TreeView / TableView gained two new ``selection_mode`` values --
+``"single-cell"`` and ``"multiple-cell"`` -- that let the user
+select individual cells rather than whole rows.  Cell selections
+fire a new ``cell_selected`` callback with the list of selected
+``{path, col_key, value}`` cells.
+
+Widget-level Ctrl/Cmd+C/X/V keyboard handlers feed three new
+callbacks: ``copy``, ``cut``, ``paste``.  The
+``copy_selection`` / ``cut_selection`` / ``paste_selection``
+methods do the same programmatically.  Cell-mode cuts emit a
+TSV payload built from the selected cells; row mode emits the
+whole row.
+
+``activated`` callback now reports the clicked column
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``activated`` callback signature gained a 4th argument:
+``(widget, values, path, col_key)``.  Handlers that destructure
+the first three keep working; new code can branch on which
+column the user double-clicked.
+
+Widget: ``set_bg`` + Label: ``set_valign``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Two small style helpers:
+
+* ``Widget.set_bg(color)`` on the base class -- generic
+  background-colour setter, accepts a CSS string or ``null``
+  to clear.  Works on transparent containers (Box / Grid /
+  ScrollArea) too.
+* ``Label.set_valign(align)`` -- ``"top"`` / ``"center"`` /
+  ``"bottom"`` vertical placement of the label text within
+  whatever vertical space the parent allocates.  Only visible
+  when the label is given more height than its text needs.
+
+Box: ``set_align`` (cross-axis)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Boxes (and the ``HBox`` / ``VBox`` shortcuts) gained a single
+orientation-aware ``set_align(align)`` method controlling the
+cross-axis placement of children:
+
+* horizontal box → ``"top"`` / ``"center"`` / ``"bottom"``;
+* vertical box   → ``"left"`` / ``"center"`` / ``"right"``.
+
+Mismatched names raise.  Maps to flex ``align-items`` on the
+box element.
+
+----
+
 Recent changes — since ``v0.2.3``
 ---------------------------------
 
