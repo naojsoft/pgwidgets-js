@@ -132,7 +132,40 @@ class Box extends ContainerWidget {
         style['gap'] = gap + "px";
     }
 
-};    
+    /**
+     * Cross-axis alignment for the children laid out in this Box.
+     * Accepted values depend on the Box's orientation:
+     *   horizontal box -> 'top' | 'center' | 'bottom'
+     *   vertical box   -> 'left' | 'center' | 'right'
+     * Mismatch throws.
+     *
+     * Maps to flex ``align-items`` on the box element, which
+     * governs the children's cross-axis placement.
+     * @param {string} align
+     */
+    set_align(align) {
+        let map;
+        if (this.orientation === 'horizontal') {
+            map = {'top':    'flex-start',
+                   'center': 'center',
+                   'bottom': 'flex-end'};
+        } else {
+            map = {'left':   'flex-start',
+                   'center': 'center',
+                   'right':  'flex-end'};
+        }
+        if (!(align in map)) {
+            let expected = (this.orientation === 'horizontal'
+                            ? "'top' | 'center' | 'bottom'"
+                            : "'left' | 'center' | 'right'");
+            throw new Error(
+                this.orientation + " Box.set_align expects "
+                + expected + ", got " + align);
+        }
+        this.element.style.alignItems = map[align];
+    }
+
+};
 
 /**
  * A vertical box layout container. Shortcut for Box with vertical orientation.
