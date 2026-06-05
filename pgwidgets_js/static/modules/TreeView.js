@@ -499,7 +499,20 @@ class TreeView extends Widget {
             let digits = String(Math.max(1, n)).length;
             cols += `${digits + 2}ch `;
         }
-        cols += '16px 18px ' + this._colWidths.join(' ');
+        // Wrap any ``fr`` track in ``minmax(0, ...)``.  Without it,
+        // the implicit min of an ``fr`` track is ``auto`` = the
+        // track's min-content, so a single cell whose content can't
+        // be shrunk (e.g. a widget cell with a fixed-width
+        // ``<button>`` or ``<select>``) forces its column wider
+        // than its share, throwing the column boundaries in the
+        // body out of register with the empty-content header.
+        // ``minmax(0, fr)`` lets the fr distribution dominate;
+        // oversize content is clipped by the cell's own
+        // ``overflow: hidden`` / ``text-overflow: ellipsis``.
+        cols += '16px 18px ' + this._colWidths.map(w => {
+            let s = String(w);
+            return s.endsWith('fr') ? `minmax(0, ${s})` : s;
+        }).join(' ');
         return cols;
     }
 
@@ -589,8 +602,16 @@ class TreeView extends Widget {
         let startX, startWidthA, startWidthB;
         const onMouseMove = (e) => {
             let dx = e.clientX - startX;
-            let newA = Math.max(30, startWidthA + dx);
-            let newB = Math.max(30, startWidthB - dx);
+            // 5 px floor matches the width of ``.treeview-resize-handle``
+            // -- enough to keep the handle grabable on the narrower
+            // column so the user can drag it back -- without
+            // preventing genuinely small icon / checkbox columns
+            // from being narrowed.  The previous 30 px floor would
+            // *inflate* any column whose declared ``colwidth`` was
+            // below 30 the moment a drag started, making columns
+            // like a 10 px Mute / checkbox column un-resizable.
+            let newA = Math.max(5, startWidthA + dx);
+            let newB = Math.max(5, startWidthB - dx);
             this._colWidths[colIndex] = newA + 'px';
             this._colWidths[colIndex + 1] = newB + 'px';
             this._applyGridTemplate();
@@ -2083,6 +2104,17 @@ class TreeView extends Widget {
         let showH = cw > vw + 1;
         let showV = ch > vh + 1;
         if (!this._hScrollBar || !this._hScrollBar.get_element()) return;
+        // Pin the header to the body's actual rendered width so the
+        // ``1fr`` units in ``gridTemplateColumns`` resolve to the
+        // same pixel widths in both grids.  Without this the body's
+        // ``width: max-content`` can grow past the header's natural
+        // width when row content is wider than the viewport, making
+        // each ``1fr`` track in the body wider than the matching
+        // track in the header and pushing column right-edges out of
+        // register.  The header-clip wrapper clips overflow; the
+        // existing horizontal-scroll ``transform`` reveals the
+        // hidden columns as the user scrolls.
+        this._header.style.width = cw + 'px';
         this._hScrollBar.get_element().style.display = showH ? '' : 'none';
         this._vScrollBar.get_element().style.display = showV ? '' : 'none';
         this._corner.style.display = (showH && showV) ? '' : 'none';
