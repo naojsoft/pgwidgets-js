@@ -29,14 +29,36 @@ class Image extends Widget {
         this._useAnimationFrame = this.get_option(options, 'use_animation_frame', false);
         this._offscreen = null;
         this._rafId = null;
+        // For animation-frame mode the public ``this.element`` is a
+        // wrapper ``<div>`` and the canvas lives in ``this._canvas``
+        // as a child of that div.  Wrapping is the only reliable way
+        // to keep the canvas's bitmap dimensions (the ``width`` /
+        // ``height`` attributes, which on a canvas double as its
+        // *intrinsic* size) out of the layout algorithm -- CSS
+        // ``contain: size`` doesn't fully cut that path because the
+        // intrinsic size of a replaced element isn't "contents".
+        // For plain ``<img>`` mode, ``this.element`` is the ``<img>``
+        // directly and ``this._canvas`` is null.
+        this._canvas = null;
 
-        this.element = this.get_option(options, 'element', null);
-        if (this.element == null) {
+        let preExisting = this.get_option(options, 'element', null);
+        if (preExisting != null) {
+            this.element = preExisting;
             if (this._useAnimationFrame) {
-                this.element = document.createElement('canvas');
-            } else {
-                this.element = document.createElement('img');
+                // Back-compat: a caller-supplied <canvas> is used
+                // as-is (no extra wrapper).  Bitmap-feedback loops
+                // are then the caller's problem to avoid -- the
+                // wrapper is only inserted on the default path.
+                this._canvas = (preExisting.tagName === 'CANVAS')
+                    ? preExisting
+                    : preExisting.querySelector('canvas');
             }
+        } else if (this._useAnimationFrame) {
+            this.element = document.createElement('div');
+            this._canvas = document.createElement('canvas');
+            this.element.appendChild(this._canvas);
+        } else {
+            this.element = document.createElement('img');
         }
         this.element.className = 'image-widget';
 
@@ -46,10 +68,10 @@ class Image extends Widget {
             this.element.draggable = false;
         }
 
-        if (this._useAnimationFrame) {
+        if (this._useAnimationFrame && this._canvas) {
             this._offscreen = document.createElement('canvas');
-            this._offscreen.width = this.element.width;
-            this._offscreen.height = this.element.height;
+            this._offscreen.width = this._canvas.width;
+            this._offscreen.height = this._canvas.height;
         }
 
         if (this.get_option(options, 'interactive', false)) {
@@ -69,10 +91,17 @@ class Image extends Widget {
             // the image's natural aspect don't match.
             this.add_callback('resize', (widget, evt) => {
                 if (widget._lastImage) return;
+                if (!widget._canvas) return;
                 let cw = Math.max(0, Math.round(evt.width));
                 let ch = Math.max(0, Math.round(evt.height));
-                if (widget.element.width !== cw) widget.element.width = cw;
-                if (widget.element.height !== ch) widget.element.height = ch;
+                // One-way sync from wrapper's CSS box -> canvas
+                // bitmap.  The canvas is a child of the wrapper
+                // div, sized via width/height: 100% in Image.css;
+                // its bitmap attrs are write-only from the layout
+                // algorithm's perspective, so this can't feed
+                // back through ``evt`` on a subsequent fire.
+                if (widget._canvas.width !== cw) widget._canvas.width = cw;
+                if (widget._canvas.height !== ch) widget._canvas.height = ch;
                 if (widget._offscreen) {
                     if (widget._offscreen.width !== cw) {
                         widget._offscreen.width = cw;
@@ -161,6 +190,7 @@ class Image extends Widget {
      */
     _drawImage(img) {
         if (!this._useAnimationFrame) return;
+        if (!this._canvas) return;
         let nw = img.naturalWidth;
         let nh = img.naturalHeight;
         if (nw <= 0 || nh <= 0) return;
@@ -170,8 +200,8 @@ class Image extends Widget {
         // scales the canvas display from bitmap to CSS box on its own,
         // which preserves the image's data without us having to
         // pre-distort it inside drawImage().
-        if (this.element.width !== nw) this.element.width = nw;
-        if (this.element.height !== nh) this.element.height = nh;
+        if (this._canvas.width !== nw) this._canvas.width = nw;
+        if (this._canvas.height !== nh) this._canvas.height = nh;
         if (this._offscreen) {
             if (this._offscreen.width !== nw) this._offscreen.width = nw;
             if (this._offscreen.height !== nh) this._offscreen.height = nh;
@@ -193,8 +223,8 @@ class Image extends Widget {
         if (this._offscreen) {
             return this._offscreen.getContext('2d');
         }
-        if (this.element.tagName === 'CANVAS') {
-            return this.element.getContext('2d');
+        if (this._canvas) {
+            return this._canvas.getContext('2d');
         }
         return null;
     }
@@ -206,12 +236,13 @@ class Image extends Widget {
      */
     update() {
         if (!this._offscreen) return;
+        if (!this._canvas) return;
         if (this._rafId !== null) return;
         this._rafId = requestAnimationFrame(() => {
             this._rafId = null;
-            if (this.element.width === 0 || this.element.height === 0) return;
-            let ctx = this.element.getContext('2d');
-            ctx.clearRect(0, 0, this.element.width, this.element.height);
+            if (this._canvas.width === 0 || this._canvas.height === 0) return;
+            let ctx = this._canvas.getContext('2d');
+            ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
             ctx.drawImage(this._offscreen, 0, 0);
         });
     }

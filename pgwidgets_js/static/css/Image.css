@@ -1,23 +1,59 @@
-/* min-width/height: 0 is needed on BOTH the <img> and <canvas>
-   variants: both are replaced elements with an intrinsic size (img =
-   the loaded picture, canvas = its bitmap width/height attributes),
-   and a flex item's default min-size is "auto" = content-min, which
-   resolves to that intrinsic size.  Without overriding it, flex
-   refuses to shrink the element below its bitmap dimensions, so a
-   600px-tall canvas inside a 36px-tall HBox stays at 600 instead of
-   stretching to the container's cross-axis.  The Image's resize
-   callback then syncs the canvas's drawing-buffer attrs to the CSS
-   box, so the bitmap matches the displayed pixel size. */
-.image-widget {
+/* Animation-frame Image: a wrapper <div class="image-widget">
+   containing a <canvas>.  The wrapper has no intrinsic size and
+   sits in the layout chain like any plain block; the canvas
+   inside fills the wrapper via width/height: 100%.  This is the
+   only reliable way to stop the canvas's bitmap dimensions (the
+   ``width``/``height`` attributes, which on a canvas double as
+   its *intrinsic* size and imply an aspect ratio) from leaking
+   into layout.  Without the wrapper a flex chain with a
+   constrained axis and an auto cross-axis ends up cycling
+   ``contentRect`` <-> ``canvas attrs`` and growing without
+   bound; ``contain: size`` on a bare canvas is *not* enough,
+   because the spec excludes a replaced element's intrinsic size
+   from the "contents" that ``contain: size`` gates.
+
+   Note: the wrapper has no width/height of its own -- callers
+   must give it size via ``set_expanding(True, True)``, packing
+   with stretch>0, or ``resize(w, h)``.  Otherwise it collapses
+   to 0x0 and the canvas with it. */
+div.image-widget {
+    display: block;
+    min-width: 0;
+    min-height: 0;
+    /* Anchor for the absolutely-positioned canvas child below.
+       Critical: ``position: relative`` keeps the canvas's
+       width/height: 100% measured against this wrapper, not the
+       nearest positioned ancestor. */
+    position: relative;
+}
+
+/* The canvas is taken out of normal flow so its intrinsic
+   ``aspect-ratio`` (a presentational hint the browser writes
+   automatically whenever ``canvas.width`` / ``canvas.height``
+   attributes change) can't feed into the wrapper's content
+   height.  Out-of-flow children contribute zero to their
+   parent's auto-resolved size, breaking the loop entirely.
+   The 100/100 percentage sizes still resolve fine because
+   ``position: absolute`` sizes against the containing block
+   (the wrapper), not against the wrapper's content. */
+div.image-widget > canvas {
+    display: block;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* Plain <img> mode: render at natural size, capped at parent.
+   No wrapper needed -- an <img>'s intrinsic size (the loaded
+   picture) doesn't loop back through a resize handler, so the
+   classic max-width/height: 100% policy is safe and lets a
+   small image render at its real size. */
+img.image-widget {
     display: block;
     max-width: 100%;
     max-height: 100%;
     min-width: 0;
     min-height: 0;
-}
-
-/* <img> only: object-fit: fill stretches the image content to fill
-   the element box (may distort aspect ratio). */
-img.image-widget {
     object-fit: fill;
 }
