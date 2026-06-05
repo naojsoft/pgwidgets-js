@@ -266,7 +266,10 @@ class Widget extends Callback {
             // stretch ensures the cross axis fills too even when an
             // ancestor has changed align-items.  min-*:0 lets the
             // item shrink below intrinsic content if the parent is
-            // tight (matches the Box.js stretch>0 path).
+            // tight (matches the Box.js stretch>0 path) -- BUT only
+            // if the caller hasn't already declared a floor via
+            // ``set_min_size``.  An explicit min is a hard floor we
+            // must respect, not erase.
             s.flex = '1 1 auto';
             s.alignSelf = 'stretch';
         }
@@ -277,11 +280,11 @@ class Widget extends Callback {
         // computed width/height.
         if (horizontal) {
             s.width = '100%';
-            s.minWidth = '0';
+            if (!s.minWidth) s.minWidth = '0';
         }
         if (vertical) {
             s.height = '100%';
-            s.minHeight = '0';
+            if (!s.minHeight) s.minHeight = '0';
         }
     }
 

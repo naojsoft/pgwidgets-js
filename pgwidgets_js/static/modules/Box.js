@@ -112,12 +112,18 @@ class Box extends ContainerWidget {
 
         if (stretch > 0) {
             elt.style.flex = stretch + ' 1 auto';
-            elt.style.minWidth = '0';
-            elt.style.minHeight = '0';
+            // Override the browser's default ``min-width: auto`` /
+            // ``min-height: auto`` on flex items so they can shrink
+            // below their intrinsic content size -- BUT only if the
+            // caller hasn't already set an explicit ``min-width`` /
+            // ``min-height`` via ``set_min_size``.  An explicit min
+            // is exactly that: a floor we must respect, not erase.
+            if (!elt.style.minWidth) elt.style.minWidth = '0';
+            if (!elt.style.minHeight) elt.style.minHeight = '0';
         } else if (mainExpand) {
             elt.style.flex = '1 1 auto';
-            elt.style.minWidth = '0';
-            elt.style.minHeight = '0';
+            if (!elt.style.minWidth) elt.style.minWidth = '0';
+            if (!elt.style.minHeight) elt.style.minHeight = '0';
         } else {
             elt.style.flex = '0 0 auto';
         }
