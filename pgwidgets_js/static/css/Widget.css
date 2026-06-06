@@ -1,3 +1,17 @@
+/* Document-level default font, set via
+   ``Application.set_default_font(family, ...)``.  ``RemoteInterface``
+   manages a ``<style id="pg-default-font">`` element that defines
+   ``--pg-default-font-*`` CSS variables on ``:root``; the body rule
+   below consumes them, so any widget that hasn't been given an
+   explicit ``set_font(...)`` inherits the registered default.
+   Per-widget ``set_font`` still wins via inline-style specificity. */
+body {
+    font-family: var(--pg-default-font-family, sans-serif);
+    font-size:   var(--pg-default-font-size,   13px);
+    font-weight: var(--pg-default-font-weight, normal);
+    font-style:  var(--pg-default-font-style,  normal);
+}
+
 .widget-disabled {
     opacity: 0.5;
     pointer-events: none;

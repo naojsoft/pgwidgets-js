@@ -399,6 +399,10 @@ class RemoteInterface {
                 return this._handleListen(msg);
             case "unlisten":
                 return this._handleUnlisten(msg);
+            case "register-font":
+                return this._handleRegisterFont(msg);
+            case "set-default-font":
+                return this._handleSetDefaultFont(msg);
             default:
                 return {type: "error", id: msg.id,
                         error: "Unknown message type: " + msg.type};
@@ -884,6 +888,130 @@ class RemoteInterface {
             widget.remove_callback(msg.action, cb);
             this._listeners.delete(key);
         }
+        return {type: "result", id: msg.id};
+    }
+
+    /**
+     * Register a custom font with the document.  ``msg.url`` is
+     * the location the bytes are served from (the Application's
+     * built-in HTTP server exposes ``/_pgwidgets/font/<id>``).
+     * Uses the FontFace API so the registration is observable by
+     * every widget that subsequently reads computed font styles.
+     * @private
+     */
+    _handleRegisterFont(msg) {
+        if (typeof FontFace === 'undefined') {
+            return {type: "result", id: msg.id};
+        }
+        // Resolve relative URLs against the page so a font served
+        // by ``Application._start_http_server`` works whether
+        // pgwidgets is being run with the built-in server or
+        // embedded in a Flask/nginx stack on a different port.
+        let url = new URL(msg.url, window.location.href).href;
+        let weight = RemoteInterface._normalizeFontWeight(msg.weight);
+        let style  = RemoteInterface._normalizeFontStyle(msg.style);
+        let face = new FontFace(
+            msg.family, `url(${url})`,
+            {weight: weight, style: style});
+        face.load().then(f => {
+            document.fonts.add(f);
+        }).catch(err => {
+            console.warn(
+                'pgwidgets: failed to load font',
+                msg.family, weight, style, url, err);
+        });
+        return {type: "result", id: msg.id};
+    }
+
+    /**
+     * CSS ``font-weight`` only accepts ``normal`` / ``bold`` /
+     * ``bolder`` / ``lighter`` / numeric ``1``-``1000``, but TTF
+     * metadata commonly uses descriptive names like ``thin``,
+     * ``light``, ``medium``, ``black``, etc.  Translate the usual
+     * suspects to their numeric equivalents (per the
+     * ``font-weight`` mapping table in the CSS Fonts spec).
+     * Unknown values pass through so a caller can still send a
+     * raw numeric weight (e.g. ``'350'``) and have it work.
+     * @private
+     */
+    static _normalizeFontWeight(w) {
+        if (w == null || w === '') return 'normal';
+        let s = String(w).toLowerCase().replace(/[\s_-]+/g, '');
+        const map = {
+            'thin':         '100',
+            'hairline':     '100',
+            'extralight':   '200',
+            'ultralight':   '200',
+            'light':        '300',
+            'normal':       '400',
+            'regular':      '400',
+            'book':         '400',
+            'medium':       '500',
+            'semibold':     '600',
+            'demibold':     '600',
+            'bold':         '700',
+            'extrabold':    '800',
+            'ultrabold':    '800',
+            'black':        '900',
+            'heavy':        '900',
+            'extrablack':   '950',
+            'ultrablack':   '950',
+        };
+        if (s in map) return map[s];
+        // Pass-through: already a numeric string or a CSS
+        // relative keyword.  FontFace will reject anything
+        // genuinely invalid and the load promise will reject,
+        // surfacing the warning in our catch handler.
+        return String(w);
+    }
+
+    /**
+     * CSS ``font-style`` accepts ``normal`` / ``italic`` /
+     * ``oblique`` (optionally with an angle).  ``slanted`` and
+     * other descriptive variants get mapped to ``italic`` --
+     * the closest semantic match -- so a TTF tagged with one of
+     * them still loads.
+     * @private
+     */
+    static _normalizeFontStyle(s) {
+        if (s == null || s === '') return 'normal';
+        let t = String(s).toLowerCase().replace(/[\s_-]+/g, '');
+        if (t === 'normal' || t === 'roman' || t === 'upright') {
+            return 'normal';
+        }
+        if (t === 'italic' || t === 'italics' || t === 'slanted') {
+            return 'italic';
+        }
+        if (t.startsWith('oblique')) return 'oblique';
+        return String(s);
+    }
+
+    /**
+     * Apply (or clear) the document-level default font.  Writes
+     * a managed ``<style id="pg-default-font">`` element on
+     * ``<head>`` that sets ``--pg-default-font-*`` CSS variables
+     * on ``:root``.  The base widget stylesheet consumes these
+     * variables, so any widget that has no explicit ``set_font``
+     * inherits the default.  ``msg.font === null`` clears it.
+     * @private
+     */
+    _handleSetDefaultFont(msg) {
+        let styleEl = document.getElementById('pg-default-font');
+        if (msg.font == null) {
+            if (styleEl) styleEl.remove();
+            return {type: "result", id: msg.id};
+        }
+        if (!styleEl) {
+            styleEl = document.createElement('style');
+            styleEl.id = 'pg-default-font';
+            document.head.appendChild(styleEl);
+        }
+        let f = msg.font;
+        let decls = [`--pg-default-font-family: ${f.family}`];
+        if (f.size   != null) decls.push(`--pg-default-font-size: ${f.size}px`);
+        if (f.weight != null) decls.push(`--pg-default-font-weight: ${f.weight}`);
+        if (f.style  != null) decls.push(`--pg-default-font-style: ${f.style}`);
+        styleEl.textContent = `:root { ${decls.join('; ')}; }`;
         return {type: "result", id: msg.id};
     }
 
