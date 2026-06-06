@@ -177,6 +177,110 @@ same property -- use CSS for global theming and programmatic methods for
 dynamic per-widget changes.
 
 
+.. _custom-fonts:
+
+Custom Fonts
+------------
+
+Two new application-level methods (added since v0.3.0) let the
+Python side push custom font files to the browser and apply a
+document-wide default font.  The mechanism is the
+``FontFace`` API + ``document.fonts.add()`` plus a small
+managed ``<style>`` element that writes CSS variables on
+``:root``.
+
+Registering a font
+~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+   app.register_font('Roboto', '/path/to/Roboto-Regular.ttf')
+   app.register_font('Roboto', '/path/to/Roboto-Bold.ttf',
+                     weight='bold')
+   app.register_font('Roboto', '/path/to/Roboto-Italic.ttf',
+                     style='italic')
+
+* ``family`` is the CSS ``font-family`` name you'll reference
+  from widget ``set_font(...)`` calls or from CSS.  Names are
+  passed through verbatim -- pick any case convention and stay
+  consistent.
+* ``source`` is a path (``str`` or ``os.PathLike``) or raw
+  ``bytes`` (e.g. ``font_path.read_bytes()`` or an in-memory
+  font from another library).
+* ``weight`` accepts CSS keywords (``'normal'``, ``'bold'``,
+  ``'bolder'``, ``'lighter'``) or numeric strings (``'100'``
+  through ``'1000'``).  The JS handler also translates common
+  TTF metadata names like ``thin``, ``light``, ``medium``,
+  ``semibold``, ``extrabold``, ``black``, ``heavy``, etc. to
+  their numeric equivalents per the CSS Fonts spec, so passing
+  weights straight from a font registry usually Just Works.
+* ``style`` accepts ``'normal'``, ``'italic'``, or
+  ``'oblique'`` (synonyms like ``'roman'`` / ``'slanted'`` get
+  normalised too).
+
+Multiple registrations against the same ``family`` with
+different ``weight`` / ``style`` combine into a single CSS
+font-family with multiple faces -- exactly the same way an
+``@font-face`` author would express it.
+
+The bytes are served via the built-in HTTP server at
+``/_pgwidgets/font/<id>`` with a long ``Cache-Control:
+immutable`` header.  When pgwidgets is embedded behind a Flask
+/ nginx stack, the route is served from the same Python process
+so it passes through naturally; under pyodide the URL is
+relative to ``window.location.href``.
+
+Default font
+~~~~~~~~~~~~
+
+.. code-block:: python
+
+   app.set_default_font('Roboto', size=13)
+
+Writes ``--pg-default-font-family``,
+``--pg-default-font-size``, ``--pg-default-font-weight`` and
+``--pg-default-font-style`` CSS variables on ``:root`` (via a
+managed ``<style id="pg-default-font">`` element).  The base
+widget stylesheet consumes them on ``body``::
+
+   body {
+       font-family: var(--pg-default-font-family, sans-serif);
+       font-size:   var(--pg-default-font-size,   13px);
+       font-weight: var(--pg-default-font-weight, normal);
+       font-style:  var(--pg-default-font-style,  normal);
+   }
+
+Anything that doesn't set a font of its own inherits the
+default.  Per-widget ``set_font(...)`` still wins via
+inline-style specificity, and the fallback values in the
+``var(...)`` calls are what you get when ``set_default_font``
+is never called -- so existing apps see no behavioural change.
+
+Pass ``family=None`` to clear the default and fall back to the
+stylesheet values.
+
+Reconstruction
+~~~~~~~~~~~~~~
+
+Font registrations are replayed to every new and reconnecting
+session before ``on_connect`` / ``reconstruct`` runs, so a
+widget reconstructed with ``set_font(family, ...)`` always
+finds the face already declared.
+
+Caveats
+~~~~~~~
+
+* Browsers may render fallback text in the brief window
+  between the ``register-font`` message arriving and
+  ``face.load()`` resolving (standard FOUT behaviour).  For
+  most apps this flash is invisible; if it matters you can
+  ``await document.fonts.ready`` in your bootstrap.
+* The bytes are kept in memory on the Python side for the
+  lifetime of the ``Application``.  A 200 KiB TTF is fine; a
+  4 MiB color-emoji set might warrant chunking or on-disk
+  caching.
+
+
 Handling CSS Conflicts with Other Libraries
 -------------------------------------------
 

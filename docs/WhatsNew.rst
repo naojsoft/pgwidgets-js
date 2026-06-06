@@ -4,6 +4,93 @@ What's New
 Recent changes — since ``v0.3.0``
 ---------------------------------
 
+Custom fonts: ``register-font`` / ``set-default-font``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Two new remote-protocol message types let the Python side push
+custom font files to the browser and apply a document-wide
+default font.
+
+* ``register-font`` -- the JS handler creates a ``FontFace``,
+  awaits its ``load()``, and adds it to ``document.fonts``,
+  after which any widget ``set_font(family, ...)`` resolves
+  against it.  The accompanying ``url`` is resolved against
+  ``window.location.href`` so the same path works under the
+  built-in HTTP server, Flask / nginx, and pyodide.
+* ``set-default-font`` -- manages a single
+  ``<style id="pg-default-font">`` element on ``<head>`` that
+  writes ``--pg-default-font-{family,size,weight,style}`` CSS
+  variables on ``:root``.  The base ``body`` rule consumes
+  those variables with safe fallbacks
+  (``sans-serif`` / ``13px`` / ``normal`` / ``normal``), so
+  apps that never opt in see no behavioural change.  Per-
+  widget ``set_font(...)`` still wins via inline-style
+  specificity.
+
+Weight / style normalisation in the JS handler translates
+descriptive TTF metadata names -- ``thin``, ``light``,
+``medium``, ``semibold``, ``extrabold``, ``black``, ``heavy``,
+etc. -- to the numeric CSS values per the CSS Fonts spec, so
+fonts shipped with descriptive weight names load without
+raising ``Invalid font descriptor`` errors.  Numeric strings
+and valid CSS keywords pass through unchanged.
+
+See :ref:`custom-fonts` for the matching Python-side API.
+
+TreeView: column-boundary alignment
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Three related fixes keep the header columns pinned to the body
+columns in every case:
+
+* ``_syncScrollbars`` writes ``this._header.style.width =
+  this._body.scrollWidth`` so ``1fr`` grid units resolve to
+  identical pixel widths in the header and body grids -- a
+  body grown to ``max-content`` by wide row content no longer
+  drifts wider than the header.
+* ``_gridTemplate`` wraps every ``fr`` track in
+  ``minmax(0, fr)``.  Without it a single widget cell whose
+  content can't shrink (a ``<button>Reset</button>`` or
+  ``<select>``) forces its column wider than the matching
+  empty-content header track; ``minmax(0, fr)`` lets the
+  ``fr`` distribution dominate.  Oversize content is clipped
+  by the cell's own ``overflow: hidden``.
+* ``_setupColumnResize`` lowers the minimum drag width from
+  30 px to 5 px so genuinely small icon / checkbox columns
+  (``colwidth: 10`` and similar) can be resized instead of
+  inflating to 30 the moment a drag starts.
+
+Image (animation-frame): wrapper div
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Animation-frame ``Image`` mode wraps its canvas in a
+``<div class="image-widget">`` and positions the canvas
+``absolute; inset: 0; width: 100%; height: 100%``.  The wrapper
+sits in the layout chain like any plain block, and absolutely-
+positioned children contribute zero to their parent's
+auto-resolved size -- so writing ``canvas.width`` /
+``canvas.height`` in the resize callback (which the browser
+mirrors back as an ``aspect-ratio: auto W/H`` presentational
+hint) can no longer feed back into layout.  Resolves the
+runaway-vertical-growth feedback loop that ``contain: size`` on
+a bare canvas couldn't fully gate.
+
+The wrapper has no width/height of its own -- callers must
+give it size via ``set_expanding(True, True)``, packing with
+``stretch > 0``, or ``resize(w, h)``.
+
+Box / Widget: respect user-set min sizes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``Box._applyBoxChildSizing`` (in the ``stretch > 0`` and
+``mainExpand`` branches) and ``Widget.set_expanding`` were
+both writing ``min-width: 0`` / ``min-height: 0`` unconditionally
+to override the browser's default ``min: auto`` on flex items.
+Either of them running second silently erased a floor declared
+via ``set_min_size``.  Both call sites now guard with
+``if (!s.minWidth) s.minWidth = '0'`` so user-set mins survive
+regardless of call order.
+
 TreeView / TableView: widget-typed cells
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
