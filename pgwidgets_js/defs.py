@@ -788,7 +788,8 @@ WIDGETS = {
         },
         "callbacks": ["activated", "selected", "expanded", "collapsed",
                       "sorted", "cell_edited", "scrolled",
-                      "cell_selected", "copy", "cut", "paste"],
+                      "cell_selected", "cell_action",
+                      "copy", "cut", "paste"],
     },
 
     "TableView": {
@@ -845,7 +846,8 @@ WIDGETS = {
         },
         "callbacks": ["activated", "selected", "sorted", "cell_edited",
                       "scrolled",
-                      "cell_selected", "copy", "cut", "paste"],
+                      "cell_selected", "cell_action",
+                      "copy", "cut", "paste"],
     },
 
     "Timer": {
