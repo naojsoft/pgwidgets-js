@@ -191,6 +191,38 @@ cross-axis placement of children:
 Mismatched names raise.  Maps to flex ``align-items`` on the
 box element.
 
+TableView: positional row API
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``TableView`` gained an explicit positional-row API so callers
+that maintain row data as positional arrays (one common
+cross-backend pattern) don't have to wrap every row in a dict:
+
+* ``set_data(rows)`` now accepts either a list of dicts
+  (preferred, keyed by column key) *or* a list of positional
+  arrays mapped to columns in order.
+* ``insert_row(index, values)`` -- new method.  ``values`` is
+  a dict or an array; ``index`` is the 0-based visible
+  position, out-of-range clamps to append.  Returns the new
+  row's path so the caller can address it afterwards.
+* ``append_row(values)`` is the index-at-end shortcut.
+
+The row-key generator stays internal (``row0``, ``row1`` ...);
+sort order, selection, and the per-cell colour overrides all
+follow rows by key rather than by visible index, so positional
+inserts compose with the existing higher-level APIs.
+
+Other improvements
+~~~~~~~~~~~~~~~~~~
+
+* TreeView: fix two cell-editing / rendering bugs.  The per-
+  cell ``dblclick`` handler captured the loop counter ``i``
+  from the *outer* scope -- which had already advanced past
+  the row by the time the click fired -- and a sibling
+  rendering path miscomputed the row index when columns were
+  hidden.  Both surfaced when wiring inline editing through
+  cross-backend table widgets.
+
 ----
 
 Recent changes — since ``v0.2.3``
