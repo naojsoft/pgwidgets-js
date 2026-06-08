@@ -37,6 +37,7 @@ WIDGET_METHODS = {
     "get_enabled": [],
     "set_tooltip": ["msg"],
     "get_tooltip": [],
+    "is_container": [],
     "set_allow_text_selection": ["tf"],
     "show": [],
     "hide": [],

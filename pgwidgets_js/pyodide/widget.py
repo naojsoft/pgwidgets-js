@@ -9,6 +9,36 @@ from js import Object, Widgets
 from pgwidgets_js.defs import (WIDGETS, WIDGET_METHODS, CONTAINER_METHODS,
                                 CALLBACK_METHODS)
 
+# Registry of built widget subclasses, keyed by JS class name.  Populated
+# by build_widget_class().  Used by _from_js_val() so that a widget
+# *returned* from a JS call is wrapped in its proper subclass (with the
+# full method set) rather than a bare Widget shell.
+_WIDGET_CLASSES = {}
+
+# Registry of live widget *instances*, keyed by their JS ``wid``.
+# Populated in Widget.__init__ and consulted by _from_js_val so that a
+# widget crossing back from JS (e.g. the child delivered to a
+# ``page-switch`` callback) resolves to its *original* Python wrapper --
+# preserving object identity and any subclass mix-ins (e.g. Ginga's
+# WidgetMixin, which adds ``extdata``).  Mirrors the wid->widget map the
+# websocket backend keeps.  Entries are removed in destroy().
+_WIDGET_INSTANCES = {}
+
+
+def _wid_key(js_obj):
+    """Return a stable dict key for a JS widget's ``wid`` (or None)."""
+    try:
+        wid = js_obj.wid
+    except Exception:
+        return None
+    if wid is None:
+        return None
+    # normalize numeric wids (JS numbers may arrive as float)
+    try:
+        return int(wid)
+    except (TypeError, ValueError):
+        return wid
+
 
 def _to_js_val(val):
     """Convert a Python value to a JS-compatible value.
@@ -37,12 +67,23 @@ def _from_js_val(val):
         return val
     # Detect JS Callback/Widget objects (they have 'add_callback' and 'wid')
     if hasattr(val, 'add_callback') and hasattr(val, 'wid'):
-        wrapper = object.__new__(Widget)
-        wrapper._js = val
+        # If this widget already has a Python wrapper (it was created on
+        # the Python side), return that original object so identity and
+        # subclass mix-ins (e.g. Ginga's WidgetMixin / extdata) survive
+        # the round-trip through JS.
+        existing = _WIDGET_INSTANCES.get(_wid_key(val))
+        if existing is not None:
+            return existing
+        # Otherwise (a widget created purely in JS): wrap in the proper
+        # built subclass when known, else fall back to a bare Widget.
         try:
-            wrapper._js_class_name = val.constructor.name
+            js_class_name = val.constructor.name
         except Exception:
-            wrapper._js_class_name = 'Widget'
+            js_class_name = 'Widget'
+        cls = _WIDGET_CLASSES.get(js_class_name, Widget)
+        wrapper = object.__new__(cls)
+        wrapper._js = val
+        wrapper._js_class_name = js_class_name
         wrapper._proxies = []
         return wrapper
     # Check if it's a JsProxy with .to_py()
@@ -89,6 +130,12 @@ class Widget:
         self._js = js_class.new(*converted_args)
         self._js_class_name = js_class_name
         self._proxies = []  # prevent GC of callback proxies
+
+        # Register so this widget resolves back to *this* object when it
+        # crosses the JS->Python boundary in a callback (see _from_js_val).
+        key = _wid_key(self._js)
+        if key is not None:
+            _WIDGET_INSTANCES[key] = self
 
         # Apply remaining kwargs as setter calls
         for k, v in setter_kwargs.items():
@@ -164,6 +211,14 @@ class Widget:
     def is_visible(self):
         return self._call("is_visible")
 
+    def destroy(self):
+        # drop our identity-registry entry, then destroy the JS widget
+        try:
+            _WIDGET_INSTANCES.pop(_wid_key(self._js), None)
+        except Exception:
+            pass
+        self._call("destroy")
+
     def __repr__(self):
         return f"<{self._js_class_name}>"
 
@@ -209,6 +264,17 @@ def _make_method(method_name, param_names=()):
     method.__name__ = method_name
     method.__qualname__ = f"Widget.{method_name}"
     return method
+
+
+# Ensure the base Widget class implements *every* common widget method
+# declared in WIDGET_METHODS, not just the hand-written subset above.
+# This matters because widgets *returned* from a JS call may be wrapped
+# in a bare Widget shell (see _from_js_val) when their JS constructor
+# name does not match a built subclass (e.g. a minified CDN bundle); the
+# bare shell must still expose set_tooltip, set_min_size, set_focus, etc.
+for _mname, _params in WIDGET_METHODS.items():
+    if not hasattr(Widget, _mname):
+        setattr(Widget, _mname, _make_method(_mname, _params))
 
 
 # Pyodide-specific overrides for methods whose Python-friendly
@@ -264,6 +330,9 @@ def build_widget_class(js_class, defn):
     attrs["__init__"] = __init__
 
     cls = type(js_class, (Widget,), attrs)
+    # register so widgets returned from JS calls can be wrapped in their
+    # proper subclass (see _from_js_val)
+    _WIDGET_CLASSES[js_class] = cls
     return cls
 
 
