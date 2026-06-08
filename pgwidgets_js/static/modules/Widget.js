@@ -449,6 +449,17 @@ class Widget extends Callback {
         return this.element.getAttribute('title') || '';
     }
 
+    /**
+     * Whether this widget is a layout container, i.e. one that accepts
+     * other widgets via add_widget() (e.g. Box, TopLevel, Frame).
+     * Overridden to return true by ContainerWidget.  Note that widgets
+     * like MenuBar/ToolBar/Menu are NOT containers in this sense.
+     * @returns {boolean} false for the base Widget.
+     */
+    is_container() {
+        return false;
+    }
+
     /** Makes the widget visible. */
     show() {
         this.element.style.display = '';
@@ -1085,6 +1096,14 @@ class ContainerWidget extends Widget {
         for (let name of ['child-added', 'child-removed']) {
             this.enable_callback(name);
         }
+    }
+
+    /**
+     * @returns {boolean} true -- ContainerWidget and its subclasses
+     * (Box, TopLevel, Frame, TabWidget, ScrollArea, ...) are containers.
+     */
+    is_container() {
+        return true;
     }
 /*
     init_style() {
