@@ -65,6 +65,11 @@ def _from_js_val(val):
     JS Widget instances are wrapped in a Python Widget shell."""
     if val is None or val is Widgets:
         return val
+    # Newer Pyodide maps JS ``null`` (and ``undefined``) to a ``JsNull``
+    # sentinel rather than Python ``None``.  Normalize it so that callers'
+    # ``x is None`` checks work (e.g. Menu.get_menu returning null).
+    if type(val).__name__ in ('JsNull', 'JsUndefined'):
+        return None
     # Detect JS Callback/Widget objects (they have 'add_callback' and 'wid')
     if hasattr(val, 'add_callback') and hasattr(val, 'wid'):
         # If this widget already has a Python wrapper (it was created on
