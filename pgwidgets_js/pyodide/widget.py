@@ -166,6 +166,10 @@ class Widget:
             handler(*py_args, *extra_args, **extra_kwargs)
         proxy = create_proxy(wrapper)
         self._proxies.append(proxy)
+        # enable_callback first (mirrors the websocket RemoteInterface
+        # path): besides registering the action it auto-wires DOM
+        # listeners for drag/drop callbacks (see Widget.enable_callback).
+        self._js.enable_callback(action)
         self._js.add_callback(action, proxy)
 
     def add_callback(self, action, handler, *extra_args, **extra_kwargs):
@@ -176,6 +180,10 @@ class Widget:
             handler(self, *py_args, *extra_args, **extra_kwargs)
         proxy = create_proxy(wrapper)
         self._proxies.append(proxy)
+        # enable_callback first (mirrors the websocket RemoteInterface
+        # path): besides registering the action it auto-wires DOM
+        # listeners for drag/drop callbacks (see Widget.enable_callback).
+        self._js.enable_callback(action)
         self._js.add_callback(action, proxy)
 
     # -- Common Widget methods --

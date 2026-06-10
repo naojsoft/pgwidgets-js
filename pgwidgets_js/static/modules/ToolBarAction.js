@@ -55,7 +55,12 @@ class ToolBarAction extends Widget {
 
         let icon_url = this.get_option(options, 'icon_url', null);
         let iconsize = this.get_option(options, 'iconsize', null);
-        if (icon_url !== null) {
+        // Truthy check (not ``!== null``): an unset icon may arrive as
+        // null (JSON, websocket backend) or undefined (to_js(None) in the
+        // in-situ/pyodide backend) or ''.  Only create the <img> for a
+        // real URL, otherwise an empty <img src="undefined"> shows as a
+        // broken-image "dot".
+        if (icon_url) {
             this.set_icon(icon_url, iconsize);
         }
 
