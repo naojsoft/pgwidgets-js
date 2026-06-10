@@ -190,7 +190,11 @@ WIDGETS = {
     },
 
     "AbstractScrollArea": {
-        "base": "widget",
+        # JS AbstractScrollArea extends ContainerWidget (holds a single
+        # child via set_widget), so it needs the container method set
+        # (get_children, num_children, remove*) -- callers like ginga's
+        # Desktop iterate get_children() on it.
+        "base": "container",
         "args": [],
         "options": ["thickness"],
         "methods": {
@@ -205,7 +209,8 @@ WIDGETS = {
     },
 
     "ScrollArea": {
-        "base": "widget",
+        # extends AbstractScrollArea -> ContainerWidget; see note above.
+        "base": "container",
         "args": [],
         "options": ["hscrollbar", "vscrollbar", "thickness"],
         "methods": {
