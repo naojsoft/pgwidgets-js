@@ -2,6 +2,13 @@
     position: relative;
     width: 100%;
     height: 24px;
+    /* The fill/label children are absolutely positioned (out of flow),
+       so the element has no intrinsic content height.  In a vertical
+       Box, the layout forces inline ``height: auto`` on children, which
+       would collapse this to 0.  ``min-height`` survives that override
+       (and the Box strips it only for stretch>0 children that should be
+       free to shrink), keeping the bar visible. */
+    min-height: 24px;
     background-color: #ddd;
     border: 1px solid #aaa;
     border-radius: 3px;
