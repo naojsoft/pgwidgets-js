@@ -1,14 +1,14 @@
 "use_strict";
 
-import {Widget} from "./Widget.js";
+import {ContainerWidget} from "./Widget.js";
 import {Menu} from "./Menu.js";
 
 /**
  * A horizontal menu bar widget. Menus are added by name and pop up
  * when the user clicks the corresponding label on the bar.
- * @extends Widget
+ * @extends ContainerWidget
  */
-class MenuBar extends Widget {
+class MenuBar extends ContainerWidget {
 
     /**
      * Creates a new MenuBar widget.
@@ -116,6 +116,9 @@ class MenuBar extends Widget {
 
         this.element.appendChild(container);
         this._menus[name] = { menu, button };
+        // track the menu as a child so get_children() works (the menu's
+        // DOM lives in document.body, not inside the menubar element)
+        this.add_child(menu);
     }
 
     /**

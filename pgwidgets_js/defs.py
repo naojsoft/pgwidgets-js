@@ -983,7 +983,7 @@ WIDGETS = {
     # -- Menus & Toolbars --
 
     "MenuBar": {
-        "base": "widget",
+        "base": "container",
         "args": [],
         "options": [],
         "methods": {
@@ -995,7 +995,7 @@ WIDGETS = {
     },
 
     "Menu": {
-        "base": "widget",
+        "base": "container",
         "args": [],
         "options": [],
         "methods": {
@@ -1026,7 +1026,7 @@ WIDGETS = {
     },
 
     "ToolBar": {
-        "base": "widget",
+        "base": "container",
         "args": [],
         "options": ["orientation"],
         "methods": {

@@ -1,15 +1,15 @@
 "use_strict";
 
-import {Widget} from "./Widget.js";
+import {ContainerWidget} from "./Widget.js";
 import {ToolBarAction} from "./ToolBarAction.js";
 
 /**
  * A toolbar widget that arranges actions and other widgets in a
  * horizontal or vertical strip. Supports buttons, toggle actions,
  * separators, and spacers.
- * @extends Widget
+ * @extends ContainerWidget
  */
-class ToolBar extends Widget {
+class ToolBar extends ContainerWidget {
 
     /**
      * Creates a new ToolBar widget.
@@ -39,6 +39,7 @@ class ToolBar extends Widget {
      * @param {Widget} child - The widget to add.
      */
     add_widget(child) {
+        this.add_child(child);
         let elt = child.get_element();
         elt.classList.add('toolbar-child');
         this.element.appendChild(elt);

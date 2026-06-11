@@ -1,14 +1,14 @@
 "use_strict";
 
-import {Widget} from "./Widget.js";
+import {ContainerWidget} from "./Widget.js";
 import {MenuAction} from "./MenuAction.js";
 
 /**
  * A popup menu widget containing menu actions, checkboxes, separators,
  * and submenus arranged in a vertical panel.
- * @extends Widget
+ * @extends ContainerWidget
  */
-class Menu extends Widget {
+class Menu extends ContainerWidget {
 
     /**
      * Creates a new Menu widget.
@@ -23,7 +23,8 @@ class Menu extends Widget {
         }
         this.element.className = 'menu-widget';
 
-        this._items = [];
+        // child widgets (actions + submenus) are tracked in
+        // ContainerWidget.children; _menus maps submenu name -> Menu
         this._menus = {};
 
         // auto-hide when a menu action is selected (for popup menus)
@@ -38,7 +39,7 @@ class Menu extends Widget {
      * @param {Widget} child - The widget to add (e.g. MenuAction, CheckBox).
      */
     add_widget(child) {
-        this._items.push(child);
+        this.add_child(child);
         this.element.appendChild(child.get_element());
     }
 
@@ -94,7 +95,7 @@ class Menu extends Widget {
             }
         });
 
-        this._items.push(menu);
+        this.add_child(menu);
         this._menus[name] = menu;
         this.element.appendChild(item);
         return menu;
