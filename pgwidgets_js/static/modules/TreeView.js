@@ -2365,6 +2365,29 @@ class TreeView extends Widget {
         return span;
     }
 
+    /**
+     * Set the vertical spacing of rows (the vertical padding inside each
+     * cell, in pixels).  Drives the ``--tv-row-pad`` CSS variable that the
+     * stylesheet applies to ``.treeview-cell``.
+     * @param {number} px - Vertical cell padding in pixels.
+     */
+    set_row_spacing(px) {
+        this.element.style.setProperty('--tv-row-pad', px + 'px');
+        // Also relax the fixed row min-height floor so the row can tighten
+        // to its content + padding; otherwise the default 24px floor leaves
+        // a visible gap when the padding is small.
+        this.element.style.setProperty('--tv-row-minheight', '0px');
+    }
+
+    /**
+     * Set the horizontal spacing of columns (the horizontal padding inside
+     * each cell, in pixels).  Drives the ``--tv-col-pad`` CSS variable.
+     * @param {number} px - Horizontal cell padding in pixels.
+     */
+    set_column_spacing(px) {
+        this.element.style.setProperty('--tv-col-pad', px + 'px');
+    }
+
     set_show_grid(tf) {
         this._showGrid = !!tf;
         this.element.classList.toggle('treeview-grid', this._showGrid);

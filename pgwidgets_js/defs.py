@@ -751,6 +751,8 @@ WIDGETS = {
             "collapse_item": ["path"],
             "get_selected": [],
             "get_subtree": ["status"],
+            "set_row_spacing": ["px"],
+            "set_column_spacing": ["px"],
             "set_selected": ["paths"],
             "clear_selection": [],
             "select_path": ["path", "state"],

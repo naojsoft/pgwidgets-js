@@ -151,7 +151,9 @@
 .treeview-row {
     display: grid;
     align-items: center;
-    min-height: 24px;
+    /* default 24px floor; set_row_spacing() relaxes this (to 0) so rows
+       can tighten to their content + cell padding. */
+    min-height: var(--tv-row-minheight, 24px);
     cursor: default;
     border-bottom: 1px solid #f0f0f0;
 }
@@ -199,7 +201,9 @@
 /* ── Cell ───────────────────────────────────────────── */
 
 .treeview-cell {
-    padding: 2px 6px;
+    /* vertical/horizontal padding overridable via set_row_spacing() /
+       set_column_spacing() (the --tv-row-pad / --tv-col-pad vars). */
+    padding: var(--tv-row-pad, 2px) var(--tv-col-pad, 6px);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
