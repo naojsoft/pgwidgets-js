@@ -164,7 +164,10 @@ WIDGETS = {
     },
 
     "Frame": {
-        "base": "widget",
+        # JS Frame extends ContainerWidget (single child via set_widget),
+        # so it needs the container method set (get_children, num_children,
+        # remove*).  get_children() returns a 0- or 1-element list.
+        "base": "container",
         "args": [],
         "options": ["title"],
         "methods": {
@@ -177,7 +180,10 @@ WIDGETS = {
     },
 
     "Expander": {
-        "base": "widget",
+        # JS Expander extends ContainerWidget (single child via set_widget),
+        # so it needs the container method set (get_children, num_children,
+        # remove*).  get_children() returns a 0- or 1-element list.
+        "base": "container",
         "args": [],
         "options": ["title", "collapsible", "shadow", "bg_color"],
         "methods": {
@@ -311,7 +317,10 @@ WIDGETS = {
     # -- Top-level windows --
 
     "TopLevel": {
-        "base": "widget",
+        # JS TopLevel extends ContainerWidget; container method set needed
+        # (get_children, num_children, remove*) -- get_children() returns a
+        # 0- or 1-element list (single child via set_widget).
+        "base": "container",
         "args": [],
         "options": ["resizable", "title", "icon", "moveable", "closeable",
                     "minimizable", "maximizable", "lowerable", "shadeable"],
@@ -333,7 +342,10 @@ WIDGETS = {
     },
 
     "Page": {
-        "base": "widget",
+        # JS Page extends ContainerWidget; container method set needed
+        # (get_children, num_children, remove*) -- get_children() returns a
+        # 0- or 1-element list (single child via set_widget).
+        "base": "container",
         "args": [],
         "options": [],
         "methods": {
