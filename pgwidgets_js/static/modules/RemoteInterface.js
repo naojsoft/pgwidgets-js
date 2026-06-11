@@ -403,6 +403,8 @@ class RemoteInterface {
                 return this._handleRegisterFont(msg);
             case "set-default-font":
                 return this._handleSetDefaultFont(msg);
+            case "open-url":
+                return this._handleOpenUrl(msg);
             default:
                 return {type: "error", id: msg.id,
                         error: "Unknown message type: " + msg.type};
@@ -1012,6 +1014,19 @@ class RemoteInterface {
         if (f.weight != null) decls.push(`--pg-default-font-weight: ${f.weight}`);
         if (f.style  != null) decls.push(`--pg-default-font-style: ${f.style}`);
         styleEl.textContent = `:root { ${decls.join('; ')}; }`;
+        return {type: "result", id: msg.id};
+    }
+
+    /**
+     * Opens a URL in the user's browser (a new tab/window).
+     * Note: this is a server-initiated open, so a popup blocker may
+     * suppress it if the user-activation from the originating click has
+     * already lapsed.  ``noopener`` keeps the new tab from accessing
+     * this window.
+     * @private
+     */
+    _handleOpenUrl(msg) {
+        window.open(msg.url, "_blank", "noopener");
         return {type: "result", id: msg.id};
     }
 
