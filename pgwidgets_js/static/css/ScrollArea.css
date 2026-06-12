@@ -6,9 +6,18 @@
 }
 
 .scrollarea-content {
+    /* flex column so a child that opts to fill (set_expanding -> flex:1)
+       fills the viewport when its content is smaller, while still growing
+       (and scrolling) when the content exceeds the viewport.  A child
+       without an expand policy keeps its natural size (top-aligned), as
+       before.  min-width/min-height:100% keep the content at least
+       viewport-sized; width:max-content lets it grow for wide content
+       (horizontal scroll); the column height is content-driven, floored
+       at the viewport by min-height. */
+    display: flex;
+    flex-direction: column;
     width: max-content;
     min-width: 100%;
-    height: max-content;
     min-height: 100%;
     box-sizing: border-box;
 }
