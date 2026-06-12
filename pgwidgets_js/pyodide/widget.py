@@ -108,10 +108,23 @@ class Widget:
         pos_names = defn.get("args", [])
         opt_names = defn.get("options", [])
 
-        # Build JS constructor args
-        js_args = list(args[:len(pos_names)])
+        # Build JS constructor args.  Fill the declared positional slots
+        # from positional args first, then from any same-named keyword
+        # arg (e.g. ``Dialog(title=..., buttons=...)``); unfilled slots
+        # are ``None`` placeholders.  Without the kwarg mapping such a
+        # kwarg would be mistaken for a ``set_<name>`` setter call and
+        # fail when no such setter exists.
+        js_args = []
+        for i, name in enumerate(pos_names):
+            if i < len(args):
+                js_args.append(args[i])
+            elif name in kwargs:
+                js_args.append(kwargs.pop(name))
+            else:
+                js_args.append(None)
 
-        # Remaining positional args become options
+        # Remaining positional args (beyond the declared slots) become
+        # options, in declared order.
         for i, val in enumerate(args[len(pos_names):]):
             if i < len(opt_names):
                 kwargs[opt_names[i]] = val
@@ -125,10 +138,16 @@ class Widget:
             else:
                 setter_kwargs[k] = v
 
-        # Convert args and build options object
+        # Convert args and build options object.  Keep the positional
+        # slots when an options dict follows (so it lands after the last
+        # positional arg, not in one); otherwise trim trailing None
+        # placeholders.
         converted_args = [_to_js_val(a) for a in js_args]
         if options:
             converted_args.append(_to_js_val(options))
+        else:
+            while converted_args and converted_args[-1] is None:
+                converted_args.pop()
 
         # Construct the JS widget
         js_class = getattr(Widgets, js_class_name)
