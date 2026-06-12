@@ -4,6 +4,62 @@ What's New
 Recent changes — since ``v0.3.0``
 ---------------------------------
 
+Containers report their children: ``get_children``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+More widgets are now treated as containers and expose the full
+container method set (``get_children`` / ``num_children`` /
+``remove`` / ``remove_widget`` / ``remove_all``):
+
+* ``Frame``, ``Expander``, ``TopLevel`` and ``Page`` -- single-child
+  containers (one child via ``set_widget``); ``get_children()``
+  returns a 0- or 1-element list.
+* ``Menu``, ``MenuBar`` and ``ToolBar`` -- these now extend
+  ``ContainerWidget`` and route their item additions
+  (``add_name`` / ``add_menu`` / ``add_action`` / ``add_widget``)
+  through ``add_child``, so the menu actions / submenus / toolbar
+  items they hold are reported by ``get_children()``.  Separators
+  and spacers (which are not widgets) are excluded.
+
+This matches the behaviour generic code expects of any container.
+
+ScrollArea: content fills the viewport
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The scroll content wrapper is now a flex column.  A child that opts
+to fill (e.g. via ``set_expanding`` or a ``Box`` stretch factor) now
+fills the viewport when its content is smaller, while still growing
+and scrolling when the content exceeds it.  A child with no expand
+policy keeps its natural size (top-aligned), exactly as before.
+
+TreeView / TableView: ``set_row_spacing`` / ``set_column_spacing``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Two new methods set the vertical (row) and horizontal (column) cell
+padding, driving the ``--tv-row-pad`` / ``--tv-col-pad`` CSS variables
+that ``.treeview-cell`` consumes (defaults ``2px`` / ``6px``).
+``set_row_spacing`` additionally relaxes the fixed row ``min-height``
+(``--tv-row-minheight``) so rows can tighten to their content +
+padding instead of being held at the 24px floor.
+
+``open-url``: open a link in the user's browser
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A new remote-protocol message type, ``open-url``, opens a URL in the
+connected browser (``window.open(url, "_blank", "noopener")``) -- so
+host-side code can open a link in the *user's* browser rather than on
+the machine running Python.  (Note: a popup blocker may suppress it
+if the user-activation from the originating click has lapsed.)
+
+ProgressBar: visible height inside a vertical box
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The progress bar now carries a ``min-height`` so it stays visible
+when packed in a vertical ``Box``.  (Its fill / label are absolutely
+positioned, and a vertical ``Box`` forces inline ``height: auto`` on
+children, which previously collapsed the bar to zero height --
+leaving only the border line.)
+
 Custom fonts: ``register-font`` / ``set-default-font``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

@@ -8,7 +8,8 @@ TopLevel
 
 The root-level container widget. Uses absolute positioning and attaches
 to the document body. Typically the outermost widget in a pgwidgets
-application.
+application.  A single-child container: ``get_children()`` returns its
+0- or 1-element child list.
 
 **Constructor:** ``new Widgets.TopLevel({title, icon, resizable,
 moveable, closeable, minimizable, maximizable, lowerable,
@@ -463,6 +464,15 @@ ScrollArea
 
 Scrollable viewport wrapping a single child widget.
 
+If the child opts to fill (via ``set_expanding`` or a ``Box`` stretch
+factor) it fills the viewport when its content is smaller than the
+viewport, and grows (and scrolls) when the content is larger.  A child
+with no expand policy keeps its natural size, top-aligned.
+
+Like the other single-child containers (:ref:`widget-frame`,
+:ref:`widget-expander`, :ref:`widget-toplevel`), ``ScrollArea`` is a
+container: ``get_children()`` returns its 0- or 1-element child list.
+
 **Constructor:** ``new Widgets.ScrollArea({hscrollbar, vscrollbar})``
 
 **Options:**
@@ -488,7 +498,8 @@ Scrollable viewport wrapping a single child widget.
 Frame
 -----
 
-Titled border container for grouping widgets.
+Titled border container for grouping widgets.  A single-child container:
+``get_children()`` returns its 0- or 1-element child list.
 
 **Constructor:** ``new Widgets.Frame({title})``
 
@@ -521,7 +532,8 @@ Titled border container for grouping widgets.
 Expander
 --------
 
-Collapsible section with a clickable header.
+Collapsible section with a clickable header.  A single-child container:
+``get_children()`` returns its 0- or 1-element child list.
 
 **Constructor:** ``new Widgets.Expander({title, collapsible, shadow})``
 

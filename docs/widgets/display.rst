@@ -396,6 +396,10 @@ supplies no value for it, so most interiors need no
      - Set column width.
    * - ``set_optimal_column_widths()``
      - Auto-size all columns.
+   * - ``set_row_spacing(px)`` / ``set_column_spacing(px)``
+     - Set the vertical (row) / horizontal (column) cell padding in
+       pixels.  ``set_row_spacing(0)`` also relaxes the row min-height
+       floor, giving tight rows.
    * - ``set_show_grid(tf)`` / ``set_show_row_numbers(tf)`` / ``set_sortable(tf)``
      - Toggle grid lines, row numbers, and click-to-sort.
    * - ``set_column_editable(col_key, tf)``

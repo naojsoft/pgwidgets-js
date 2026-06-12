@@ -1,6 +1,13 @@
 Menu & Toolbar Widgets
 ======================
 
+``MenuBar``, ``Menu`` and ``ToolBar`` are container widgets: the menu
+actions, submenus and toolbar items they hold (added via ``add_name`` /
+``add_menu`` / ``add_action`` / ``add_widget``) are reported by the
+standard container API -- ``get_children()`` / ``num_children()`` /
+``remove(...)``.  Separators and spacers are not widgets and are not
+included.
+
 .. _widget-menubar:
 
 MenuBar
