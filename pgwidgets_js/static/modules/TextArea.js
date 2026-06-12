@@ -35,6 +35,10 @@ class TextArea extends Widget {
 
         this._scrollTimer = null;
         this._scrollReady = false;
+        // history limit: max number of lines retained (null = unlimited).
+        // NOTE: this caps the *content*, not the display height -- the
+        // textarea is sized by its container (grid cell) and scrolls.
+        this._limit = null;
 
         super.init_style();
 
@@ -88,6 +92,7 @@ class TextArea extends Widget {
 
     set_text(text) {
         this._textarea.value = text;
+        this._enforce_limit();
         this._syncScrollbars();
     }
 
@@ -97,7 +102,18 @@ class TextArea extends Widget {
 
     append_text(text) {
         this._textarea.value += text;
+        this._enforce_limit();
         this._syncScrollbars();
+    }
+
+    /** Trim the buffer to the configured line limit (oldest dropped). */
+    _enforce_limit() {
+        if (!this._limit) return;
+        let lines = this._textarea.value.split('\n');
+        if (lines.length > this._limit) {
+            this._textarea.value = lines.slice(lines.length - this._limit)
+                                        .join('\n');
+        }
     }
 
     clear() {
@@ -115,7 +131,14 @@ class TextArea extends Widget {
     }
 
     set_limit(numlines) {
-        this._textarea.rows = numlines;
+        // History limit: the maximum number of lines retained in the
+        // buffer (oldest dropped when exceeded).  This is NOT the display
+        // height -- the textarea is sized by its container and scrolls --
+        // so we must not touch ``rows`` (doing so would inflate the
+        // textarea to ``numlines`` tall and defeat scrolling).
+        this._limit = (numlines && numlines > 0) ? numlines : null;
+        this._enforce_limit();
+        this._syncScrollbars();
     }
 
     // -----------------------------------------------------------------
