@@ -437,16 +437,19 @@ class MDISubWindow extends ContainerWidget {
     
     /** Raises the sub-window to the top of the z-order. */
     raise_() {
-        let num_children = this.mdi_widget.children.length;
-        this.element.style.zIndex = num_children;
+        // Place this window above all others.  Use (max existing z)+1
+        // rather than children.length: the z-indices can drift above the
+        // child count (e.g. after closing windows or repeated raise/lower),
+        // which previously left a freshly added/raised window stacked
+        // *under* existing ones, hiding it.
+        let maxZ = 0;
         for (let subwin of this.mdi_widget.children) {
-            if (subwin != this) {
-                let win_elt = subwin.get_element();
-                if (win_elt.style.zIndex == num_children) {
-                    win_elt.style.zIndex--;
-                }
+            if (subwin !== this) {
+                let z = parseInt(subwin.get_element().style.zIndex, 10) || 0;
+                if (z > maxZ) maxZ = z;
             }
         }
+        this.element.style.zIndex = maxZ + 1;
 
         this.mdi_widget._refreshActiveSubWindow();
         this.mdi_widget.make_callback('page-switch', this.get_child());
