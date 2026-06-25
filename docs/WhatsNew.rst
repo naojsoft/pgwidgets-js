@@ -1,6 +1,46 @@
 What's New
 ==========
 
+Recent changes — since ``v0.3.2``
+---------------------------------
+
+MDIWidget: new and raised sub-windows come to the top
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Raising a sub-window (including the implicit raise when one is created)
+now sets its ``z-index`` to one above the current maximum, rather than to
+the sub-window count.  The count could drift below the live z-indices
+(after closing windows, or repeated raise/lower), which previously left a
+freshly created window stacked *underneath* existing ones and hidden.
+
+TextArea: scrollbars, and ``set_limit`` is a history limit
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Scrollbars now appear correctly for an over-full ``TextArea``.  Also,
+``set_limit(n)`` now bounds the *retained* text to the last ``n`` lines
+(a scrollback/history limit, trimming the oldest lines as new text is
+appended) instead of setting the number of visible rows.
+
+Pyodide: keyword args for positional constructor parameters
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In the in-situ (Pyodide) backend, constructing a widget with keyword
+arguments that name positional constructor parameters -- e.g.
+``Dialog(title=..., buttons=...)`` -- now fills those constructor slots,
+matching the sync backend.  Previously such kwargs fell through to
+``set_<name>`` setter dispatch and raised when no such setter existed, so
+affected widgets (e.g. ``Dialog``) could not be constructed in-situ.
+
+Pyodide: widgets expose their definition for ``has_callback``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In-situ widget classes now carry their definition, so ``has_callback(name)``
+reports the callbacks a widget *declares* (e.g. ``page-switch`` /
+``page-close``), matching the sync backend.  Host code that wires a callback
+only ``if widget.has_callback(name)`` -- such as a workspace connecting
+``page-close`` -- now works in-situ; previously that gate returned ``False``
+and the callback was never connected.
+
 Recent changes — since ``v0.3.0``
 ---------------------------------
 
