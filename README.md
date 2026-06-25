@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="pgwidgets_js/static/icons/pgwidgets-logo.png" alt="pgwidgets logo" width="300">
+  <img src="pgwidgets_js/static/icons/pgwidgets-logo.png" alt="pgwidgets logo" width="500">
 </p>
 
 <p align="center">
