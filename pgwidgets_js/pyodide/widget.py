@@ -361,6 +361,11 @@ def build_widget_class(js_class, defn):
         Widget.__init__(self, js_class, *args, **kwargs)
     attrs["__init__"] = __init__
 
+    # expose the definition so callers can introspect declared callbacks
+    # (mirrors the sync backend): ginga's has_callback() consults
+    # ``_defn["callbacks"]`` to decide whether to wire e.g. 'page-close'
+    attrs["_defn"] = defn
+
     cls = type(js_class, (Widget,), attrs)
     # register so widgets returned from JS calls can be wrapped in their
     # proper subclass (see _from_js_val)
