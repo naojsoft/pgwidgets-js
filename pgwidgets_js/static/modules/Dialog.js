@@ -150,6 +150,42 @@ class Dialog extends TopLevel {
     }
 
     /**
+     * Removes a widget from the dialog's content area.
+     * @param {Widget} child - The widget to remove.
+     * @param {boolean} [destroy=false] - If true, also destroy the child.
+     */
+    remove_widget(child, destroy = false) {
+        this._contentArea.remove_widget(child, destroy);
+    }
+
+    /**
+     * Removes all widgets from the dialog's content area, leaving the
+     * button bar intact.  (The base implementation would clear the
+     * dialog's own children -- the content area + button bar -- which
+     * detaches the layout; delegate here to match add_widget().)
+     * @param {boolean} [destroy=false] - If true, also destroy each child.
+     */
+    remove_all(destroy = false) {
+        this._contentArea.remove_all(destroy);
+    }
+
+    /**
+     * Returns the content area's child widgets.
+     * @returns {Widget[]} The children array.
+     */
+    get_children() {
+        return this._contentArea.get_children();
+    }
+
+    /**
+     * Returns the number of widgets in the dialog's content area.
+     * @returns {number} The child count.
+     */
+    num_children() {
+        return this._contentArea.num_children();
+    }
+
+    /**
      * Adds a button widget to the dialog's button bar.
      * Clicking the button fires the dialog's 'activated' callback
      * with the given value, and auto-closes if autoclose is enabled.
