@@ -830,6 +830,8 @@ WIDGETS = {
             "select_all": ["state"],
             "set_column_width": ["col_index", "width"],
             "set_optimal_column_widths": [],
+            "set_row_spacing": ["px"],
+            "set_column_spacing": ["px"],
             "sort_by_column": ["col_index", "ascending"],
             "scroll_to_path": ["path"],
             "scroll_to_end": [],
