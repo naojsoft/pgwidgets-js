@@ -366,6 +366,8 @@ WIDGETS = {
             "set_position": ["x", "y"],
             "popup": ["x", "y"],
             "set_modal": ["tf"],
+            # inherited from TopLevel on the JS side (Dialog extends TopLevel)
+            "set_title": ["title"],
         },
         "callbacks": [*CONTAINER_CALLBACKS, "activated", "move", "close"],
     },
