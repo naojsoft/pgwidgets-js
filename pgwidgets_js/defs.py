@@ -109,7 +109,7 @@ WIDGETS = {
     "ButtonBox": {
         "base": "container",
         "args": [],
-        "options": ["orientation", "halign"],
+        "options": ["orientation", "halign", "min_button_width"],
         "methods": {
             "add_widget": ["child", "stretch"],
             "insert_widget": ["index", "child", "stretch"],

@@ -214,6 +214,9 @@ class ButtonBox extends Box {
     constructor(options = { orientation: 'horizontal' }) {
         super(options);
         this._halign = this.get_option(options, 'halign', 'center');
+        // optional lower bound: buttons are never narrower than this, even
+        // if the widest button's natural size is smaller
+        this._minButtonWidth = this.get_option(options, 'min_button_width', null);
         this._applyAlign();
 
     }
@@ -281,8 +284,9 @@ class ButtonBox extends Box {
                 let w = elt.getBoundingClientRect().width;
                 if (w > maxW) maxW = w;
             }
-            if (maxW > 0) {
-                let px = Math.ceil(maxW) + 'px';
+            let target = Math.max(Math.ceil(maxW), this._minButtonWidth || 0);
+            if (target > 0) {
+                let px = target + 'px';
                 for (let child of this.children) {
                     let elt = child.get_element();
                     elt.style.minWidth = px;
