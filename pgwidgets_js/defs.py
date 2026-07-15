@@ -411,6 +411,7 @@ WIDGETS = {
             "set_icon": ["url", "size"],
             "get_icon": [],
             "set_color": ["bg", "fg"],
+            "set_hover": ["bg", "fg"],
         },
         "callbacks": ["activated"],
     },

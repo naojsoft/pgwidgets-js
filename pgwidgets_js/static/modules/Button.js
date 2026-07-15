@@ -35,6 +35,11 @@ class Button extends Widget {
 
         this.element.onclick = () => this._cb_redirect('clicked');
         this.enable_callback('activated');
+
+        // hover highlight colors (see set_hover); null = no hover override
+        this._hoverBg = null;
+        this._hoverFg = null;
+        this._hoverInstalled = false;
     }
 
     /**
@@ -111,6 +116,58 @@ class Button extends Widget {
         }
         if (fg !== null) {
             this.element.style.color = fg;
+        }
+    }
+
+    /**
+     * Give this button a hover highlight: while the pointer is over the
+     * button its background/foreground switch to the supplied colors,
+     * reverting on mouse-out.  Mirrors the qt/gtk backends' per-button
+     * hover.  Pass ``(null, null)`` or empty strings to clear it.
+     *
+     * Implemented with mouseenter/mouseleave that swap (and restore) the
+     * inline style, because an inline base background set via set_color
+     * would otherwise win over a CSS ``:hover`` rule.
+     *
+     * @param {string|null} [bg=null] - Hover background CSS color.
+     * @param {string|null} [fg=null] - Hover foreground (text) CSS color.
+     */
+    set_hover(bg=null, fg=null) {
+        this._hoverBg = (bg === '') ? null : bg;
+        this._hoverFg = (fg === '') ? null : fg;
+        if (!this._hoverInstalled) {
+            this._hoverInstalled = true;
+            this.element.addEventListener('mouseenter',
+                                          () => this._applyHover());
+            this.element.addEventListener('mouseleave',
+                                          () => this._restoreHover());
+        }
+    }
+
+    _applyHover() {
+        if (this._hoverBg === null && this._hoverFg === null) {
+            return;
+        }
+        // remember whatever inline colors are in effect (e.g. a base color
+        // from set_color, or '' for the default look) so we can restore them
+        this._savedBg = this.element.style.background;
+        this._savedFg = this.element.style.color;
+        if (this._hoverBg !== null) {
+            this.element.style.background = this._hoverBg;
+        }
+        if (this._hoverFg !== null) {
+            this.element.style.color = this._hoverFg;
+        }
+    }
+
+    _restoreHover() {
+        if (this._savedBg !== undefined) {
+            this.element.style.background = this._savedBg;
+            this._savedBg = undefined;
+        }
+        if (this._savedFg !== undefined) {
+            this.element.style.color = this._savedFg;
+            this._savedFg = undefined;
         }
     }
 
