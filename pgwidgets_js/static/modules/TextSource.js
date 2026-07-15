@@ -817,6 +817,25 @@ class TextSource extends Widget {
     }
 
     /**
+     * Whether there is a non-empty selection.
+     * @returns {boolean}
+     */
+    has_selection() {
+        return this._selStart !== this._selEnd;
+    }
+
+    /**
+     * Canonical accessor used by page-level code.  Returns
+     * ``[startRef, endRef]`` for the current selection, or ``null``
+     * when there is no selection (guard with ``has_selection()``).
+     * Alias of ``get_selection_range``; does not throw.
+     * @returns {?[TextBufferRef, TextBufferRef]}
+     */
+    get_selection_bounds() {
+        return this.get_selection_range();
+    }
+
+    /**
      * Set the selection to span ``[startRef, endRef]``.  The cursor
      * lands at *endRef*'s position.
      * @param {TextBufferRef} startRef
@@ -1726,6 +1745,48 @@ class TextSource extends Widget {
             names.add(t.name);
         }
         return Array.from(names);
+    }
+
+    /**
+     * Returns the overall ``[startRef, endRef]`` span of a named tag —
+     * from the first occurrence of the tag to the last — or ``null`` if
+     * the tag is not applied anywhere.  This is the replacement for the
+     * old GTK ``get_region`` helper used by page-level code.
+     * @param {string} name
+     * @returns {?[TextBufferRef, TextBufferRef]}
+     */
+    get_tag_region(name) {
+        let spans = this._tags.filter(t => t.name === name);
+        if (spans.length === 0) return null;
+        let start = Math.min(...spans.map(t => t.start));
+        let end = Math.max(...spans.map(t => t.end));
+        return [this.create_ref(start, 'right'),
+                this.create_ref(end, 'right')];
+    }
+
+    /**
+     * Returns an array of ``[startRef, endRef]`` pairs, one per maximal
+     * contiguous run of the named tag.  Empty array if unapplied.
+     * @param {string} name
+     * @returns {Array<[TextBufferRef, TextBufferRef]>}
+     */
+    get_tag_regions(name) {
+        let spans = this._tags.filter(t => t.name === name)
+                              .sort((a, b) => a.start - b.start);
+        if (spans.length === 0) return [];
+        let merged = [];
+        let curStart = spans[0].start, curEnd = spans[0].end;
+        for (let t of spans.slice(1)) {
+            if (t.start <= curEnd) {
+                curEnd = Math.max(curEnd, t.end);
+            } else {
+                merged.push([curStart, curEnd]);
+                curStart = t.start; curEnd = t.end;
+            }
+        }
+        merged.push([curStart, curEnd]);
+        return merged.map(([s, e]) => [this.create_ref(s, 'right'),
+                                       this.create_ref(e, 'right')]);
     }
 
     _updateTagsOnInsert(offset, n) {

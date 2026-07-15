@@ -554,6 +554,8 @@ WIDGETS = {
             "get_cursor": [],
             "set_cursor": ["ref"],
             "get_selection_range": [],
+            "has_selection": [],
+            "get_selection_bounds": [],
             "set_selection_range": ["start_ref", "end_ref"],
             # Tags
             "create_tag": ["name", "attrs"],
@@ -563,6 +565,8 @@ WIDGETS = {
             "remove_tag": ["name", "start_ref", "end_ref"],
             "get_tags_at": ["ref"],
             "get_tags_range": ["start_ref", "end_ref"],
+            "get_tag_region": ["name"],
+            "get_tag_regions": ["name"],
             # Live refs
             "create_ref": ["offset", "gravity"],
             "remove_ref": ["ref"],
