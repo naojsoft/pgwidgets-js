@@ -454,6 +454,14 @@ class TextSource extends Widget {
                 this._captureSelection();
             }
         });
+
+        // -- hover tooltips (fire 'tooltip'; the page decides what to show) --
+        this._tooltipsEnabled = false;
+        this._tooltipTimer = null;
+        this._tooltipEl = null;
+        this._edit.addEventListener('mousemove', (e) => this._onHoverMove(e));
+        this._edit.addEventListener('mouseleave', () => this._hideTooltip());
+
         requestAnimationFrame(() => { this._scrollReady = true; });
     }
 
@@ -860,6 +868,9 @@ class TextSource extends Widget {
     }
 
     set_wrap(mode) {
+        // Tolerate a boolean (some callers pass true/false): map to a mode.
+        if (mode === true) mode = 'word';
+        else if (mode === false) mode = 'none';
         if (!['none', 'hard', 'word'].includes(mode)) {
             throw new Error(`Invalid wrap mode: ${mode}`);
         }
@@ -878,6 +889,106 @@ class TextSource extends Widget {
         this._showIconGutter = !!tf;
         this._iconGutter.style.display = this._showIconGutter ? '' : 'none';
         this._render();
+    }
+
+    /**
+     * Set the editor font.  ``family`` and/or ``size`` (px) may be null to
+     * leave that dimension unchanged.  The line-number gutter is kept in the
+     * same font so its rows stay aligned with the text.
+     * @param {?string} family
+     * @param {?number} size
+     */
+    set_font(family, size) {
+        if (family != null) this._fontFamily = family;
+        if (size != null) this._fontSize = size;
+        for (let el of [this._edit, this._numberGutter]) {
+            if (el) {
+                el.style.fontFamily = this._fontFamily;
+                el.style.fontSize = this._fontSize + 'px';
+            }
+        }
+        this._render();
+    }
+
+    /** Enable/disable hover tooltips (which fire the 'tooltip' callback). */
+    set_tooltips_enabled(tf) {
+        this._tooltipsEnabled = !!tf;
+        if (!this._tooltipsEnabled) this._hideTooltip();
+    }
+
+    _onHoverMove(e) {
+        if (!this._tooltipsEnabled) return;
+        // Hide any showing tooltip while the pointer moves, and (re)arm a
+        // timer so we only query once the pointer settles -- like a native
+        // tooltip.
+        this._hideTooltip();
+        let x = e.clientX, y = e.clientY;
+        this._tooltipTimer = setTimeout(() => {
+            this._tooltipTimer = null;
+            let hit = this._lineColFromPoint(x, y);
+            if (hit === null) return;
+            // The page appends a string to the callback's result list (on the
+            // Python side) and calls _showTooltip() if it wants one shown.
+            this.make_callback('tooltip', hit.line, hit.col, hit.text, x, y);
+        }, 400);
+    }
+
+    _lineColFromPoint(x, y) {
+        let cp = null;
+        if (document.caretPositionFromPoint) {
+            let p = document.caretPositionFromPoint(x, y);
+            if (p) cp = {node: p.offsetNode, offset: p.offset};
+        } else if (document.caretRangeFromPoint) {
+            let r = document.caretRangeFromPoint(x, y);
+            if (r) cp = {node: r.startContainer, offset: r.startOffset};
+        }
+        if (!cp || !cp.node) return null;
+        let el = cp.node.nodeType === Node.TEXT_NODE ? cp.node.parentNode
+                                                     : cp.node;
+        let lineDiv = el && el.closest ? el.closest('.textsource-line') : null;
+        if (!lineDiv) return null;
+        // column = length of text from the line start up to the caret point
+        let range = document.createRange();
+        range.selectNodeContents(lineDiv);
+        try {
+            range.setEnd(cp.node, cp.offset);
+        } catch (err) {
+            return null;
+        }
+        return {line: parseInt(lineDiv.dataset.lineIndex, 10) || 0,
+                col: range.toString().length,
+                text: lineDiv.textContent};
+    }
+
+    /** Show (non-empty text) or hide (empty) a tooltip near (x, y). */
+    _showTooltip(text, x, y) {
+        if (!text) { this._hideTooltip(); return; }
+        if (this._tooltipEl === null) {
+            let el = document.createElement('div');
+            el.className = 'textsource-tooltip';
+            Object.assign(el.style, {
+                position: 'fixed', zIndex: '10000', background: '#ffffe0',
+                color: '#000', border: '1px solid #888', padding: '2px 6px',
+                font: '12px sans-serif', pointerEvents: 'none',
+                maxWidth: '400px', whiteSpace: 'pre-wrap',
+            });
+            document.body.appendChild(el);
+            this._tooltipEl = el;
+        }
+        this._tooltipEl.textContent = text;
+        this._tooltipEl.style.left = (x + 12) + 'px';
+        this._tooltipEl.style.top = (y + 16) + 'px';
+        this._tooltipEl.style.display = 'block';
+    }
+
+    _hideTooltip() {
+        if (this._tooltipTimer !== null) {
+            clearTimeout(this._tooltipTimer);
+            this._tooltipTimer = null;
+        }
+        if (this._tooltipEl !== null) {
+            this._tooltipEl.style.display = 'none';
+        }
     }
 
     /**
@@ -1887,8 +1998,18 @@ class TextSource extends Widget {
      * @param {TextBufferRef} ref
      */
     scroll_to_ref(ref) {
-        let offset = this._offsetOf(ref);
-        let line = this._lineOfOffset(offset);
+        this._scrollToOffset(this._offsetOf(ref));
+    }
+
+    /**
+     * Scroll so the line containing *offset* is visible.  Reconstruction /
+     * remote-driver counterpart to ``scroll_to_ref`` that avoids minting a
+     * ref over the wire (the Python side owns the ref and passes its offset).
+     * @private
+     * @param {number} offset
+     */
+    _scrollToOffset(offset) {
+        let line = this._lineOfOffset(this._clampOffset(offset));
         let lineDiv = this._edit.children[line];
         if (lineDiv && lineDiv.scrollIntoView) {
             lineDiv.scrollIntoView({ block: 'nearest' });

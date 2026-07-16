@@ -179,6 +179,17 @@ WIDGETS = {
         "callbacks": [],
     },
 
+    "Separator": {
+        # A thin horizontal or vertical rule (like an HTML <hr>).
+        "base": "widget",
+        "args": ["orientation"],
+        "options": [],
+        "methods": {
+            "set_orientation": ["orientation"],
+        },
+        "callbacks": [],
+    },
+
     "Expander": {
         # JS Expander extends ContainerWidget (single child via set_widget),
         # so it needs the container method set (get_children, num_children,
@@ -550,6 +561,8 @@ WIDGETS = {
             "set_wrap": ["mode"],
             "set_line_numbers": ["tf"],
             "set_icon_gutter": ["tf"],
+            "set_font": ["family", "size"],
+            "set_tooltips_enabled": ["tf"],
             "set_icon": ["ref", "icon_url"],
             "get_cursor": [],
             "set_cursor": ["ref"],
@@ -601,7 +614,7 @@ WIDGETS = {
             "get_scroll_position": [],
         },
         "callbacks": ["changed", "cursor_moved", "line_clicked",
-                      "icon_clicked", "scrolled"],
+                      "icon_clicked", "scrolled", "tooltip"],
     },
 
     # A live position handle into a TextSource buffer.  Extends the
