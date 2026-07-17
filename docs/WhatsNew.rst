@@ -1,6 +1,80 @@
 What's New
 ==========
 
+Recent changes — since ``v0.3.3``
+---------------------------------
+
+TextSource: text no longer clipped when scrolling long files
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A ``TextSource`` holding more than a screenful of text showed only the
+first screen -- the scrollbar reported the full length, but scrolling
+past the first page revealed blank space.  The edit area is now laid out
+so it grows to the full content height, and the widget scrolls through
+all of it.
+
+TextSource: fonts, hover tooltips, and scroll helpers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``set_font(family, size)`` sets the editor font.  Hover tooltips can be
+enabled with ``set_tooltips_enabled(True)``: while enabled the widget
+fires a ``tooltip`` callback carrying the line, column and text under the
+pointer, leaving the host to decide what (if anything) to display.  New
+scroll helpers address the buffer by offset (used by ``scroll_to_ref``
+and the remote-driver scroll methods), and ``set_wrap`` now also accepts
+a boolean.
+
+TextSource: selection and tag-region queries
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Four query methods now match Ginga's qt/gtk ``TextSource``:
+``has_selection()``; ``get_selection_bounds()`` returning the selected
+``[start, end]`` refs (or ``None``); ``get_tag_region(name)`` returning a
+tag's overall span; and ``get_tag_regions(name)`` returning one
+``[start, end]`` pair per contiguous run of the tag.  They are declared in
+the widget spec, so the Python proxy -- and thus Ginga's pgw
+``TextSource`` -- can call them.
+
+New widget: Separator
+~~~~~~~~~~~~~~~~~~~~~
+
+``Separator`` is a thin horizontal or vertical rule for visually
+dividing a layout.
+
+Button: per-button hover highlight (``set_hover``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``set_hover(bg, fg)`` mirrors the qt/gtk backends' per-button hover:
+while the pointer is over the button its colors switch to the supplied
+values and revert on mouse-out.  Passing ``(None, None)`` clears it.  It
+is a setter, so it round-trips and replays on browser reconnect (like
+``set_color``).
+
+ButtonBox: ``min_button_width`` option
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A ``ButtonBox`` already sizes its buttons to the widest member; the new
+``min_button_width`` constructor option sets a floor so buttons never
+render narrower than the given width.
+
+Dialog: ``set_title``, and correct content-area handling
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``set_title`` is now callable on a ``Dialog`` across all wrappers;
+previously the method was undeclared on the ``Dialog`` spec and raised
+``AttributeError``.  Also, ``remove_all`` / ``remove_widget`` /
+``get_children`` / ``num_children`` now target the dialog's content area,
+matching ``add_widget``.  Previously ``remove_all`` tore out the whole
+content-plus-buttons layout, so a rebuilt dialog (e.g. a ``MessageDialog``
+re-showing its message) could leave its content orphaned and blank.
+
+TableView: ``set_row_spacing`` / ``set_column_spacing``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The Python proxy for ``TableView`` now exposes ``set_row_spacing`` and
+``set_column_spacing`` (already implemented by its ``TreeView`` base), so
+cell spacing can be set on a ``TableView``.
+
 Recent changes — since ``v0.3.2``
 ---------------------------------
 
