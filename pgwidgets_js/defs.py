@@ -774,6 +774,7 @@ WIDGETS = {
             "add_item": ["parent", "key", "values"],
             "remove_item": ["path"],
             "remove_items": ["paths"],
+            "delete_tree": ["tree", "prune_empty"],
             "clear": [],
             "expand_all": [],
             "collapse_all": [],
@@ -828,7 +829,7 @@ WIDGETS = {
         },
         "callbacks": ["activated", "selected", "expanded", "collapsed",
                       "sorted", "cell_edited", "scrolled",
-                      "cell_selected", "cell_action",
+                      "cell_selected", "cell_action", "changed",
                       "copy", "cut", "paste"],
     },
 

@@ -97,7 +97,7 @@ class TreeView extends Widget {
 
         for (let name of ['activated', 'selected', 'expanded', 'collapsed',
                           'sorted', 'cell_edited', 'scrolled',
-                          'cell_selected', 'cell_action',
+                          'cell_selected', 'cell_action', 'changed',
                           'copy', 'cut', 'paste']) {
             this.enable_callback(name);
         }
@@ -883,6 +883,73 @@ class TreeView extends Widget {
         }
         for (let p of touched) this._applySortToNode(p);
         this._renderAll();
+    }
+
+    /**
+     * Delete the nodes named by `spec` from the tree.
+     *
+     * `spec` is a nested object of keys mirroring the tree.  A key mapping
+     * to an empty object (or null) removes that node together with its
+     * whole subtree; a key mapping to a non-empty object is descended into
+     * so that only the named descendants are removed.  Keys absent from
+     * the tree are ignored.  With `prune_empty` (default true) a branch
+     * left childless by the deletion is removed as well, cascading upward.
+     *
+     * Selection on surviving nodes is preserved.  If a selected node was
+     * removed the 'selected' callback fires; if anything was removed the
+     * 'changed' callback fires.
+     * @param {Object} spec
+     * @param {boolean} [prune_empty=true]
+     */
+    delete_tree(spec, prune_empty = true) {
+        let selBefore = this._selection.length;
+        let removed = this._deleteSpec(this._root, spec || {}, prune_empty);
+        if (removed > 0) {
+            this._renderAll();
+            if (this._selection.length !== selBefore) {
+                this.make_callback('selected', this.get_selected());
+            }
+            this.make_callback('changed');
+        }
+    }
+
+    /** @private Recursively delete `spec` under `parentNode`; return count. */
+    _deleteSpec(parentNode, spec, prune_empty) {
+        let count = 0;
+        for (let key of Object.keys(spec)) {
+            let node = parentNode.children.get(key);
+            if (!node) continue;                       // not present; skip
+            let sub = spec[key];
+            let descend = sub && typeof sub === 'object'
+                          && Object.keys(sub).length > 0
+                          && node.children.size > 0;
+            if (!descend) {
+                // remove this node together with its whole subtree
+                this._dropFromSelection(node);
+                parentNode.children.delete(key);
+                parentNode.sortedView = null;
+                count += 1;
+            } else {
+                count += this._deleteSpec(node, sub, prune_empty);
+                if (prune_empty && node.children.size === 0) {
+                    this._dropFromSelection(node);
+                    parentNode.children.delete(key);
+                    parentNode.sortedView = null;
+                    count += 1;
+                }
+            }
+        }
+        return count;
+    }
+
+    /** @private Drop `node` and any of its descendants from the selection. */
+    _dropFromSelection(node) {
+        this._selection = this._selection.filter(n => {
+            for (let p = n; p; p = p.parent) {
+                if (p === node) return false;
+            }
+            return true;
+        });
     }
 
     clear() {
