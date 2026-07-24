@@ -74,7 +74,16 @@ class ComboBox extends Widget {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 this._hideDropdown();
-                this.make_callback('activated', this.get_index(), this.get_text());
+                let idx = this.get_index();
+                if (idx < 0 && this._editable) {
+                    // Commit a new typed value (mirrors the Qt/Gtk
+                    // backends) so the reported index is valid and
+                    // consistent with get_text().
+                    this.append_text(this._input.value);
+                    idx = this._items.length - 1;
+                    this._selectedIdx = idx;
+                }
+                this.make_callback('activated', idx, this.get_text());
             } else if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 if (this._dropdown.style.display === 'none') {
@@ -89,6 +98,10 @@ class ComboBox extends Widget {
         if (this._editable) {
             this._input.addEventListener('input', () => {
                 this._showDropdown(this._input.value);
+                // Report the live text so the server-side get_text() stays
+                // current without waiting for Enter/selection.  Does not
+                // fire 'activated' -- typing must not count as activation.
+                this.make_callback('modified', this._input.value);
             });
         }
 
@@ -114,6 +127,8 @@ class ComboBox extends Widget {
         });
 
         this.enable_callback('activated');
+        // 'modified' reports live entry text as the user types (editable)
+        this.enable_callback('modified');
     }
 
     /**

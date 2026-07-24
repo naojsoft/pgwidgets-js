@@ -667,7 +667,7 @@ WIDGETS = {
             "clear": [],
             "set_length": ["numchars"],
         },
-        "callbacks": ["activated"],
+        "callbacks": ["activated", "modified"],
     },
 
     "SpinBox": {
