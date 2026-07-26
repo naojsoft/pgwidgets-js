@@ -55,11 +55,42 @@ class MenuBar extends ContainerWidget {
      * Adds a Menu widget to the bar under the given name.
      * @param {Menu} menu - The Menu widget to associate.
      * @param {string} name - The label displayed on the menu bar.
+     * @param {Object} [options] - Optional settings.
+     * @param {string|null} [options.icon_url=null] - URL of an icon image.
+     * @param {number[]|null} [options.iconsize=null] - Icon size [w, h] in px.
+     * @param {boolean} [options.icon_only=false] - Show only the icon (when
+     *   set), keeping the name as an accessible tooltip; falls back to the
+     *   text label when no icon is present.
      */
-    add_menu(menu, name) {
+    add_menu(menu, name, options = {}) {
         let button = document.createElement('div');
         button.className = 'menubar-item';
-        button.textContent = name;
+
+        let icon_url = this.get_option(options, 'icon_url', null);
+        let iconsize = this.get_option(options, 'iconsize', null);
+        let icon_only = this.get_option(options, 'icon_only', false);
+
+        // Truthy check (see ToolBarAction/MenuAction): an unset icon may
+        // arrive as null/undefined/'' depending on the backend.
+        if (icon_url) {
+            let img = document.createElement('img');
+            img.className = 'menubar-item-icon';
+            img.src = icon_url;
+            if (iconsize) {
+                img.style.width = iconsize[0] + 'px';
+                img.style.height = iconsize[1] + 'px';
+            }
+            button.appendChild(img);
+        }
+        if (icon_url && icon_only) {
+            // icon only: keep the name as an accessible tooltip
+            button.title = name;
+        } else {
+            let label = document.createElement('span');
+            label.className = 'menubar-item-label';
+            label.textContent = name;
+            button.appendChild(label);
+        }
 
         let container = document.createElement('div');
         container.className = 'menubar-item-container';

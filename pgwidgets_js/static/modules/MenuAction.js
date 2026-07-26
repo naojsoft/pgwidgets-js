@@ -17,6 +17,9 @@ class MenuAction extends Widget {
      * @param {number[]|null} [options.iconsize=null] - Icon size as [width, height] in pixels.
      * @param {boolean} [options.checkable=false] - Whether the action has a checkbox.
      * @param {string|null} [options.name=null] - Alias for text.
+     * @param {boolean} [options.icon_only=false] - If true, show only the icon
+     *   (when one is set), keeping the text as the accessible tooltip and as
+     *   the fallback when no icon is present.
      * @param {HTMLElement} [options.element=null] - Optional pre-existing DOM element to use.
      */
     constructor(options = {}) {
@@ -29,6 +32,8 @@ class MenuAction extends Widget {
 
         this.checkable = this.get_option(options, 'checkable', false);
         this.checked = false;
+        this.icon_only = this.get_option(options, 'icon_only', false);
+        this._has_icon = false;
 
         // checkbox indicator (hidden unless checkable)
         this._check = document.createElement('span');
@@ -44,7 +49,11 @@ class MenuAction extends Widget {
 
         let icon_url = this.get_option(options, 'icon_url', null);
         let iconsize = this.get_option(options, 'iconsize', null);
-        if (icon_url !== null) {
+        // Truthy check (not ``!== null``): an unset icon may arrive as null
+        // (JSON/websocket backend), undefined (to_js(None) in the pyodide
+        // backend) or ''.  Only create the icon for a real URL, otherwise an
+        // empty ``<img src="undefined">`` shows as a broken-image dot.
+        if (icon_url) {
             this.set_icon(icon_url, iconsize);
         }
 
@@ -60,6 +69,8 @@ class MenuAction extends Widget {
         if (text !== null) {
             this.set_text(text);
         }
+
+        this._applyIconOnly();
 
         // click handler
         this.element.addEventListener('click', (e) => {
@@ -94,6 +105,7 @@ class MenuAction extends Widget {
      */
     set_text(text) {
         this._label.textContent = text;
+        this._applyIconOnly();
     }
 
     /**
@@ -112,9 +124,31 @@ class MenuAction extends Widget {
     set_icon(url, iconsize = null) {
         this._icon.src = url;
         this._icon.style.display = '';
-        if (iconsize !== null) {
+        this._has_icon = true;
+        if (iconsize) {
             this._icon.style.width = iconsize[0] + 'px';
             this._icon.style.height = iconsize[1] + 'px';
+        }
+        this._applyIconOnly();
+    }
+
+    /**
+     * Applies the icon_only display preference: when icon_only is set and an
+     * icon is present, hide the text label (keeping it as a tooltip for
+     * accessibility); otherwise show the label.  Safe to call before the
+     * label element exists (during construction).
+     * @private
+     */
+    _applyIconOnly() {
+        if (!this._label) return;
+        if (this.icon_only && this._has_icon) {
+            this._label.style.display = 'none';
+            if (this._label.textContent) {
+                this.element.title = this._label.textContent;
+            }
+        } else {
+            this._label.style.display = '';
+            this.element.removeAttribute('title');
         }
     }
 

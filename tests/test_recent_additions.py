@@ -106,3 +106,38 @@ def test_widget_css_consumes_pg_default_font_variables():
     assert "body {" in text or "body{" in text, (
         "Widget.css has the variable names but no body rule "
         "consuming them")
+
+
+# ----- MenuAction icon support --------------------------------
+
+def test_menuaction_supports_icons_and_icon_only():
+    """``MenuAction`` supports an icon (``icon_url``/``iconsize``) as well
+    as text, plus an ``icon_only`` option that shows just the icon where
+    available and falls back to the text label otherwise."""
+    options = WIDGETS["MenuAction"]["options"]
+    for opt in ("icon_url", "iconsize", "icon_only"):
+        assert opt in options, (
+            f"MenuAction.{opt} missing from defs.py options: {options}")
+    # the JS module must actually read icon_only and (robustly) create the
+    # icon only for a truthy URL (matching ToolBarAction)
+    js = (get_static_path() / "modules" / "MenuAction.js").read_text(
+        encoding="utf-8")
+    assert "icon_only" in js, "MenuAction.js does not reference icon_only"
+    assert "if (icon_url)" in js, (
+        "MenuAction.js should guard icon creation with a truthy check "
+        "(if (icon_url)) to avoid a broken <img> for undefined/'' URLs")
+
+
+def test_menubar_add_menu_supports_icons():
+    """``MenuBar.add_menu`` gained an ``options`` parameter so top-level
+    menubar entries can carry an icon (icon_url/iconsize/icon_only), to match
+    leaf MenuAction items and the qt/gtk backends."""
+    params = WIDGETS["MenuBar"]["methods"]["add_menu"]
+    assert params == ["menu", "name", "options"], (
+        f"MenuBar.add_menu params changed: {params}")
+    js = (get_static_path() / "modules" / "MenuBar.js").read_text(
+        encoding="utf-8")
+    for token in ("icon_url", "iconsize", "icon_only"):
+        assert token in js, f"MenuBar.js does not reference {token}"
+    assert "if (icon_url)" in js, (
+        "MenuBar.js should guard icon creation with a truthy check")

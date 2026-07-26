@@ -4,6 +4,18 @@ What's New
 Recent changes — since ``v0.3.3``
 ---------------------------------
 
+Menu icons: ``icon_only`` and top-level menubar icons
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``MenuAction`` already accepted ``icon_url`` / ``iconsize``; it now also
+takes ``icon_only``, which shows just the icon (keeping the text as an
+accessible tooltip) and falls back to the text label when no icon is set.
+``MenuBar.add_menu(menu, name, options)`` gained an optional ``options``
+argument so top-level menubar entries can carry an icon
+(``icon_url`` / ``iconsize`` / ``icon_only``) too.  Icon creation now uses a
+truthy guard (matching ``ToolBarAction``) so an unset icon arriving as
+``null``/``undefined``/``''`` no longer renders a broken image.
+
 TextSource: text no longer clipped when scrolling long files
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

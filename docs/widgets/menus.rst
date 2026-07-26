@@ -25,8 +25,11 @@ Horizontal menu bar, typically placed at the top of a window.
 
    * - Method
      - Description
-   * - ``add_menu(menu, name)``
-     - Add a Menu with a display name.
+   * - ``add_menu(menu, name, options)``
+     - Add a Menu with a display name.  ``options`` (optional) may include
+       ``icon_url`` / ``iconsize`` / ``icon_only`` to show an icon on the
+       top-level entry (``icon_only`` shows just the icon and keeps the name
+       as a tooltip).
    * - ``add_name(name)``
      - Add a menu by name (creates and returns a new Menu).
    * - ``get_menu(name)``
@@ -88,7 +91,7 @@ MenuAction
 
 A single action item inside a Menu.
 
-**Constructor:** ``new Widgets.MenuAction({text, icon_url, iconsize, checkable, name})``
+**Constructor:** ``new Widgets.MenuAction({text, icon_url, iconsize, checkable, name, icon_only})``
 
 **Options:**
 
@@ -97,6 +100,8 @@ A single action item inside a Menu.
 - ``iconsize`` -- icon size in pixels
 - ``checkable`` -- whether the action has a check state
 - ``name`` -- internal name
+- ``icon_only`` -- when an icon is set, show only the icon (the text is kept
+  as an accessible tooltip; falls back to the text if no icon is set)
 
 **Methods:**
 

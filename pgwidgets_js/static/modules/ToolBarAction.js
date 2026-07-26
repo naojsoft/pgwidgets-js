@@ -150,7 +150,7 @@ class ToolBarAction extends Widget {
             this.element.insertBefore(this._icon, this.element.firstChild);
         }
         this._icon.src = url;
-        if (iconsize !== null) {
+        if (iconsize) {
             this._icon.style.width = iconsize[0] + 'px';
             this._icon.style.height = iconsize[1] + 'px';
         }

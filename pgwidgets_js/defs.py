@@ -1010,7 +1010,7 @@ WIDGETS = {
         "args": [],
         "options": [],
         "methods": {
-            "add_menu": ["menu", "name"],
+            "add_menu": ["menu", "name", "options"],
             "add_name": ["name"],
             "get_menu": ["name"],
         },
@@ -1035,7 +1035,8 @@ WIDGETS = {
     "MenuAction": {
         "base": "widget",
         "args": [],
-        "options": ["text", "icon_url", "iconsize", "checkable", "name"],
+        "options": ["text", "icon_url", "iconsize", "checkable", "name",
+                    "icon_only"],
         "methods": {
             "set_text": ["text"],
             "get_text": [],
