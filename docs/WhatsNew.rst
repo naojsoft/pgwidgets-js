@@ -16,6 +16,14 @@ argument so top-level menubar entries can carry an icon
 truthy guard (matching ``ToolBarAction``) so an unset icon arriving as
 ``null``/``undefined``/``''`` no longer renders a broken image.
 
+RadioButton: robust ``group`` handling
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``RadioButton`` now uses a truthy check for the ``group`` option, so an
+unset group arriving as ``null``/``undefined``/``''`` (varies by backend,
+e.g. ``to_js(None)`` under Pyodide) reliably starts a new group instead of
+risking a crash on ``undefined.group``.
+
 TextSource: text no longer clipped when scrolling long files
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

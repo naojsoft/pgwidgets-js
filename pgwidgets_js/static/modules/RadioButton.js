@@ -40,8 +40,11 @@ class RadioButton extends Widget {
         this.element.appendChild(this.label);
 
         // group management
+        // Truthy check (not ``!== null``): an unset group may arrive as null
+        // (JSON/websocket backend), undefined (to_js(None) in the pyodide
+        // backend) or '' -- treat any of those as "start a new group".
         let groupOwner = this.get_option(options, 'group', null);
-        if (groupOwner !== null) {
+        if (groupOwner) {
             // join existing group
             this.group = groupOwner.group;
             this.group.push(this);
