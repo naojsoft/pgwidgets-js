@@ -26,6 +26,10 @@ class TableView extends TreeView {
         super(merged);
         this.element.classList.add('tableview-widget');
 
+        // A TableView drives a spreadsheet-style current-cell cursor: the
+        // arrow/Tab keys move a highlighted cell and editable columns accept
+        // type / Delete / Enter editing.  Pass cell_cursor: false to opt out.
+        this._cellCursor = this.get_option(options, 'cell_cursor', true);
     }
 
     /**

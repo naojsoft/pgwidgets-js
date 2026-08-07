@@ -119,6 +119,18 @@ class TreeView extends Widget {
         this._cellSelection = new Set();
         this._cellAnchor = null;
 
+        // Current-cell cursor (spreadsheet-style keyboard navigation and
+        // editing).  Enabled by TableView (this._cellCursor = true): the
+        // arrow/Tab keys move a highlighted current cell and, on editable
+        // columns, typing / Delete / Enter edit it.  TreeView leaves it off
+        // and keeps its tree-navigation key handling.
+        this._cellCursor = false;
+        this._cursor = null;          // {node, colIndex} | null
+        // When true, every (non-icon, non-widget) column is editable,
+        // regardless of its per-column ``editable`` flag.  Toggled via
+        // set_editable().
+        this._editableAll = false;
+
         // Per-cell / row / column / table colour overrides.  Each
         // entry is ``{fg, bg}`` (with ``fg`` and/or ``bg`` possibly
         // null when only one channel was set).  Looked up at render
@@ -1510,7 +1522,7 @@ class TreeView extends Widget {
             }
 
             let colType = colDef.type;
-            let editable = colDef.editable && colType !== 'icon';
+            let editable = this._colEditable(i);
 
             if (colDef.widget) {
                 // Widget cells host a real DOM input rather than
@@ -1571,7 +1583,19 @@ class TreeView extends Widget {
                 // selected; selection highlight wins.
                 this._applyCellStyle(cell, node, i);
             }
+            // Current-cell cursor highlight (TableView).
+            if (this._cellCursor && this._cursor
+                    && this._cursor.node === node
+                    && this._cursor.colIndex === i) {
+                cell.classList.add('treeview-cell-cursor');
+            }
             cell.addEventListener('click', (e) => {
+                if (this._cellCursor) {
+                    // A click both parks the cursor here and gives the
+                    // widget keyboard focus so the arrow/edit keys work.
+                    this.element.focus();
+                    this._setCursor(node, cell._colIndex);
+                }
                 if (this._isCellMode()) {
                     e.stopPropagation();
                     this._onCellClick(e, node, cell._colIndex);
@@ -2090,6 +2114,13 @@ class TreeView extends Widget {
             }
         }
 
+        // TableView drives a current-cell cursor instead of the tree
+        // navigation below.
+        if (this._cellCursor) {
+            this._onKeyDownCursor(e);
+            return;
+        }
+
         if (this._selection.length === 0) return;
         let visible = this._getVisibleNodes();
         let current = visible.indexOf(this._selection[this._selection.length - 1]);
@@ -2146,6 +2177,190 @@ class TreeView extends Widget {
                                this._pathOfNode(node), null);
             break;
         }
+    }
+
+    // -- Current-cell cursor (TableView) --
+
+    /** Park the cursor on ``(node, colIndex)`` (clamped), repaint the
+     *  highlight, scroll it into view, and (unless ``opts.silent``) fire
+     *  'cell_selected'. */
+    _setCursor(node, colIndex, opts = {}) {
+        if (!node) return;
+        colIndex = Math.max(0, Math.min(this._columns.length - 1, colIndex));
+        this._cursor = { node, colIndex };
+        this._updateCursorDisplay();
+        if (opts.scroll !== false) this._scrollToNode(node);
+        if (!opts.silent) {
+            // Match the 'cell_selected' payload used elsewhere: a list of
+            // {path, col_key, value} (here just the one cursor cell).
+            let colDef = this._columns[colIndex];
+            let colKey = colDef ? colDef.key : null;
+            let value = (node.values != null && typeof node.values === 'object'
+                         && !Array.isArray(node.values) && colKey in node.values)
+                ? node.values[colKey] : '';
+            this.make_callback('cell_selected',
+                [{ path: this._pathOfNode(node), col_key: colKey, value }]);
+        }
+    }
+
+    /** Repaint the cursor highlight on the visible cells without a full
+     *  re-render. */
+    _updateCursorDisplay() {
+        for (let row of this._body.querySelectorAll('.treeview-row')) {
+            let node = row._node;
+            for (let cell of row.querySelectorAll('.treeview-cell')) {
+                let isCur = this._cursor && this._cursor.node === node
+                    && this._cursor.colIndex === cell._colIndex;
+                cell.classList.toggle('treeview-cell-cursor', !!isCur);
+            }
+        }
+    }
+
+    /** The DOM cell element for ``(node, colIndex)``, or null. */
+    _cellElement(node, colIndex) {
+        if (!node || !node.element) return null;
+        for (let cell of node.element.querySelectorAll('.treeview-cell')) {
+            if (cell._colIndex === colIndex) return cell;
+        }
+        return null;
+    }
+
+    /** True if the column at ``colIndex`` accepts inline editing. */
+    _colEditable(colIndex) {
+        let colDef = this._columns[colIndex];
+        return !!(colDef && (colDef.editable || this._editableAll)
+                  && colDef.type !== 'icon' && !colDef.widget);
+    }
+
+    /** Make every text column editable (tf true) or restore per-column
+     *  editability (tf false).  A table-wide shortcut for the per-column
+     *  ``editable`` flag. */
+    set_editable(tf) {
+        this._editableAll = !!tf;
+        this._renderAll();
+    }
+
+    /** Keydown handling when the current-cell cursor is active. */
+    _onKeyDownCursor(e) {
+        let visible = this._getVisibleNodes();
+        if (visible.length === 0) return;
+        // Ensure the cursor points at a live, visible row.
+        let fresh = false;
+        if (!this._cursor || visible.indexOf(this._cursor.node) < 0) {
+            this._setCursor(visible[0], 0, { silent: true, scroll: false });
+            fresh = true;
+        }
+        let rowIdx = visible.indexOf(this._cursor.node);
+        let colIdx = this._cursor.colIndex;
+
+        // First navigation keystroke just reveals the cursor (at the
+        // top-left) rather than also moving it.
+        if (fresh && ['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight',
+                      'Tab'].includes(e.key)) {
+            e.preventDefault();
+            this._setCursor(visible[rowIdx], colIdx);
+            return;
+        }
+
+        switch (e.key) {
+        case 'ArrowDown':
+            e.preventDefault(); this._moveCursorTo(visible, rowIdx + 1, colIdx);
+            break;
+        case 'ArrowUp':
+            e.preventDefault(); this._moveCursorTo(visible, rowIdx - 1, colIdx);
+            break;
+        case 'ArrowRight':
+            e.preventDefault(); this._moveCursorTo(visible, rowIdx, colIdx + 1);
+            break;
+        case 'ArrowLeft':
+            e.preventDefault(); this._moveCursorTo(visible, rowIdx, colIdx - 1);
+            break;
+        case 'Tab':
+            e.preventDefault();
+            this._moveCursorTo(visible, rowIdx, colIdx + (e.shiftKey ? -1 : 1));
+            break;
+        case 'Enter':
+        case 'F2':
+            // Edit the existing contents in place (caret editing).
+            e.preventDefault();
+            this._editCursorCell();
+            break;
+        case 'Delete':
+        case 'Backspace':
+            e.preventDefault();
+            this._clearCursorCell();
+            break;
+        default:
+            // A printable character starts an edit pre-filled with it,
+            // replacing the cell's prior contents.
+            if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                e.preventDefault();
+                this._editCursorCell({ prefill: e.key, enterMode: true });
+            }
+            break;
+        }
+    }
+
+    /** Move the cursor to ``(rowIdx, colIdx)`` (clamped).  When the row
+     *  changes and we're in a row-selection mode, keep the row selection
+     *  in lockstep so 'selected' consumers still fire. */
+    _moveCursorTo(visible, rowIdx, colIdx) {
+        rowIdx = Math.max(0, Math.min(visible.length - 1, rowIdx));
+        colIdx = Math.max(0, Math.min(this._columns.length - 1, colIdx));
+        let node = visible[rowIdx];
+        let rowChanged = !this._cursor || node !== this._cursor.node;
+        this._setCursor(node, colIdx);
+        if (rowChanged && (this._selectionMode === 'single'
+                           || this._selectionMode === 'multiple')) {
+            this._selection = [node];
+            this._updateSelectionDisplay();
+            this.make_callback('selected', this.get_selected());
+        }
+    }
+
+    /** Begin editing the cursor cell.  ``opts.prefill`` seeds the editor
+     *  (type-to-replace); otherwise the existing value is loaded (F2). */
+    _editCursorCell(opts = {}) {
+        if (!this._cursor) return;
+        let { node, colIndex } = this._cursor;
+        if (!this._colEditable(colIndex)) return;
+        let cell = this._cellElement(node, colIndex);
+        if (cell) this._startEdit(node, colIndex, cell, opts);
+    }
+
+    /** Clear the cursor cell's contents (Delete/Backspace), firing
+     *  'cell_edited'. */
+    _clearCursorCell() {
+        if (!this._cursor) return;
+        let { node, colIndex } = this._cursor;
+        if (!this._colEditable(colIndex)) return;
+        let colDef = this._columns[colIndex];
+        let colKey = colDef.key;
+        let oldValue = (node.values != null && typeof node.values === 'object'
+                        && !Array.isArray(node.values) && colKey in node.values)
+            ? node.values[colKey] : '';
+        if (oldValue == null) oldValue = '';
+        let newValue = (colDef.type === 'boolean') ? false : '';
+        if (node.values == null) node.values = {};
+        let changed = node.values[colKey] !== newValue;
+        node.values[colKey] = newValue;
+        let cell = this._cellElement(node, colIndex);
+        if (cell) this._restoreCell(cell, newValue);
+        if (changed) {
+            this.make_callback('cell_edited',
+                this._pathOfNode(node), colKey, oldValue, newValue);
+        }
+    }
+
+    /** Commit the open editor and move the cursor by ``(dRow, dCol)``. */
+    _commitEditAndMove(dRow, dCol) {
+        this._commitEdit();
+        this.element.focus();
+        if (!this._cursor) return;
+        let visible = this._getVisibleNodes();
+        let rowIdx = visible.indexOf(this._cursor.node);
+        if (rowIdx < 0) return;
+        this._moveCursorTo(visible, rowIdx + dRow, this._cursor.colIndex + dCol);
     }
 
     _scrollToNode(node) {
@@ -2641,7 +2856,7 @@ class TreeView extends Widget {
 
     // -- Inline cell editing --
 
-    _startEdit(node, colIndex, cell) {
+    _startEdit(node, colIndex, cell, opts = {}) {
         if (this._editor) this._commitEdit();
 
         let colKey = this._columns[colIndex].key;
@@ -2655,27 +2870,67 @@ class TreeView extends Widget {
         let input = document.createElement('input');
         input.type = 'text';
         input.className = 'treeview-cell-editor';
-        input.value = String(oldValue);
 
         cell.textContent = '';
         cell.appendChild(input);
         input.focus();
-        input.select();
+        if (opts.prefill != null) {
+            // Type-to-replace: seed with the typed character, caret at end.
+            input.value = String(opts.prefill);
+            let n = input.value.length;
+            input.setSelectionRange(n, n);
+        } else {
+            input.value = String(oldValue);
+            input.select();
+        }
 
         this._editor = input;
-        this._editInfo = { node, colIndex, oldValue, cell };
+        this._editInfo = { node, colIndex, oldValue, cell,
+                           enterMode: !!opts.enterMode };
 
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                this._commitEdit();
-            } else if (e.key === 'Escape') {
-                e.preventDefault();
-                this._cancelEdit();
-            }
-            e.stopPropagation();
-        });
+        input.addEventListener('keydown', (e) => this._onEditorKeyDown(e));
         input.addEventListener('blur', () => this._commitEdit());
+    }
+
+    /** Keydown inside the inline cell editor.  In cursor mode, Tab and
+     *  Enter (and, when the edit began by typing, the arrow keys) commit
+     *  and move the cursor; Esc cancels. */
+    _onEditorKeyDown(e) {
+        let info = this._editInfo;
+        let cursor = this._cellCursor;
+        switch (e.key) {
+        case 'Enter':
+            e.preventDefault();
+            if (cursor) this._commitEditAndMove(1, 0);   // commit + down
+            else this._commitEdit();
+            break;
+        case 'Escape':
+            e.preventDefault();
+            this._cancelEdit();
+            if (cursor) this.element.focus();
+            break;
+        case 'Tab':
+            if (cursor) {
+                e.preventDefault();
+                this._commitEditAndMove(0, e.shiftKey ? -1 : 1);
+            }
+            break;
+        case 'ArrowUp':
+        case 'ArrowDown':
+        case 'ArrowLeft':
+        case 'ArrowRight':
+            // "Enter mode" (edit begun by typing/Delete): arrows commit and
+            // move, like a spreadsheet.  "Edit mode" (F2/double-click): let
+            // the arrows move the caret within the text instead.
+            if (cursor && info && info.enterMode) {
+                e.preventDefault();
+                let d = { ArrowUp: [-1, 0], ArrowDown: [1, 0],
+                          ArrowLeft: [0, -1], ArrowRight: [0, 1] }[e.key];
+                this._commitEditAndMove(d[0], d[1]);
+            }
+            break;
+        }
+        e.stopPropagation();
     }
 
     _commitEdit() {

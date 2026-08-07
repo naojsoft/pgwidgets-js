@@ -253,6 +253,13 @@
     color: white;
 }
 
+/* Current-cell cursor (TableView spreadsheet-style navigation). Drawn as
+   an inset outline so it reads on top of selection/row backgrounds. */
+.treeview-cell-cursor {
+    outline: 2px solid #4a90e2;
+    outline-offset: -2px;
+}
+
 /* ── Inline cell editor ─────────────────────────────── */
 
 .treeview-cell-editable {

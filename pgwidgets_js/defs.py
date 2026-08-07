@@ -767,6 +767,7 @@ WIDGETS = {
                     "sortable", "allow_text_selection"],
         "methods": {
             "set_columns": ["columns"],
+            "set_editable": ["tf"],
             "set_tree": ["tree"],
             "add_tree": ["tree", "parent"],
             "update_tree": ["tree"],
@@ -841,6 +842,7 @@ WIDGETS = {
                     "sortable", "allow_text_selection"],
         "methods": {
             "set_columns": ["columns"],
+            "set_editable": ["tf"],
             "set_rows": ["rows"],
             "set_data": ["data"],
             "clear": [],
