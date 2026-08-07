@@ -768,6 +768,7 @@ WIDGETS = {
         "methods": {
             "set_columns": ["columns"],
             "set_editable": ["tf"],
+            "set_header_font": ["family", "size", "weight", "style"],
             "set_tree": ["tree"],
             "add_tree": ["tree", "parent"],
             "update_tree": ["tree"],
@@ -843,6 +844,7 @@ WIDGETS = {
         "methods": {
             "set_columns": ["columns"],
             "set_editable": ["tf"],
+            "set_header_font": ["family", "size", "weight", "style"],
             "set_rows": ["rows"],
             "set_data": ["data"],
             "clear": [],

@@ -48,7 +48,9 @@
 .treeview-header-cell {
     position: relative;
     padding: 4px 6px;
-    font-weight: 600;
+    /* non-bold by default (compact, matching the qt backend); use
+       set_header_font() to opt into a bold/other header font */
+    font-weight: normal;
     overflow: hidden;
     white-space: nowrap;
     border-right: 1px solid #ddd;
@@ -90,7 +92,13 @@
     flex-shrink: 0;
     font-size: 10px;
     color: #555;
-    margin-right: 6px;
+}
+
+/* Only reserve the gap when a sort arrow is actually shown, so unsorted
+   headers don't carry extra right-side space and stay aligned with the
+   body cells. */
+.treeview-sort-indicator:not(:empty) {
+    margin-left: 6px;
 }
 
 .treeview-resize-handle {

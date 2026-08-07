@@ -130,6 +130,8 @@ class TreeView extends Widget {
         // regardless of its per-column ``editable`` flag.  Toggled via
         // set_editable().
         this._editableAll = false;
+        // optional header font override (set_header_font); null = stylesheet
+        this._headerFont = null;
 
         // Per-cell / row / column / table colour overrides.  Each
         // entry is ``{fg, bg}`` (with ``fg`` and/or ``bg`` possibly
@@ -608,6 +610,31 @@ class TreeView extends Widget {
         }
 
         this._updateSortIndicators();
+        this._applyHeaderFont();
+    }
+
+    /** Set the header row's font.  ``family``/``size``/``weight``/``style``
+     *  are CSS values (size may be a number of px or a CSS length string);
+     *  any that are null/undefined are left at the stylesheet default.
+     *  Headers are non-bold by default -- pass weight 'bold' to embolden. */
+    set_header_font(family, size, weight, style) {
+        this._headerFont = { family, size, weight, style };
+        this._applyHeaderFont();
+    }
+
+    _applyHeaderFont() {
+        let f = this._headerFont;
+        if (!f) return;
+        for (let cell of this._header.querySelectorAll(
+                '.treeview-header-cell')) {
+            if (f.family) cell.style.fontFamily = f.family;
+            if (f.size != null) {
+                cell.style.fontSize = (typeof f.size === 'number')
+                    ? f.size + 'px' : f.size;
+            }
+            if (f.weight) cell.style.fontWeight = f.weight;
+            if (f.style) cell.style.fontStyle = f.style;
+        }
     }
 
     _setupColumnResize(handle, colIndex) {
@@ -1241,10 +1268,15 @@ class TreeView extends Widget {
         measure.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font:inherit;';
         this.element.appendChild(measure);
 
+        // Header reserve: 12px for the cell's own padding (matching the
+        // data cells below), plus room for the sort arrow + its gap only
+        // when the table is actually sortable -- otherwise a non-sortable
+        // table would carry ~18px of dead space in every column.
+        let headerPad = this._sortable ? 30 : 12;
         let widths = new Array(numCols).fill(0);
         for (let i = 0; i < numCols; i++) {
             measure.textContent = this._columns[i].label;
-            widths[i] = Math.max(widths[i], measure.offsetWidth + 30);
+            widths[i] = Math.max(widths[i], measure.offsetWidth + headerPad);
         }
         this._walkNodes(this._root, (node) => {
             for (let i = 0; i < numCols; i++) {
