@@ -4,6 +4,27 @@ What's New
 Recent changes — since ``v0.3.3``
 ---------------------------------
 
+TableView: spreadsheet-style cell cursor and editing
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``TableView`` gained a current-cell cursor navigated with the arrow keys
+and Tab.  ``set_editable(tf)`` makes every text column editable in one
+call.  With editing on, typing a printable character starts an edit
+pre-filled with that character (replacing the cell), Enter or F2 edits
+the existing contents, and Delete/Backspace clears the cell.  While
+editing, the arrow keys commit and move in that direction (Excel-style),
+Tab commits and moves right, Enter commits and moves down, and Esc
+cancels.
+
+TableView/TreeView: header font and more compact tables
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+New ``set_header_font(family, size, weight, style)`` sets the
+column-header font.  Headers are now non-bold by default for a more
+compact table (pass a bold weight to embolden), and
+``set_optimal_column_widths`` only reserves sort-indicator padding on
+sortable columns, so unsorted/non-sortable columns pack more tightly.
+
 Menu icons: ``icon_only`` and top-level menubar icons
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
