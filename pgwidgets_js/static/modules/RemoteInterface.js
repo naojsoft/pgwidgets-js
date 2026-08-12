@@ -16,6 +16,8 @@ import {Callback} from "./Callback.js";
  *   {type: "reconstruct-end", id}             End UI reconstruction
  *   {type: "create", id, class, args}         Create a widget, returns wid
  *   {type: "call", id, wid, method, args}     Call a method, returns result
+ *   {type: "batch", id, calls: [{wid,         Apply many calls as a unit,
+ *          method, args}, ...]}               rendering each widget once
  *   {type: "listen", id, wid, action}         Register for a callback
  *   {type: "unlisten", id, wid, action}       Remove a callback listener
  *   [ msg, msg, ... ]                         Batch of messages
@@ -395,6 +397,8 @@ class RemoteInterface {
                 return this._handleCreate(msg);
             case "call":
                 return this._handleCall(msg);
+            case "batch":
+                return this._handleBatch(msg);
             case "listen":
                 return this._handleListen(msg);
             case "unlisten":
@@ -744,6 +748,54 @@ class RemoteInterface {
         if (result !== undefined) {
             response.value = this._serializeValue(result);
         }
+        return response;
+    }
+
+    /**
+     * Handle a batch message: a list of calls applied as a unit.
+     *
+     * Widgets whose rendering is expensive (TreeView and friends
+     * expose ``_suspendRender``) are suspended for the duration, so a
+     * burst of cell writes or colour overrides costs one re-render
+     * instead of one per call.  Rendering is resumed in a finally, so a
+     * failing call can't leave a widget stuck not drawing.
+     *
+     * Errors are collected rather than aborting the batch: the Python
+     * side has already applied every one of these to its model, so
+     * stopping halfway would leave the browser diverged.  Any errors
+     * come back in the single result.
+     * @private
+     */
+    _handleBatch(msg) {
+        let calls = msg.calls || [];
+        let suspended = [];
+        let errors = [];
+        try {
+            for (let c of calls) {
+                let widget = Callback._registry.get(c.wid);
+                if (widget && typeof widget._suspendRender === 'function'
+                        && !suspended.includes(widget)) {
+                    widget._suspendRender(true);
+                    suspended.push(widget);
+                }
+            }
+            for (let c of calls) {
+                let r = this._handleCall({type: "call", wid: c.wid,
+                                          method: c.method,
+                                          args: c.args, silent: c.silent});
+                if (r && r.type === "error") errors.push(r.error);
+            }
+        } finally {
+            for (let widget of suspended) {
+                try {
+                    widget._suspendRender(false);
+                } catch (e) {
+                    errors.push(String(e && e.message || e));
+                }
+            }
+        }
+        let response = {type: "result", id: msg.id};
+        if (errors.length > 0) response.value = {errors: errors};
         return response;
     }
 

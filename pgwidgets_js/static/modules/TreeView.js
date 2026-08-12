@@ -120,11 +120,14 @@ class TreeView extends Widget {
         this._cellAnchor = null;
 
         // Current-cell cursor (spreadsheet-style keyboard navigation and
-        // editing).  Enabled by TableView (this._cellCursor = true): the
-        // arrow/Tab keys move a highlighted current cell and, on editable
-        // columns, typing / Delete / Enter edit it.  TreeView leaves it off
-        // and keeps its tree-navigation key handling.
-        this._cellCursor = false;
+        // editing): the arrow/Tab keys move a highlighted current cell
+        // and, on editable columns, typing / Delete / Enter edit it.
+        // Off by default on a TreeView, which keeps its tree-navigation
+        // key handling instead; TableView defaults it on.  Pass
+        // cell_cursor: true to opt a TreeView in -- worthwhile when the
+        // tree carries editable columns, since dblclick is otherwise the
+        // only way to start an edit.
+        this._cellCursor = this.get_option(options, 'cell_cursor', false);
         this._cursor = null;          // {node, colIndex} | null
         // When true, every (non-icon, non-widget) column is editable,
         // regardless of its per-column ``editable`` flag.  Toggled via
@@ -410,42 +413,62 @@ class TreeView extends Widget {
      *  override.  Colours are CSS strings — hex (``'#ff0000'``),
      *  named (``'red'``), or ``rgb()``/``rgba()``. */
     set_cell_color(path, col_key, fg = null, bg = null, bold = null) {
+        this._setCellStyle(path, col_key, fg, bg, bold);
+        this._renderAll();
+    }
+
+    /** @private Record one cell override without re-rendering.  Shared
+     *  by set_cell_color and the batched set_colors, so a single call
+     *  and a batched one behave identically. */
+    _setCellStyle(path, col_key, fg, bg, bold) {
         let node = this._nodeAtPath(path);
-        if (!node) return;
-        if (this._columnIndex(col_key) < 0) return;
+        if (!node) return false;
+        if (this._columnIndex(col_key) < 0) return false;
         let key = JSON.stringify(this._pathOfNode(node)) + '|' + col_key;
         if (fg == null && bg == null && bold == null) {
             this._cellStyles.delete(key);
         } else {
             this._cellStyles.set(key, {fg, bg, bold});
         }
-        this._renderAll();
+        return true;
     }
 
     /** Set foreground / background colour (and optional ``bold``)
      *  on a whole row. */
     set_row_color(path, fg = null, bg = null, bold = null) {
+        this._setRowStyle(path, fg, bg, bold);
+        this._renderAll();
+    }
+
+    /** @private Record one row override without re-rendering. */
+    _setRowStyle(path, fg, bg, bold) {
         let node = this._nodeAtPath(path);
-        if (!node) return;
+        if (!node) return false;
         let key = JSON.stringify(this._pathOfNode(node));
         if (fg == null && bg == null && bold == null) {
             this._rowStyles.delete(key);
         } else {
             this._rowStyles.set(key, {fg, bg, bold});
         }
-        this._renderAll();
+        return true;
     }
 
     /** Set foreground / background colour (and optional ``bold``)
      *  on a whole column. */
     set_column_color(col_key, fg = null, bg = null, bold = null) {
-        if (this._columnIndex(col_key) < 0) return;
+        this._setColumnStyle(col_key, fg, bg, bold);
+        this._renderAll();
+    }
+
+    /** @private Record one column override without re-rendering. */
+    _setColumnStyle(col_key, fg, bg, bold) {
+        if (this._columnIndex(col_key) < 0) return false;
         if (fg == null && bg == null && bold == null) {
             this._columnStyles.delete(col_key);
         } else {
             this._columnStyles.set(col_key, {fg, bg, bold});
         }
-        this._renderAll();
+        return true;
     }
 
     /** Set foreground / background colour (and optional ``bold``)
@@ -484,6 +507,60 @@ class TreeView extends Widget {
     }
 
     /** Clear *all* colour overrides at every level. */
+    /**
+     * Apply many colour overrides in one go, rendering once at the end.
+     *
+     * Each ``set_*_color`` call re-renders the whole view, so restoring
+     * or refreshing a few hundred coloured cells one call at a time is
+     * both slow and visibly iterative — and over the websocket driver
+     * each call is a separate round-trip as well.  This takes the lot
+     * in a single call.
+     *
+     * @param {Object} spec
+     * @param {Array}  [spec.cells]   - {path, col_key, fg, bg, bold}
+     * @param {Array}  [spec.rows]    - {path, fg, bg, bold}
+     * @param {Array}  [spec.columns] - {col_key, fg, bg, bold}
+     * @param {Object} [spec.table]   - {fg, bg, bold}
+     * @param {boolean} [spec.clear]  - drop all existing overrides
+     *   first, so the spec becomes the complete colour state.
+     *
+     * As with the single-cell calls, an entry whose fg/bg/bold are all
+     * null removes that override.  Entries naming a path or column that
+     * doesn't exist are skipped.
+     */
+    set_colors(spec) {
+        if (spec == null || typeof spec !== 'object') return;
+        if (spec.clear) {
+            this._cellStyles.clear();
+            this._rowStyles.clear();
+            this._columnStyles.clear();
+            this._tableStyle = null;
+        }
+        for (let e of (spec.cells || [])) {
+            this._setCellStyle(e.path, e.col_key,
+                               e.fg ?? null, e.bg ?? null, e.bold ?? null);
+        }
+        for (let e of (spec.rows || [])) {
+            this._setRowStyle(e.path, e.fg ?? null, e.bg ?? null,
+                              e.bold ?? null);
+        }
+        for (let e of (spec.columns || [])) {
+            this._setColumnStyle(e.col_key, e.fg ?? null, e.bg ?? null,
+                                 e.bold ?? null);
+        }
+        if (spec.table !== undefined) {
+            let t = spec.table;
+            if (t == null || (t.fg == null && t.bg == null
+                              && t.bold == null)) {
+                this._tableStyle = null;
+            } else {
+                this._tableStyle = {fg: t.fg ?? null, bg: t.bg ?? null,
+                                    bold: t.bold ?? null};
+            }
+        }
+        this._renderAll();
+    }
+
     clear_all_colors() {
         this._cellStyles.clear();
         this._rowStyles.clear();
@@ -779,20 +856,156 @@ class TreeView extends Widget {
     }
 
     /**
-     * Replace the tree, preserving selection wherever possible.
-     * Selected paths that still resolve in the new tree stay
-     * selected; paths that no longer exist are dropped.
+     * Bring the tree to `tree`, changing only what actually differs.
      *
-     * (Phase 1: structurally a set_tree + selection restore.  A
-     * future implementation can compute the diff between current
-     * and new trees and apply minimal updates.)
+     * Unlike set_tree, which throws the rows away and rebuilds them,
+     * this walks the existing nodes and applies the minimal set of
+     * additions, removals and cell writes.  Surviving nodes keep their
+     * identity, so expansion state, selection, per-cell colours, the
+     * scroll position and any open cell editor all survive an update —
+     * which is what makes this usable on a repeating refresh.
+     *
+     * Nodes that disappear are dropped from the selection (and their
+     * cell/row colour overrides are discarded, so they don't linger for
+     * paths that no longer exist).  As before, the 'selected' callback
+     * fires only if the selection actually changed.
      *
      * @param {Object} tree
      */
     update_tree(tree) {
-        let paths = this._selection.map(n => this._pathOfNode(n));
-        this.set_tree(tree);
-        this._restoreSelectionByPaths(paths);
+        if (this._root.children.size === 0) {
+            this.set_tree(tree);        // nothing to diff against
+            return;
+        }
+        let selBefore = this._selection.length;
+        let changed = this._diffApply(this._root, tree || {}, []);
+        if (changed > 0) {
+            this._applySort();
+            this._renderAll();
+        }
+        if (this._selection.length !== selBefore) {
+            this.make_callback('selected', this.get_selected());
+        }
+    }
+
+    /**
+     * Bring a flat table to `data`, changing only what differs — the
+     * set_data counterpart of update_tree.  Rows are matched by
+     * position (the same synthetic ``row0``, ``row1``, ... keys
+     * set_data assigns), so a changed cell is a cell write rather than
+     * a wholesale rebuild, and selection / colours / scroll survive.
+     *
+     * @param {Array} data
+     */
+    update_data(data) {
+        if (this._root.children.size === 0) {
+            this.set_data(data);
+            return;
+        }
+        let spec = {};
+        for (let i = 0; i < data.length; i++) {
+            spec['row' + i] = this._rowValues(data[i]);
+        }
+        let selBefore = this._selection.length;
+        let changed = this._diffApply(this._root, spec, []);
+        if (changed > 0) {
+            this._applySort();
+            this._renderAll();
+        }
+        if (this._selection.length !== selBefore) {
+            this.make_callback('selected', this.get_selected());
+        }
+    }
+
+    /**
+     * @private Recursively reconcile `parent`'s children with `spec`,
+     * a dict-shaped description in the same form set_tree takes.
+     * Returns the number of changes applied (0 means "nothing to
+     * re-render").
+     */
+    _diffApply(parent, spec, path) {
+        let changed = 0;
+        let incoming = new Map();
+        if (spec && typeof spec === 'object') {
+            for (let [k, v] of Object.entries(spec)) {
+                incoming.set(String(k), v);
+            }
+        }
+
+        // Gone: remove the node and everything under it.
+        for (let key of Array.from(parent.children.keys())) {
+            if (incoming.has(key)) continue;
+            let node = parent.children.get(key);
+            this._dropFromSelection(node);
+            this._dropStylesUnder(path.concat(key));
+            parent.children.delete(key);
+            parent.sortedView = null;
+            changed += 1;
+        }
+
+        for (let [key, data] of incoming) {
+            let node = parent.children.get(key);
+            if (!node) {
+                this._addNodeFromDict(parent, key, data);
+                parent.sortedView = null;
+                changed += 1;
+                continue;
+            }
+            // Same classification the bulk loader uses, so a node that
+            // gains or loses children is handled by the recursion
+            // rather than needing a special case.
+            let {values, childData} = this._splitNodeData(data);
+            if (this._mergeValues(node, values)) changed += 1;
+            changed += this._diffApply(node, childData || {},
+                                       path.concat(key));
+        }
+        return changed;
+    }
+
+    /**
+     * @private Merge `values` into a node's own column values.  Keys
+     * absent from `values` are dropped, so an update is a true
+     * replacement of the row rather than an accumulation.  Returns
+     * true if anything changed.
+     */
+    _mergeValues(node, values) {
+        if (values == null) return false;
+        if (node.values == null) node.values = {};
+        let cur = node.values;
+        let changed = false;
+        for (let [k, v] of Object.entries(values)) {
+            if (cur[k] !== v) {
+                cur[k] = v;
+                changed = true;
+            }
+        }
+        for (let k of Object.keys(cur)) {
+            if (!(k in values)) {
+                delete cur[k];
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
+    /**
+     * @private Discard cell and row colour overrides for `path` and
+     * everything beneath it.  Without this, removing a node would leave
+     * style entries keyed to a path that no longer exists, which would
+     * then be inherited by any future node re-using that key.
+     */
+    _dropStylesUnder(path) {
+        let self = JSON.stringify(path);
+        let descendant = self.slice(0, -1) + ',';
+        let hit = (pathKey) => (pathKey === self
+                                || pathKey.startsWith(descendant));
+        for (let k of Array.from(this._rowStyles.keys())) {
+            if (hit(k)) this._rowStyles.delete(k);
+        }
+        for (let k of Array.from(this._cellStyles.keys())) {
+            let cut = k.lastIndexOf('|');
+            if (cut > 0 && hit(k.slice(0, cut))) this._cellStyles.delete(k);
+        }
     }
 
     /**
@@ -845,24 +1058,32 @@ class TreeView extends Widget {
      * internally so paths and reconstruction work uniformly.
      * @param {Array} data
      */
+    /**
+     * Normalise one flat row into a column-key → value object.  Rows may
+     * be positional arrays, dicts, or a bare primitive (single column).
+     * Shared by set_data and update_data.
+     * @private
+     */
+    _rowValues(row) {
+        if (Array.isArray(row)) {
+            let values = {};
+            for (let c = 0; c < this._columns.length && c < row.length; c++) {
+                values[this._columns[c].key] = row[c];
+            }
+            return values;
+        }
+        if (row != null && typeof row === 'object') return row;
+        let values = {};
+        if (this._columns.length > 0) {
+            values[this._columns[0].key] = row;
+        }
+        return values;
+    }
+
     set_data(data) {
         this.clear();
         for (let i = 0; i < data.length; i++) {
-            let row = data[i];
-            let values;
-            if (Array.isArray(row)) {
-                values = {};
-                for (let c = 0; c < this._columns.length && c < row.length; c++) {
-                    values[this._columns[c].key] = row[c];
-                }
-            } else if (row != null && typeof row === 'object') {
-                values = row;
-            } else {
-                values = {};
-                if (this._columns.length > 0) {
-                    values[this._columns[0].key] = row;
-                }
-            }
+            let values = this._rowValues(data[i]);
             let key = 'row' + i;
             let node = this._makeNode({
                 key: key, values: values, depth: 0,
@@ -1371,7 +1592,18 @@ class TreeView extends Widget {
      *   - else (all primitives) → leaf (the dict IS the values)
      * @private
      */
-    _addNodeFromDict(parent, key, data) {
+    /**
+     * Split a dict-shaped node description into its own column values
+     * and its child entries, applying the leaf/interior rules above.
+     * Factored out of _addNodeFromDict so the incremental update path
+     * (update_tree / update_data) classifies nodes identically to the
+     * bulk load path -- the two must not drift.
+     * @private
+     * @returns {{values: (Object|null), childData: (Object|null)}}
+     *   childData is null for a leaf, an object (possibly empty) for an
+     *   interior.
+     */
+    _splitNodeData(data) {
         let values, childData;
         if (data == null) {
             values = null;
@@ -1419,6 +1651,11 @@ class TreeView extends Widget {
             }
         }
 
+        return {values, childData};
+    }
+
+    _addNodeFromDict(parent, key, data) {
+        let {values, childData} = this._splitNodeData(data);
         let isInterior = childData !== null;
         let node = this._makeNode({
             key: key,
@@ -1439,7 +1676,40 @@ class TreeView extends Widget {
 
     // -- Internal: rendering --
 
+    /**
+     * Suspend (or resume) rendering.  A burst of updates -- a few
+     * hundred cell writes or colour overrides -- would otherwise
+     * re-render the whole view once per call, which is both slow and
+     * visibly iterative.  Callers that apply many changes at once wrap
+     * them in ``_suspendRender(true) ... _suspendRender(false)``;
+     * resuming renders once if anything was suppressed.
+     *
+     * Nests, so an outer batch keeps control until it finishes.
+     * @param {boolean} tf
+     */
+    _suspendRender(tf) {
+        if (tf) {
+            this._renderDepth = (this._renderDepth || 0) + 1;
+            return;
+        }
+        if (!this._renderDepth) return;
+        this._renderDepth -= 1;
+        if (this._renderDepth === 0 && this._renderPending) {
+            this._renderPending = false;
+            this._renderAll();
+        }
+    }
+
     _renderAll() {
+        if (this._renderDepth) {
+            // inside a batch -- coalesce into one render on resume
+            this._renderPending = true;
+            return;
+        }
+        return this._renderAllNow();
+    }
+
+    _renderAllNow() {
         // Pre-count visible rows so _gridTemplate can size the
         // row-number gutter to the largest number we'll display.
         // Set the cache *before* the create-row loop so per-row

@@ -269,11 +269,19 @@ matter how the visible tree is sorted.
 
 **Constructor:** ``new Widgets.TreeView({columns, show_header,
 selection_mode, alternate_row_colors, show_grid, show_row_numbers,
-sortable, allow_text_selection})``
+sortable, allow_text_selection, cell_cursor})``
 
 ``selection_mode`` is one of ``"single"`` / ``"multiple"`` (rows)
 or ``"single-cell"`` / ``"multiple-cell"`` (cells).  See
 "Cell-level selection" below.
+
+``cell_cursor`` (default ``false`` on a TreeView, ``true`` on a
+TableView) enables the spreadsheet-style current-cell cursor: the
+arrow and Tab keys move a highlighted cell, and on an ``editable``
+column typing replaces the cell, Delete clears it, and Enter opens
+it for editing.  Turn it on for a tree with editable columns --
+otherwise double-click is the only way to start an edit.  Turning
+it on replaces the tree's own arrow-key navigation.
 
 **Column descriptors:** each column is a string (label only) or an
 object with the following keys:
@@ -290,7 +298,9 @@ object with the following keys:
   depends on type: numeric → right, boolean / icon → center,
   otherwise left.
 - ``editable`` -- whether cells in the column can be edited via
-  double-click.
+  double-click (or, with ``cell_cursor`` on, from the keyboard).
+  Editable cells are marked with a dotted underline and an I-beam
+  cursor so they are distinguishable from read-only ones.
 - ``icon_size`` -- pixel size for icon columns (default 16).
 - ``colwidth`` -- initial column width.  Numbers are pixels;
   strings pass through as CSS grid track values (e.g.
@@ -347,7 +357,18 @@ supplies no value for it, so most interiors need no
        whose paths still resolve survive; vanished paths are
        dropped.
    * - ``update_tree(tree)``
-     - Replace the tree but preserve selections by path.
+     - Bring the tree to `tree`, changing only what differs.  Walks the
+       existing nodes and applies the minimal set of additions,
+       removals and cell writes, so surviving rows keep their identity
+       and with it their expansion state, selection, per-cell colours,
+       scroll position and any open cell editor.  This is what makes a
+       repeating refresh usable; ``set_tree`` rebuilds and loses all of
+       it.  Colour overrides for removed nodes are discarded.
+   * - ``update_data(data)``
+     - The flat-table counterpart of ``update_tree``: rows are matched
+       by position and only the differing cells are written.  On a
+       TableView it is also spelled ``update_rows(rows)``, mirroring
+       ``set_rows``.
    * - ``set_data(data)``
      - Flat-table data.  Each row is a dict (preferred) or an
        array; arrays are mapped to column keys in order.  Synthetic
@@ -404,6 +425,16 @@ supplies no value for it, so most interiors need no
      - Toggle grid lines, row numbers, and click-to-sort.
    * - ``set_column_editable(col_key, tf)``
      - Make a column editable.
+   * - ``set_colors(spec)``
+     - Apply many overrides at once, rendering once at the end.
+       ``spec`` is ``{cells: [{path, col_key, fg, bg, bold}, ...],
+       rows: [{path, ...}], columns: [{col_key, ...}], table: {...},
+       clear: bool}``.  Every single-cell call re-renders the whole
+       view, so use this whenever more than a handful of cells change
+       at once -- restoring a few hundred coloured cells one call at a
+       time is slow and visibly iterative.  ``clear`` drops the
+       existing overrides first, making the spec the complete colour
+       state.
    * - ``set_cell_color(path, col_key, fg, bg, bold)`` /
        ``set_row_color(path, fg, bg, bold)`` /
        ``set_column_color(col_key, fg, bg, bold)`` /
@@ -519,7 +550,7 @@ and the same column descriptors.
 
 **Constructor:** ``new Widgets.TableView({columns, show_header,
 selection_mode, alternate_row_colors, show_grid, show_row_numbers,
-sortable, allow_text_selection})``
+sortable, allow_text_selection, cell_cursor})``
 
 ``set_data`` (or its alias ``set_rows``) accepts either a list of
 dicts (preferred) or a list of positional arrays:

@@ -29,6 +29,8 @@ class TableView extends TreeView {
         // A TableView drives a spreadsheet-style current-cell cursor: the
         // arrow/Tab keys move a highlighted cell and editable columns accept
         // type / Delete / Enter editing.  Pass cell_cursor: false to opt out.
+        // TreeView reads the same option (defaulting it off); re-read it
+        // here to flip the default on for a table.
         this._cellCursor = this.get_option(options, 'cell_cursor', true);
     }
 
@@ -38,6 +40,17 @@ class TableView extends TreeView {
      */
     set_rows(rows) {
         this.set_data(rows);
+    }
+
+    /**
+     * Bring the table to `rows`, changing only what differs.  Alias for
+     * update_data; the incremental counterpart of set_rows, so a
+     * periodic refresh keeps selection, colours and scroll position
+     * instead of rebuilding every row.
+     * @param {Array[]} rows
+     */
+    update_rows(rows) {
+        this.update_data(rows);
     }
 
     /**

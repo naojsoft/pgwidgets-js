@@ -270,8 +270,23 @@
 
 /* ── Inline cell editor ─────────────────────────────── */
 
+/* Editable cells advertise themselves, so the user doesn't have to
+   discover by trial which columns accept a double-click: an I-beam
+   cursor plus a dotted rule along the bottom of the cell.  The rule is
+   painted as a background image rather than a border so it occupies no
+   layout space and cannot shift row heights.  The hover tint is skipped
+   on a selected cell, where the selection highlight has to win. */
 .treeview-cell-editable {
     cursor: text;
+    background-image: linear-gradient(to right,
+                                      #9a9a9a 0 2px, transparent 2px 4px);
+    background-repeat: repeat-x;
+    background-position: left bottom;
+    background-size: 4px 1px;
+}
+
+.treeview-cell-editable:not(.treeview-cell-selected):hover {
+    background-color: rgba(74, 144, 226, 0.10);
 }
 
 .treeview-cell-editor {
