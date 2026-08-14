@@ -24,6 +24,12 @@
     user-select: none;
     /* Anchor for the absolutely-positioned, centered title text. */
     position: relative;
+    /* The title text is positioned absolutely and the icon is hidden
+       until one is set, so with no buttons there is nothing in the flow
+       to give the bar height and it collapses to its padding, leaving
+       the title cramped.  Hold the height a row of buttons would give
+       it (.mdi-button is 18px plus 1px borders). */
+    min-height: 20px;
 }
 
 .toplevel-title-icon {

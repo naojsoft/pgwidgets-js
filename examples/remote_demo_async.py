@@ -202,7 +202,7 @@ async def build_ui(pg):
 
 
 async def handler(ws):
-    print(f"Browser connected")
+    print("Browser connected")
     pg = PGWidgets(ws)
 
     # Start receiving messages in the background so responses
