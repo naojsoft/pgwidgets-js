@@ -1,6 +1,44 @@
 What's New
 ==========
 
+Recent changes — since ``v0.3.6``
+---------------------------------
+
+TreeView / TableView: incremental updates and batched painting
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Bulk updates previously cost one full re-render per call, so a
+repeating refresh of a few hundred coloured cells was slow and
+repainted in visible stages.
+
+* ``update_tree`` now reconciles against the existing nodes instead of
+  clearing and rebuilding, so surviving rows keep their identity --
+  and with it expansion state, selection, cell colours, scroll
+  position, and any open cell editor.  ``update_data`` (``update_rows``
+  on ``TableView``) does the same for flat tables, matching rows by
+  position.  Colour overrides for removed nodes are dropped so a later
+  node reusing the key can't inherit them.
+* ``set_colors(spec)`` applies many cell / row / column / table colour
+  overrides in a single re-render.
+* A new ``batch`` protocol message applies a list of calls as a unit
+  with rendering suspended on each widget it touches, so a burst from
+  the Python driver redraws once.  Errors are collected rather than
+  aborting the batch.
+* Editable cells now show a dotted underline plus a hover tint (the
+  text cursor alone was undiscoverable), and ``cell_cursor`` is a
+  constructor option for both widgets so an editable ``TreeView`` can
+  offer keyboard editing too.
+
+TopLevel: readable title bar with no window buttons
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A ``TopLevel`` built with all the window buttons turned off collapsed
+its title bar to a couple of pixels, cramping the title against the
+frame (the title text is absolutely positioned and the icon is hidden
+until set, so nothing in the bar's flow gave it height).  The bar now
+carries a ``min-height`` matching a button row, so it looks the same
+with or without buttons.
+
 Recent changes — since ``v0.3.3``
 ---------------------------------
 
