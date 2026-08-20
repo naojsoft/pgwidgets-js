@@ -2871,8 +2871,10 @@ class TreeView extends Widget {
      *   Change fires ``cell_edited`` with the new option string.
      * - ``progress``: <progress max=col.max value=val>.  Read-only.
      * - ``button``:  <button>.  Click fires
-     *   ``cell_action(row_values, col_key)``.  The button label is
-     *   the per-row value when non-null, else ``col.text`` if set.
+     *   ``cell_action(path, row_values, col_key)`` -- both ways of
+     *   naming the row, since a tree wants the path and a table wants
+     *   the values.  The button label is the per-row value when
+     *   non-null, else ``col.text`` if set.
      */
     _buildCellWidget(node, colDef, val) {
         let colKey = colDef.key;
@@ -2937,8 +2939,8 @@ class TreeView extends Widget {
                               : (colDef.text || ''));
             el.addEventListener('click', (e) => {
                 e.stopPropagation();
-                this.make_callback('cell_action', node.values || {},
-                                   colKey);
+                this.make_callback('cell_action', path,
+                                   node.values || {}, colKey);
             });
             return el;
         }
