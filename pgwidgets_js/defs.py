@@ -857,6 +857,7 @@ WIDGETS = {
             "clear": [],
             "get_selected": [],
             "set_selected": ["items"],
+            "clear_selection": [],
             "select_path": ["path", "state"],
             "select_paths": ["paths", "state"],
             "select_all": ["state"],

@@ -1395,13 +1395,18 @@ class TreeView extends Widget {
     }
 
     /**
-     * Clear all selection.  Fires the 'selected' callback with an
-     * empty list.
+     * Clear all selection.
+     *
+     * NOTE: this and the other selection setters below do NOT fire the
+     * 'selected' callback -- selecting from code is not the user
+     * selecting something.  The caller already knows what it just did,
+     * and a pair of views that clear each other's selection would
+     * otherwise ping-pong.  Only pointer and keyboard interaction
+     * reports a selection.
      */
     clear_selection() {
         this._selection = [];
         this._updateSelectionDisplay();
-        this.make_callback('selected', this.get_selected());
     }
 
     set_selected(paths) {
@@ -1423,7 +1428,6 @@ class TreeView extends Widget {
             }
         }
         this._updateSelectionDisplay();
-        this.make_callback('selected', this.get_selected());
     }
 
     select_path(path, state) {
@@ -1436,7 +1440,6 @@ class TreeView extends Widget {
             this._selection.splice(idx, 1);
         }
         this._updateSelectionDisplay();
-        this.make_callback('selected', this.get_selected());
     }
 
     select_paths(paths, state) {
@@ -1451,7 +1454,6 @@ class TreeView extends Widget {
             }
         }
         this._updateSelectionDisplay();
-        this.make_callback('selected', this.get_selected());
     }
 
     select_all(state) {
@@ -1462,7 +1464,6 @@ class TreeView extends Widget {
             this._selection = [];
         }
         this._updateSelectionDisplay();
-        this.make_callback('selected', this.get_selected());
     }
 
     /**
