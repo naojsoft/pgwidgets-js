@@ -1996,9 +1996,10 @@ class TextSource extends Widget {
     /**
      * Scroll the view so that the line containing *ref* is visible.
      * @param {TextBufferRef} ref
+     * @param {string} [align='nearest'] - 'nearest', 'center' or 'top'.
      */
-    scroll_to_ref(ref) {
-        this._scrollToOffset(this._offsetOf(ref));
+    scroll_to_ref(ref, align = 'nearest') {
+        this._scrollToOffset(this._offsetOf(ref), align);
     }
 
     /**
@@ -2007,14 +2008,37 @@ class TextSource extends Widget {
      * ref over the wire (the Python side owns the ref and passes its offset).
      * @private
      * @param {number} offset
+     * @param {string} [align='nearest'] - 'nearest' scrolls the least
+     *   amount that brings the line into view, 'center' puts it in the
+     *   middle of the view and 'top' at the top.
      */
-    _scrollToOffset(offset) {
+    _scrollToOffset(offset, align = 'nearest') {
         let line = this._lineOfOffset(this._clampOffset(offset));
         let lineDiv = this._edit.children[line];
         if (lineDiv && lineDiv.scrollIntoView) {
-            lineDiv.scrollIntoView({ block: 'nearest' });
+            let block = { center: 'center', top: 'start' }[align] || 'nearest';
+            lineDiv.scrollIntoView({ block: block });
             this._syncFromScroll();
         }
+    }
+
+    /**
+     * Set the appearance of the text caret.
+     *
+     * NOTE: this styles the browser's own caret, which means it is only
+     * drawn while the editor has the keyboard focus, and that the block
+     * shape needs a browser supporting the CSS 'caret-shape' property
+     * (elsewhere the caret keeps its color but stays a thin bar).
+     *
+     * @param {string} [style='line'] - 'line' or 'block'.
+     * @param {?string} [color=null] - Any CSS color, or null for the
+     *   browser default.
+     */
+    set_cursor_style(style = 'line', color = null) {
+        this._cursorStyle = style;
+        this._cursorColor = color;
+        this._edit.style.caretColor = (color === null) ? '' : color;
+        this._edit.style.caretShape = (style === 'block') ? 'block' : '';
     }
 
     /** Scroll so the cursor is visible. */

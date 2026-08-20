@@ -183,6 +183,57 @@ class TextArea extends Widget {
     }
 
     /**
+     * Scrolls so that line *lineno* (0-based) is visible.
+     *
+     * NOTE: a <textarea> has no per-line elements to measure, so the
+     * line's position is derived from the computed line height.  With
+     * wrapping on, a long logical line occupies more than one visual
+     * line and the result is approximate.
+     *
+     * @param {number} lineno - Line to scroll to (0-based).
+     * @param {string} [align='nearest'] - Where the line should end up:
+     *   'nearest' scrolls the least amount that brings it into view,
+     *   'center' puts it in the middle and 'top' at the top.
+     */
+    scroll_to_lineno(lineno, align = 'nearest') {
+        let ta = this._textarea;
+        let style = window.getComputedStyle(ta);
+        let lineHeight = parseFloat(style.lineHeight);
+        if (! isFinite(lineHeight)) {
+            // 'normal' -- approximate it from the font size
+            lineHeight = parseFloat(style.fontSize) * 1.2;
+        }
+        let padTop = parseFloat(style.paddingTop) || 0;
+        let top = padTop + Math.max(0, lineno) * lineHeight;
+        let view = ta.clientHeight;
+        let pos = ta.scrollTop;
+        let target;
+        if (align === 'center') {
+            target = top - (view - lineHeight) / 2;
+        } else if (align === 'top') {
+            target = top;
+        } else {
+            if (top < pos) target = top;
+            else if (top + lineHeight > pos + view) target = top + lineHeight - view;
+            else target = pos;
+        }
+        let maxY = ta.scrollHeight - view;
+        ta.scrollTop = Math.max(0, Math.min(target, maxY));
+        this._scrollSilent = true;
+        this._syncFromScroll();
+        this._scrollSilent = false;
+    }
+
+    /** Scrolls to the end of the buffer. */
+    scroll_to_end() {
+        let ta = this._textarea;
+        ta.scrollTop = Math.max(0, ta.scrollHeight - ta.clientHeight);
+        this._scrollSilent = true;
+        this._syncFromScroll();
+        this._scrollSilent = false;
+    }
+
+    /**
      * Returns the current scroll position as [h_pct, v_pct] (0–1).
      * @returns {number[]}
      */
