@@ -1478,6 +1478,23 @@ class TreeView extends Widget {
         this._applyGridTemplate();
     }
 
+    /**
+     * The current width of every column, in pixels, left to right.
+     *
+     * Measured from the rendered header cells so that auto-sized
+     * columns ('1fr') report a real number too; falls back to the
+     * widths that were set when the view is not on screen yet, and to
+     * 0 for a column whose width was never set.
+     * @returns {number[]}
+     */
+    get_column_widths() {
+        return this._columns.map((col, i) => {
+            let cell = this._headerCells ? this._headerCells[i] : null;
+            if (cell && cell.offsetWidth) return cell.offsetWidth;
+            return parseFloat(this._colWidths[i]) || 0;
+        });
+    }
+
     set_optimal_column_widths() {
         if (!this.element.isConnected) {
             requestAnimationFrame(() => this.set_optimal_column_widths());
