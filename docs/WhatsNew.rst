@@ -1,6 +1,62 @@
 What's New
 ==========
 
+Recent changes — since ``v0.4.0``
+---------------------------------
+
+TreeView / TableView: selecting from code no longer fires ``selected``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``clear_selection()``, ``set_selected()``, ``select_path()``,
+``select_paths()`` and ``select_all()`` now change the selection
+silently: selecting from code is not the user selecting something.  The
+caller already knows what it did, and two views that clear each other's
+selection would otherwise ping-pong.  Only pointer and keyboard
+interaction reports a selection.
+
+This is a behaviour change -- ``clear_selection()`` previously
+documented that it fires ``selected`` with an empty list -- and it
+brings these widgets in line with what the desktop toolkits already
+did.  A caller that leaned on the callback to update itself should now
+call its handler directly after selecting.  ``TableView`` inherits all
+of these from ``TreeView``; it also declares ``clear_selection`` in
+``defs.py`` now, which only ``TreeView`` had.
+
+``cell_action`` names the clicked row by path as well as by value
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A button cell fired ``cell_action(row_values, col_key)``, which is what
+a table wants but not what a tree does -- a tree names a row by its
+path.  The callback now sends both, as
+``cell_action(path, row_values, col_key)``, and the consumer keeps
+whichever suits the widget it is presenting.  Existing handlers take one
+more leading argument.
+
+TreeView / TableView: ``get_column_widths()``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Returns the width of every column, left to right.  The widths are
+measured from the rendered header cells, so an auto-sized (``1fr``)
+column reports a real number rather than nothing; when the view is not
+on screen yet it falls back to the widths that were set.
+
+Text widgets: scroll alignment, and a styleable ``TextSource`` caret
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``TextArea`` gains ``scroll_to_lineno(lineno, align)`` and
+``scroll_to_end()``.  A ``<textarea>`` has no per-line elements, so the
+line's position is computed from the line height -- approximate when
+wrapping is on.
+
+``TextSource.scroll_to_ref()`` takes the same ``align`` -- ``'nearest'``
+(the default, as before), ``'center'`` or ``'top'`` -- mapped onto
+``scrollIntoView``'s ``block`` value, so a search that scrolls to its
+match can put the match in the middle of the view instead of merely
+bringing it into sight.  ``set_cursor_style(style, color)`` styles the
+caret through CSS ``caret-color`` / ``caret-shape``: it is the browser's
+own caret, so it is drawn only while the editor has the focus, and the
+``'block'`` shape needs a browser that supports ``caret-shape``.
+
 Recent changes — since ``v0.3.6``
 ---------------------------------
 

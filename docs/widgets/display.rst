@@ -385,10 +385,11 @@ supplies no value for it, so most interiors need no
      - Expand or collapse a single node by key path.
    * - ``get_selected()`` / ``set_selected(paths)``
      - Get or set selection.  ``set_selected`` accepts a single
-       path or an array of paths.
+       path or an array of paths.  Setting is silent -- see
+       "Selecting from code" below.
    * - ``clear_selection()``
-     - Drop all selection.  Fires the ``selected`` callback with
-       an empty list.
+     - Drop all selection.  Silent, like the other selection
+       setters.
    * - ``select_path(path, state)`` / ``select_paths(paths, state)``
      - Select or deselect by key path(s).
    * - ``select_all(state)``
@@ -415,6 +416,11 @@ supplies no value for it, so most interiors need no
      - Column manipulation.  ``before`` is a column key.
    * - ``set_column_width(col_key, width)``
      - Set column width.
+   * - ``get_column_widths()``
+     - The width of every column, left to right, in pixels.
+       Measured from the rendered header cells, so an auto-sized
+       (``"1fr"``) column reports a real number; falls back to the
+       widths that were set when the view is not on screen yet.
    * - ``set_optimal_column_widths()``
      - Auto-size all columns.
    * - ``set_row_spacing(px)`` / ``set_column_spacing(px)``
@@ -467,15 +473,20 @@ across the row.
   col_key)``; fires on row double-click or Enter.  ``col_key``
   is the column the click landed on (``null`` for
   keyboard-triggered activation).
-- ``selected`` -- selection changed; handler receives an array of
-  ``{path, values}`` objects.
+- ``selected`` -- the user changed the selection; handler
+  receives an array of ``{path, values}`` objects.  Selecting
+  from code does not fire it -- see "Selecting from code" below.
 - ``expanded`` / ``collapsed`` -- handler ``(widget, values, path)``.
 - ``cell_edited`` -- ``(widget, path, col_key, oldValue, newValue)``.
-- ``cell_selected`` -- cell-mode selection changed; handler
-  receives ``(widget, cells)`` where each cell is
-  ``{path, col_key, value}``.
-- ``cell_action`` -- ``(widget, row_values, col_key)``; fires
-  when the user clicks a ``widget: "button"`` cell.
+- ``cell_selected`` -- the user changed the cell-mode selection;
+  handler receives ``(widget, cells)`` where each cell is
+  ``{path, col_key, value}``.  Like ``selected``, it does not
+  fire for selection made from code.
+- ``cell_action`` -- ``(widget, path, row_values, col_key)``;
+  fires when the user clicks a ``widget: "button"`` cell.  Both
+  names for the row are sent: a table normally wants
+  ``row_values``, a tree its ``path``.  (Before v0.4.1 the
+  ``path`` argument was not there.)
 - ``copy`` / ``cut`` / ``paste`` -- ``(widget, tsv)``; fire from
   Ctrl/Cmd+C/X/V and from the programmatic helpers.
 - ``sorted`` -- ``(widget, col_key, ascending)``.
@@ -498,6 +509,18 @@ DOM input per cell:
 gate the per-row widget.  An empty row value of ``null`` /
 ``false`` on a button column suppresses that row's button if
 ``visible_key`` is also unset.
+
+**Selecting from code.** ``set_selected``, ``select_path``,
+``select_paths``, ``select_all``, ``clear_selection`` and their
+cell-mode counterparts ``select_cell`` / ``select_cells`` /
+``clear_cell_selection`` all change the selection *silently*:
+``selected`` and ``cell_selected`` report pointer and keyboard
+interaction only.  The caller already knows what it selected, and
+two views that clear each other's selection would otherwise
+ping-pong.  Call your own handler after selecting if it needs to
+run.  (Before v0.4.1, ``clear_selection`` fired ``selected`` with
+an empty list, and the desktop toolkits ginga wraps disagreed
+among themselves on the rest.)
 
 **Colour overrides.** Each of the four ``set_*_color`` methods
 takes ``fg`` (text), ``bg`` (background), and ``bold``.  All
@@ -572,11 +595,14 @@ dicts (preferred) or a list of positional arrays:
    table.append_row({NAME: "Carol", DEPT: "Sales", SALARY: 71000});
    table.sort_by_column("SALARY", false);  // descending
 
-**Callbacks:** identical to TreeView, including the new
+**Callbacks:** identical to TreeView, including the
 ``activated`` 4-arg signature with ``col_key``, the
 ``cell_selected`` / ``cell_action`` / ``copy`` / ``cut`` /
 ``paste`` callbacks, and the per-cell ``cell_edited``
-signature.
+signature.  ``cell_action`` carries the clicked row's ``path``
+ahead of its values here too, even though a flat table normally
+reads the values; the path is a single-element array of the
+row's key.  Selecting from code is silent, as on a TreeView.
 
 TableView ``set_columns`` accepts the same column descriptor
 fields as TreeView, including ``widget`` / ``choices`` /

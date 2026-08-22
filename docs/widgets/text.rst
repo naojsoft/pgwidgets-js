@@ -164,6 +164,15 @@ Multi-line text editor.
      - Set word-wrap mode.
    * - ``set_limit(numlines)``
      - Limit visible lines (scrollback).
+   * - ``scroll_to_lineno(lineno, align="nearest")``
+     - Scroll so line *lineno* (0-based, clamped to the text) is in
+       view.  ``align`` is ``"nearest"`` (scroll the least amount
+       that brings the line into view), ``"center"`` or ``"top"``.
+       A ``<textarea>`` has no per-line elements, so the line's
+       position is computed from the line height -- approximate when
+       ``wrap`` is on.
+   * - ``scroll_to_end()``
+     - Scroll to the last line.
 
 **Callbacks:** None.
 
@@ -325,10 +334,23 @@ position-returning method on the public API uses refs.
      - Find all non-overlapping matches; returns an array of ref pairs.
    * - ``replace(query, replacement, {all, start_ref, case_insensitive})``
      - Find and replace; returns the number of replacements.
-   * - ``scroll_to_ref(ref)``
+   * - ``scroll_to_ref(ref, align="nearest")``
      - Scroll the view so the line containing *ref* is visible.
+       ``align`` is ``"nearest"`` (the default), ``"center"`` or
+       ``"top"``, mapped onto ``scrollIntoView``'s ``block`` value,
+       so a search can put its match in the middle of the view
+       rather than merely bringing it into sight.
+       To scroll to a line number, mint a ref for it first with
+       ``get_ref_line_start(lineno)``.
    * - ``scroll_to_cursor()``
      - Scroll to cursor position.
+   * - ``set_cursor_style(style="line", color=null)``
+     - Style the caret: ``style`` is ``"line"`` or ``"block"``,
+       ``color`` any CSS colour (``null`` restores the browser's).
+       This styles the browser's own caret through ``caret-color``
+       / ``caret-shape``, so it is drawn only while the editor has
+       the focus, and ``"block"`` needs a browser that supports
+       ``caret-shape``.
 
 **Callbacks:**
 
