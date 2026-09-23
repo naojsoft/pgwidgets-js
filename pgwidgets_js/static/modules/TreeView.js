@@ -1403,6 +1403,13 @@ class TreeView extends Widget {
      * and a pair of views that clear each other's selection would
      * otherwise ping-pong.  Only pointer and keyboard interaction
      * reports a selection.
+     *
+     * NOTE: the ``state`` argument of the select_* methods defaults to
+     * true, matching select_cell()/select_cells() and the Python side
+     * (whose callers write ``select_path(path)`` to select a row).  A
+     * bridge that forwards only the arguments it was given would
+     * otherwise pass ``undefined`` here, and the call would silently do
+     * nothing -- or, for select_all(), clear the selection instead.
      */
     clear_selection() {
         this._selection = [];
@@ -1430,7 +1437,7 @@ class TreeView extends Widget {
         this._updateSelectionDisplay();
     }
 
-    select_path(path, state) {
+    select_path(path, state = true) {
         let node = this._nodeAtPath(path);
         if (!node) return;
         let idx = this._selection.indexOf(node);
@@ -1442,7 +1449,7 @@ class TreeView extends Widget {
         this._updateSelectionDisplay();
     }
 
-    select_paths(paths, state) {
+    select_paths(paths, state = true) {
         for (let path of paths) {
             let node = this._nodeAtPath(path);
             if (!node) continue;
@@ -1456,7 +1463,7 @@ class TreeView extends Widget {
         this._updateSelectionDisplay();
     }
 
-    select_all(state) {
+    select_all(state = true) {
         if (state) {
             this._selection = [];
             this._walkNodes(this._root, (n) => this._selection.push(n));
