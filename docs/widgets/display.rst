@@ -390,10 +390,11 @@ supplies no value for it, so most interiors need no
    * - ``clear_selection()``
      - Drop all selection.  Silent, like the other selection
        setters.
-   * - ``select_path(path, state)`` / ``select_paths(paths, state)``
-     - Select or deselect by key path(s).
-   * - ``select_all(state)``
-     - Select or deselect all nodes.
+   * - ``select_path(path, state=true)`` / ``select_paths(paths, state=true)``
+     - Select or deselect by key path(s).  ``state`` defaults to
+       true, so ``select_path(path)`` selects.
+   * - ``select_all(state=true)``
+     - Select or deselect all nodes.  ``state`` defaults to true.
    * - ``get_subtree(status='all')``
      - Return a dict-tree containing a subset.  ``status`` is
        ``"all"``, ``"selected"``, ``"expanded"``, or ``"collapsed"``.
@@ -422,7 +423,7 @@ supplies no value for it, so most interiors need no
        (``"1fr"``) column reports a real number; falls back to the
        widths that were set when the view is not on screen yet.
    * - ``set_optimal_column_widths()``
-     - Auto-size all columns.
+     - Auto-size all columns to their header and cell content.
    * - ``set_row_spacing(px)`` / ``set_column_spacing(px)``
      - Set the vertical (row) / horizontal (column) cell padding in
        pixels.  ``set_row_spacing(0)`` also relaxes the row min-height
@@ -509,6 +510,18 @@ DOM input per cell:
 gate the per-row widget.  An empty row value of ``null`` /
 ``false`` on a button column suppresses that row's button if
 ``visible_key`` is also unset.
+
+**Resizing columns.** Every header cell carries a divider on its right
+edge, the last column included.  Dragging one resizes *that* column and
+leaves the rest alone: the columns after it keep their widths and slide
+along, and the table grows past the viewport into the horizontal
+scrollbar.  This is what a qt ``QHeaderView`` does in its default
+Interactive mode.  A drag pins every column to the width it is
+rendering at, so a column still on ``"1fr"`` stops re-dividing the
+leftover space and drifting.  (Before v0.4.2 a drag behaved like a
+splitter, taking the width it gained out of the next column, and the
+last column had no divider at all because it has no neighbour to take
+from.)
 
 **Selecting from code.** ``set_selected``, ``select_path``,
 ``select_paths``, ``select_all``, ``clear_selection`` and their

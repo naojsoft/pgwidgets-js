@@ -4,6 +4,37 @@ What's New
 Recent changes — since ``v0.4.0``
 ---------------------------------
 
+TreeView: a header drag resizes one column, qt-style
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Dragging a header divider now resizes the column to its left and
+nothing else.  The columns after it keep their widths and slide along,
+and the table grows past the viewport into the horizontal scrollbar --
+what a qt ``QHeaderView`` does in its default Interactive mode.  A drag
+first pins every column to the width it is rendering at, so a column
+still on ``"1fr"`` stops re-dividing the leftover space and drifting
+while an unrelated boundary is dragged.
+
+Previously a drag behaved like a splitter: every pixel the column
+gained came out of the next one, so widening a column ate its
+neighbour down to the 5 px floor before anything to the right would
+move.  For the same reason the last column had no divider -- it has no
+neighbour to take width from.  It has one now.
+
+TreeView: ``select_path()`` and friends default ``state`` to true
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``select_path(path, state = true)``, ``select_paths()`` and
+``select_all()`` now default ``state``, matching ``select_cell()`` /
+``select_cells()`` and the Python API, where a caller writes
+``select_path(path)`` to select a row.
+
+A bridge that forwards only the arguments it was given -- as the Python
+proxy does, being generated from the ``defs.py`` parameter lists --
+passed ``undefined`` otherwise, and the call quietly did nothing.
+``select_all()`` was worse than a no-op: it took the ``else`` branch
+and cleared the selection instead of filling it.
+
 TreeView / TableView: selecting from code no longer fires ``selected``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

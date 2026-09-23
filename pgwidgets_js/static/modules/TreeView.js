@@ -676,12 +676,16 @@ class TreeView extends Widget {
                 this._onHeaderClick(this._columns[i].key);
             });
 
-            if (i < this._columns.length - 1) {
-                let handle = document.createElement('div');
-                handle.className = 'treeview-resize-handle';
-                cell.appendChild(handle);
-                this._setupColumnResize(handle, i);
-            }
+            // Every column gets a divider, the last one included -- qt
+            // lets you drag the final section's right edge too.  (The
+            // last one used to be skipped because resizing worked like a
+            // splitter, and the last column has no neighbour to take the
+            // width from; now that a drag only resizes its own column,
+            // there is nothing special about it.)
+            let handle = document.createElement('div');
+            handle.className = 'treeview-resize-handle';
+            cell.appendChild(handle);
+            this._setupColumnResize(handle, i);
 
             this._header.appendChild(cell);
         }
@@ -714,8 +718,22 @@ class TreeView extends Widget {
         }
     }
 
+    /**
+     * Wire up one header divider.
+     *
+     * Dragging resizes only the column to the divider's left: the
+     * columns after it keep their widths and slide along, the table
+     * grows past the viewport and the horizontal scrollbar takes up the
+     * difference.  That is what a qt ``QHeaderView`` does in its default
+     * Interactive mode, and what makes a too-narrow column widenable
+     * without robbing its neighbour.
+     *
+     * (It used to behave like a splitter -- every pixel the dragged
+     * column gained came out of the next one, so widening a column ate
+     * the one beside it down to the 5 px floor before anything moved.)
+     */
     _setupColumnResize(handle, colIndex) {
-        let startX, startWidthA, startWidthB;
+        let startX, startWidth;
         const onMouseMove = (e) => {
             let dx = e.clientX - startX;
             // 5 px floor matches the width of ``.treeview-resize-handle``
@@ -726,11 +744,11 @@ class TreeView extends Widget {
             // *inflate* any column whose declared ``colwidth`` was
             // below 30 the moment a drag started, making columns
             // like a 10 px Mute / checkbox column un-resizable.
-            let newA = Math.max(5, startWidthA + dx);
-            let newB = Math.max(5, startWidthB - dx);
-            this._colWidths[colIndex] = newA + 'px';
-            this._colWidths[colIndex + 1] = newB + 'px';
+            this._colWidths[colIndex] = Math.max(5, startWidth + dx) + 'px';
             this._applyGridTemplate();
+            // the table's total width changes now (it did not when this
+            // stole from the neighbour), so the scrollbar has to follow
+            this._syncScrollbars();
         };
         const onMouseUp = () => {
             document.removeEventListener('mousemove', onMouseMove);
@@ -741,8 +759,18 @@ class TreeView extends Widget {
             e.stopPropagation();
             startX = e.clientX;
             let cells = this._header.querySelectorAll('.treeview-header-cell');
-            startWidthA = cells[colIndex].getBoundingClientRect().width;
-            startWidthB = cells[colIndex + 1].getBoundingClientRect().width;
+            // Pin every column to the width it is rendering at before
+            // the drag starts.  Any track still on an ``fr`` unit would
+            // otherwise re-divide the leftover space on each move, so
+            // columns the user never touched would drift as a side
+            // effect of dragging one boundary.
+            for (let i = 0; i < this._colWidths.length; i++) {
+                if (cells[i]) {
+                    this._colWidths[i] =
+                        cells[i].getBoundingClientRect().width + 'px';
+                }
+            }
+            startWidth = parseFloat(this._colWidths[colIndex]);
             document.addEventListener('mousemove', onMouseMove);
             document.addEventListener('mouseup', onMouseUp);
         });
