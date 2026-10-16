@@ -244,7 +244,7 @@ class TreeView extends Widget {
             if (typeof c === 'string') {
                 return { label: c, type: 'string', editable: false,
                          key: '_col' + (autoIdx++), halign: 'left',
-                         colwidth: null, widget: null };
+                         colwidth: null, widget: null, sortable: null };
             }
             let type = TreeView._normalizeType(c.type);
             let key = c.key;
@@ -268,6 +268,11 @@ class TreeView extends Widget {
                               ? String(c.enabled_key) : null),
                 visible_key: (c.visible_key != null
                               ? String(c.visible_key) : null),
+                // null = follow the widget's own `sortable`; false
+                // takes this column out of the header-click sort even
+                // on a sortable table.  A column flag can only narrow:
+                // sortable: true on a non-sortable table does nothing.
+                sortable: (c.sortable == null ? null : !!c.sortable),
             };
         });
     }
@@ -327,6 +332,18 @@ class TreeView extends Widget {
     }
 
     /** Find the column descriptor for a key.  Returns null if unknown. */
+    /**
+     * Can the user sort by clicking this column's header?  The table
+     * has to be sortable, and the column must not have opted out with
+     * ``sortable: false``.  A per-column flag only ever narrows: it
+     * cannot make a column sortable on a table that is not.
+     * @private
+     */
+    _columnIsSortable(col) {
+        if (!this._sortable) return false;
+        return !(col && col.sortable === false);
+    }
+
     _columnByKey(key) {
         for (let col of this._columns) {
             if (col.key === key) return col;
@@ -650,6 +667,9 @@ class TreeView extends Widget {
             // left otherwise).  CSS handles the per-halign layout.
             let halign = this._columns[i].halign || 'left';
             cell.classList.add('treeview-halign-' + halign);
+            if (this._sortable && !this._columnIsSortable(this._columns[i])) {
+                cell.classList.add('treeview-header-nosort');
+            }
 
             let labelSpan = document.createElement('span');
             labelSpan.className = 'treeview-header-label';
@@ -668,7 +688,8 @@ class TreeView extends Widget {
                 // When not sortable, plain click selects too.
                 if (this._isCellMode()) {
                     let usingModifier = e.shiftKey || e.ctrlKey || e.metaKey;
-                    if (usingModifier || !this._sortable) {
+                    if (usingModifier
+                            || !this._columnIsSortable(this._columns[i])) {
                         this._onHeaderColumnSelect(e, i);
                         return;
                     }
@@ -777,7 +798,10 @@ class TreeView extends Widget {
     }
 
     _onHeaderClick(colKey) {
-        if (!this._sortable) return;
+        // The user's gesture only.  sort_by_column() stays permissive,
+        // so an application can still sort on a column it has taken out
+        // of the header's reach.
+        if (!this._columnIsSortable(this._columnByKey(colKey))) return;
         let ascending = (this._sortColKey === colKey) ? !this._sortAscending : true;
         this.sort_by_column(colKey, ascending);
         this.make_callback('sorted', colKey, ascending);

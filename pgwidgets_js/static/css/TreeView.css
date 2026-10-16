@@ -63,6 +63,13 @@
     background: #e4e4e4;
 }
 
+/* A column that has opted out of the header-click sort
+   (`sortable: false`) on an otherwise sortable table: clicking it does
+   nothing, so don't offer the pointer that says it will. */
+.treeview-header-nosort {
+    cursor: default;
+}
+
 .treeview-header-cell:last-child {
     border-right: none;
 }
