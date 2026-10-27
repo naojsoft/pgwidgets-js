@@ -99,7 +99,7 @@ def make_demo(name):
         btn_icon.set_icon("../pgwidgets_js/static/icons/pgicon.svg",
                           [16, 16])
         btn_icon.on("activated",
-                     lambda: lbl.set_text("Icon button clicked"))
+                    lambda: lbl.set_text("Icon button clicked"))
         hbox.add_widget(btn_a, 0)
         hbox.add_widget(btn_b, 0)
         hbox.add_widget(btn_icon, 0)
@@ -146,7 +146,7 @@ def make_demo(name):
         content.add_widget(Widgets.Label("Editable:"), 0)
         combo2 = Widgets.ComboBox(editable=True, dropdown_limit=5)
         for f in ["Red", "Orange", "Yellow", "Green", "Blue",
-                   "Indigo", "Violet"]:
+                  "Indigo", "Violet"]:
             combo2.append_text(f)
         combo2.on("activated",
                   lambda idx, text: lbl.set_text(f"Entered: {text}"))
@@ -322,7 +322,7 @@ def make_demo(name):
         sl1.on("activated",
                lambda val: lbl.set_text(f"Integer: {val}"))
         sl2 = Widgets.Slider(min=0, max=1, step=0.01, value=0.5,
-                     dtype="float", track=True)
+                             dtype="float", track=True)
         sl2.on("activated",
                lambda val: lbl.set_text(f"Float: {val}"))
         content.add_widget(Widgets.Label("Integer (0-100):"), 0)
@@ -376,8 +376,8 @@ def make_demo(name):
 
     elif name == "TextArea":
         ta = Widgets.TextArea("This is a multi-line text area.\n\n"
-                      "You can type freely here.\n"
-                      "Resize the window to see it adapt.")
+                              "You can type freely here.\n"
+                              "Resize the window to see it adapt.")
         subwin = mdi.add_widget(ta,
                                 {"title": "TextArea",
                                  "width": 320, "height": 200})
@@ -399,6 +399,7 @@ def make_demo(name):
         src.create_tag("keyword", {"foreground": "#0066cc", "bold": True})
         src.create_tag("string",  {"foreground": "#a31515"})
         text = src.get_text()
+
         # apply_tag now takes TextBufferRefs; build a small helper.
         def tag_range(name, start, end):
             src.apply_tag(name,

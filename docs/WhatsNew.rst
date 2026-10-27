@@ -1,6 +1,22 @@
 What's New
 ==========
 
+Recent changes — since ``v0.4.2``
+---------------------------------
+
+* TreeView / TableView: a column descriptor can now carry
+  ``sortable: false`` to take that column out of the header-click
+  sort.  Clicking its header does nothing (in cell-selection mode it
+  selects the column instead), and the header drops the pointer cursor
+  that advertises a sort.  This guards against an accidental sort on a
+  column whose values are all equal: it leaves nothing on screen to show
+  it happened, and the next edit in that column re-sorts the rows and
+  makes the edited row jump.
+* The per-column flag only narrows: ``sortable: true`` on a table built
+  with ``sortable=False`` still does not sort.  It gates the user's
+  gesture only, so ``sort_by_column()`` still works on an opted-out
+  column.  Columns without the flag behave as before.
+
 Recent changes — since ``v0.4.0``
 ---------------------------------
 

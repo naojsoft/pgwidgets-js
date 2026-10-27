@@ -7,7 +7,7 @@ from pyodide.ffi import create_proxy, to_js
 from js import Object, Widgets
 
 from pgwidgets_js.defs import (WIDGETS, WIDGET_METHODS, CONTAINER_METHODS,
-                                CALLBACK_METHODS)
+                               CALLBACK_METHODS)
 
 # Registry of built widget subclasses, keyed by JS class name.  Populated
 # by build_widget_class().  Used by _from_js_val() so that a widget
